@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check if user is authenticated admin
+    function isAdmin() {
+      return request.auth != null &&
+             request.auth.token.admin == true;
+    }
+
+    // Helper function to check if user owns the resource
+    function isOwner(userId) {
+      return request.auth != null &&
+             request.auth.uid == userId;
+    }
+
+    // Admin users collection
+    match /usuarios_admin/{userId} {
+      allow read: if isAdmin() || isOwner(userId);
+      allow write: if isAdmin();
+    }
+
+    // Campaigns collection
+    match /campanias/{campaignId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+
+      // Leads subcollection under campaign
+      match /leads/{leadId} {
+        allow read: if isAdmin();
+        allow create: if isAdmin();
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // Global leads collection (denormalized for queries)
+    match /leads/{leadId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // Demo configurations per niche
+    match /config_demos/{nicheId} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}
