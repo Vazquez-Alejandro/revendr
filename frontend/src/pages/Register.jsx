@@ -1,25 +1,22 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
+import { createUserWithEmailAndPassword } from 'firebase/auth'
+import { doc, setDoc } from 'firebase/firestore'
+import { auth, db } from '../config/firebase'
 import { Loader2, AlertCircle } from 'lucide-react'
 
-export default function Login() {
+export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [nombre, setNombre] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { signIn, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  if (isAuthenticated) {
-    navigate('/dashboard')
-    return null
-  }
-
-  const handleSubmit = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault()
-    if (!email || !password) {
-      setError('Por favor completa todos los campos')
+    if (!email || !password || !nombre) {
+      setError('Completa todos los campos')
       return
     }
 
@@ -27,10 +24,32 @@ export default function Login() {
     setError('')
 
     try {
-      await signIn(email, password)
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password)
+      const user = userCredential.user
+
+      await setDoc(doc(db, 'usuarios_admin', user.uid), {
+        email: email,
+        nombre: nombre,
+        role: 'super_admin',
+        permissions: ['campaigns', 'leads', 'settings', 'billing'],
+        api_credits: {
+          apify: 1000,
+          whatsapp: 500,
+          inmoxil: 500,
+        },
+        plan: 'enterprise',
+        fecha_creacion: new Date(),
+        activo: true,
+      })
+
       navigate('/dashboard')
     } catch (err) {
-      setError(err.message)
+      const errorMessages = {
+        'auth/email-already-in-use': 'Este correo ya está registrado',
+        'auth/weak-password': 'La contraseña debe tener al menos 6 caracteres',
+        'auth/invalid-email': 'Correo electrónico inválido',
+      }
+      setError(errorMessages[err.code] || err.message)
     } finally {
       setLoading(false)
     }
@@ -43,12 +62,12 @@ export default function Login() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
             <span className="text-3xl">⚡</span>
           </div>
-          <h1 className="text-2xl font-bold text-dark-50">Revendr</h1>
-          <p className="text-dark-400 mt-2">SaaS Engine - Panel de Control</p>
+          <h1 className="text-2xl font-bold text-dark-50">Crear Cuenta</h1>
+          <p className="text-dark-400 mt-2">Registrate para acceder al panel</p>
         </div>
 
         <div className="card">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleRegister} className="space-y-4">
             {error && (
               <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
@@ -57,9 +76,19 @@ export default function Login() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Correo Electrónico
-              </label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Nombre</label>
+              <input
+                type="text"
+                value={nombre}
+                onChange={(e) => setNombre(e.target.value)}
+                className="input-field"
+                placeholder="Tu nombre"
+                disabled={loading}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Correo Electrónico</label>
               <input
                 type="email"
                 value={email}
@@ -71,15 +100,13 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                Contraseña
-              </label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Contraseña</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="input-field"
-                placeholder="••••••••"
+                placeholder="Mínimo 6 caracteres"
                 disabled={loading}
               />
             </div>
@@ -92,19 +119,19 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Iniciando sesión...
+                  Creando cuenta...
                 </>
               ) : (
-                'Iniciar Sesión'
+                'Crear Cuenta'
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-dark-400 text-sm">
-              ¿No tenés cuenta?{' '}
-              <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium">
-                Crear Cuenta
+              ¿Ya tenés cuenta?{' '}
+              <Link to="/login" className="text-brand-400 hover:text-brand-300 font-medium">
+                Iniciar Sesión
               </Link>
             </p>
           </div>

@@ -5,12 +5,30 @@ import Dashboard from './pages/Dashboard'
 import Campaigns from './pages/Campaigns'
 import Leads from './pages/Leads'
 import Login from './pages/Login'
+import Register from './pages/Register'
+import Landing from './pages/public/Landing'
+import Pricing from './pages/public/Pricing'
+import DemoBooking from './pages/public/DemoBooking'
+import DemoProperties from './pages/public/DemoProperties'
+import DemoClinic from './pages/public/DemoClinic'
 
 function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      {/* Public routes */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/pricing" element={<Pricing />} />
       
+      {/* Demo routes (public, no auth) */}
+      <Route path="/demo/estetica/:demoId" element={<DemoBooking />} />
+      <Route path="/demo/inmobiliaria/:demoId" element={<DemoProperties />} />
+      <Route path="/demo/clinica/:demoId" element={<DemoClinic />} />
+      
+      {/* Auth routes */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      
+      {/* Protected admin routes */}
       <Route
         path="/dashboard"
         element={
@@ -24,8 +42,7 @@ function App() {
         <Route path="leads" element={<Leads />} />
       </Route>
 
-      <Route path="/" element={<Navigate to="/dashboard" replace />} />
-      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

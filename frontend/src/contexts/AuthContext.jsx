@@ -5,7 +5,7 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail 
 } from 'firebase/auth'
-import { doc, getDoc, onSnapshot } from 'firebase/firestore'
+import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 
 const AuthContext = createContext(null)

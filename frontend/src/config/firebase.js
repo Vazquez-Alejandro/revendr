@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app'
-import { getAuth, connectAuthEmulator } from 'firebase/auth'
-import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore'
-import { getFunctions, connectFunctionsEmulator } from 'firebase/functions'
+import { getAuth } from 'firebase/auth'
+import { getFirestore } from 'firebase/firestore'
+import { getFunctions } from 'firebase/functions'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,15 +17,5 @@ const app = initializeApp(firebaseConfig)
 export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const functions = getFunctions(app)
-
-if (import.meta.env.DEV) {
-  try {
-    connectAuthEmulator(auth, 'http://localhost:9099')
-    connectFirestoreEmulator(db, 'localhost', 8080)
-    connectFunctionsEmulator(functions, 'localhost', 5001)
-  } catch (error) {
-    console.warn('Emulators not available:', error.message)
-  }
-}
 
 export default app
