@@ -6,6 +6,13 @@ admin.initializeApp()
 const db = admin.firestore()
 const express = require('express')
 const cors = require('cors')
+const axios = require('axios')
+
+const APIFY_TOKEN = process.env.APIFY_TOKEN
+const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN
+const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
+const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
 
 const app = express()
 
@@ -150,9 +157,6 @@ app.post('/api/leads/:leadId/send-whatsapp', async (req, res) => {
     }
 
     const lead = leadDoc.data()
-    const WHATSAPP_TOKEN = functions.config().whatsapp?.token
-    const PHONE_NUMBER_ID = functions.config().whatsapp?.phone_number_id
-
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
       return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
     }
@@ -196,9 +200,6 @@ app.post('/webhooks/apify', async (req, res) => {
   try {
     const { defaultDatasetId, campaignId } = req.body
 
-    const axios = require('axios')
-    const APIFY_TOKEN = functions.config().apify?.token
-
     const response = await axios.get(
       `https://api.apify.com/v2/datasets/${defaultDatasetId}/items`,
       { params: { token: APIFY_TOKEN, format: 'json' } }
@@ -241,8 +242,8 @@ app.post('/webhooks/apify', async (req, res) => {
 
 app.post('/webhooks/stripe', async (req, res) => {
   try {
-    const stripe = require('stripe')(functions.config().stripe?.secret_key)
-    const webhookSecret = functions.config().stripe?.webhook_secret
+    const stripe = require('stripe')(STRIPE_SECRET_KEY)
+    const webhookSecret = STRIPE_WEBHOOK_SECRET
 
     const sig = req.headers['stripe-signature']
     let event
