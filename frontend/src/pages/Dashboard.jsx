@@ -9,6 +9,22 @@ import {
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react'
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+} from 'recharts'
+
+const COLORS = ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -20,6 +36,9 @@ export default function Dashboard() {
     demosGeneradas: 0,
   })
   const [recentLeads, setRecentLeads] = useState([])
+  const [chartData, setChartData] = useState([])
+  const [statusData, setStatusData] = useState([])
+  const [rubroData, setRubroData] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -42,19 +61,46 @@ export default function Dashboard() {
       let demosGeneradas = 0
       let clientesActivos = 0
       const today = new Date().toDateString()
+      
+      const leadsByDate = {}
+      const leadsByStatus = {}
+      const leadsByRubro = {}
 
       campaignsSnapshot.docs.forEach(doc => {
         if (doc.data().estado === 'activa') activeCampaigns++
       })
 
-      const leadsData = []
       allLeadsSnapshot.docs.forEach(doc => {
         const lead = doc.data()
         if (lead.fecha_creacion?.toDate?.()?.toDateString() === today) leadsHoy++
-        if (lead.estado_proceso === 'demo_generada') demosGeneradas++
+        if (lead.estado_proceso === 'demo_generadas') demosGeneradas++
         if (lead.estado_proceso === 'cliente_activo') clientesActivos++
+
+        const date = lead.fecha_creacion?.toDate?.()
+        if (date) {
+          const dateKey = date.toLocaleDateString('es-AR', { day: '2-digit', month: 'short' })
+          leadsByDate[dateKey] = (leadsByDate[dateKey] || 0) + 1
+        }
+
+        leadsByStatus[lead.estado_proceso] = (leadsByStatus[lead.estado_proceso] || 0) + 1
+        leadsByRubro[lead.rubro] = (leadsByRubro[lead.rubro] || 0) + 1
       })
 
+      const chartDataArr = Object.entries(leadsByDate)
+        .slice(-7)
+        .map(([date, count]) => ({ date, leads: count }))
+
+      const statusDataArr = Object.entries(leadsByStatus).map(([name, value]) => ({
+        name: name.replace(/_/g, ' '),
+        value,
+      }))
+
+      const rubroDataArr = Object.entries(leadsByRubro).map(([name, value]) => ({
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        value,
+      }))
+
+      const leadsData = []
       leadsSnapshot.docs.forEach(doc => {
         leadsData.push({ id: doc.id, ...doc.data() })
       })
@@ -71,6 +117,9 @@ export default function Dashboard() {
       })
 
       setRecentLeads(leadsData)
+      setChartData(chartDataArr)
+      setStatusData(statusDataArr)
+      setRubroData(rubroDataArr)
     } catch (error) {
       console.error('Error loading dashboard:', error)
     } finally {
@@ -143,6 +192,18 @@ export default function Dashboard() {
     )
   }
 
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-dark-800 border border-dark-700 rounded-lg p-3 shadow-lg">
+          <p className="text-dark-300 text-sm">{label}</p>
+          <p className="text-brand-400 font-bold">{payload[0].value} leads</p>
+        </div>
+      )
+    }
+    return null
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -185,87 +246,120 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card">
+          <h2 className="text-lg font-semibold text-dark-100 mb-4">Leads por Día</h2>
+          {chartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorLeads" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area 
+                  type="monotone" 
+                  dataKey="leads" 
+                  stroke="#0ea5e9" 
+                  strokeWidth={2}
+                  fillOpacity={1} 
+                  fill="url(#colorLeads)" 
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-dark-500">
+              Sin datos para mostrar
+            </div>
+          )}
+        </div>
+
+        <div className="card">
+          <h2 className="text-lg font-semibold text-dark-100 mb-4">Leads por Estado</h2>
+          {statusData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {statusData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center text-dark-500">
+              Sin datos para mostrar
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2 mt-2">
+            {statusData.map((entry, index) => (
+              <div key={entry.name} className="flex items-center gap-1 text-xs text-dark-400">
+                <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                {entry.name}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card">
+          <h2 className="text-lg font-semibold text-dark-100 mb-4">Leads por Rubro</h2>
+          {rubroData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={rubroData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                <XAxis dataKey="name" stroke="#64748b" fontSize={12} />
+                <YAxis stroke="#64748b" fontSize={12} />
+                <Tooltip />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center text-dark-500">
+              Sin datos para mostrar
+            </div>
+          )}
+        </div>
+
+        <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-dark-100">Leads Recientes</h2>
             <a href="/dashboard/leads" className="text-brand-400 hover:text-brand-300 text-sm font-medium">
               Ver todos →
             </a>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-dark-700">
-                  <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                    Negocio
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                    Rubro
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                    Estado
-                  </th>
-                  <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                    Fecha
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-dark-700">
-                {recentLeads.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="py-8 text-center text-dark-400">
-                      No hay leads aún. Crea una campaña para empezar.
-                    </td>
-                  </tr>
-                ) : (
-                  recentLeads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-dark-700/50 transition-colors">
-                      <td className="py-3 px-4">
-                        <div className="text-sm font-medium text-dark-100">
-                          {lead.nombre_negocio}
-                        </div>
-                        <div className="text-xs text-dark-400">{lead.telefono_whatsapp}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span className="text-sm text-dark-300 capitalize">{lead.rubro}</span>
-                      </td>
-                      <td className="py-3 px-4">
-                        {getStatusBadge(lead.estado_proceso)}
-                      </td>
-                      <td className="py-3 px-4 text-sm text-dark-400">
-                        {lead.fecha_creacion?.toDate?.()?.toLocaleDateString('es-AR') || 'N/A'}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="card">
-          <h2 className="text-lg font-semibold text-dark-100 mb-4">Pipeline por Rubro</h2>
-          <div className="space-y-4">
-            {[
-              { name: 'Inmobiliarias', count: 45, color: 'bg-brand-500' },
-              { name: 'Estética/Peluquería', count: 32, color: 'bg-violet-500' },
-              { name: 'Clínicas Médicas', count: 28, color: 'bg-emerald-500' },
-              { name: 'Restaurantes', count: 15, color: 'bg-amber-500' },
-            ].map((niche) => (
-              <div key={niche.name}>
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-dark-300">{niche.name}</span>
-                  <span className="text-sm font-medium text-dark-200">{niche.count}</span>
-                </div>
-                <div className="h-2 bg-dark-700 rounded-full overflow-hidden">
-                  <div
-                    className={`h-full ${niche.color} rounded-full transition-all duration-500`}
-                    style={{ width: `${(niche.count / 45) * 100}%` }}
-                  />
-                </div>
+          <div className="space-y-3">
+            {recentLeads.length === 0 ? (
+              <div className="py-8 text-center text-dark-400">
+                No hay leads aún. Crea una campaña para empezar.
               </div>
-            ))}
+            ) : (
+              recentLeads.map((lead) => (
+                <div key={lead.id} className="flex items-center justify-between p-3 bg-dark-900 rounded-lg">
+                  <div>
+                    <div className="text-sm font-medium text-dark-100">{lead.nombre_negocio}</div>
+                    <div className="text-xs text-dark-400">{lead.rubro}</div>
+                  </div>
+                  {getStatusBadge(lead.estado_proceso)}
+                </div>
+              ))
+            )}
           </div>
         </div>
       </div>

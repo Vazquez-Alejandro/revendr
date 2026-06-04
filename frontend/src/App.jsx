@@ -4,6 +4,7 @@ import { DashboardLayout } from './components/layout/DashboardLayout'
 import Dashboard from './pages/Dashboard'
 import Campaigns from './pages/Campaigns'
 import Leads from './pages/Leads'
+import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Landing from './pages/public/Landing'
@@ -40,6 +41,7 @@ function App() {
         <Route index element={<Dashboard />} />
         <Route path="campanias" element={<Campaigns />} />
         <Route path="leads" element={<Leads />} />
+        <Route path="settings" element={<Settings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
