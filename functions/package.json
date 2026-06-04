@@ -2,7 +2,7 @@
   "name": "revendr-functions",
   "description": "Revendr Firebase Cloud Functions",
   "engines": {
-    "node": "18"
+    "node": "20"
   },
   "main": "index.js",
   "dependencies": {
