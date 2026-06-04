@@ -5,7 +5,7 @@ import {
   signOut as firebaseSignOut,
   sendPasswordResetEmail 
 } from 'firebase/auth'
-import { doc, getDoc, onSnapshot, updateDoc } from 'firebase/firestore'
+import { doc, getDoc, updateDoc } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 
 const AuthContext = createContext(null)
@@ -27,50 +27,29 @@ export function AuthProvider({ children }) {
   const clearError = useCallback(() => setError(null), [])
 
   useEffect(() => {
-    let unsubscribeAdmin = null
-
-    const unsubscribeAuth = onAuthStateChanged(
-      auth,
-      async (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser(firebaseUser)
         try {
-          if (firebaseUser) {
-            setUser(firebaseUser)
-
-            const adminRef = doc(db, 'usuarios_admin', firebaseUser.uid)
-            
-            unsubscribeAdmin = onSnapshot(
-              adminRef,
-              (docSnap) => {
-                if (docSnap.exists()) {
-                  setAdminData({ id: docSnap.id, ...docSnap.data() })
-                } else {
-                  setAdminData(null)
-                }
-                setLoading(false)
-              },
-              (err) => {
-                console.error('Error listening to admin data:', err)
-                setAdminData(null)
-                setLoading(false)
-              }
-            )
+          const adminRef = doc(db, 'usuarios_admin', firebaseUser.uid)
+          const adminSnap = await getDoc(adminRef)
+          if (adminSnap.exists()) {
+            setAdminData({ id: adminSnap.id, ...adminSnap.data() })
           } else {
-            setUser(null)
             setAdminData(null)
-            setLoading(false)
           }
         } catch (err) {
-          console.error('Auth state change error:', err)
-          setError(err.message)
-          setLoading(false)
+          console.error('Error loading admin data:', err)
+          setAdminData(null)
         }
+      } else {
+        setUser(null)
+        setAdminData(null)
       }
-    )
+      setLoading(false)
+    })
 
-    return () => {
-      unsubscribeAuth()
-      if (unsubscribeAdmin) unsubscribeAdmin()
-    }
+    return () => unsubscribe()
   }, [])
 
   const signIn = useCallback(async (email, password) => {
@@ -118,20 +97,6 @@ export function AuthProvider({ children }) {
     return available >= amount
   }, [adminData])
 
-  const deductCredit = useCallback(async (apiType, amount = 1) => {
-    if (!adminData) throw new Error('No admin data available')
-    
-    const currentCredits = adminData.api_credits?.[apiType] || 0
-    if (currentCredits < amount) {
-      throw new Error(`Insufficient ${apiType} credits`)
-    }
-
-    const adminRef = doc(db, 'usuarios_admin', adminData.id)
-    await updateDoc(adminRef, {
-      [`api_credits.${apiType}`]: currentCredits - amount
-    })
-  }, [adminData])
-
   const value = {
     user,
     adminData,
@@ -143,7 +108,6 @@ export function AuthProvider({ children }) {
     clearError,
     hasPermission,
     canUseAPI,
-    deductCredit,
     isAuthenticated: !!user,
     isAdmin: adminData?.role === 'super_admin' || adminData?.role === 'admin',
   }

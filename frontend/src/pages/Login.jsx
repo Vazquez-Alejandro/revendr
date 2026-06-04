@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Loader2, AlertCircle } from 'lucide-react'
@@ -11,10 +11,11 @@ export default function Login() {
   const { signIn, isAuthenticated } = useAuth()
   const navigate = useNavigate()
 
-  if (isAuthenticated) {
-    navigate('/dashboard')
-    return null
-  }
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [isAuthenticated, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
