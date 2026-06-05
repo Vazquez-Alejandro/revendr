@@ -257,11 +257,52 @@ app.post('/webhooks/stripe', async (req, res) => {
 
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object
+      const customerEmail = session.customer_details?.email
+      const customerName = session.customer_details?.name
+      const plan = session.metadata?.plan || 'starter'
       const leadId = session.metadata?.leadId
+
+      let userId = null
+
+      if (customerEmail) {
+        try {
+          const existingUser = await admin.auth().getUserByEmail(customerEmail)
+          userId = existingUser.uid
+        } catch (err) {
+          const newUser = await admin.auth().createUser({
+            email: customerEmail,
+            displayName: customerName || customerEmail.split('@')[0],
+            password: Math.random().toString(36).slice(-12) + 'A1!',
+          })
+          userId = newUser.uid
+          await admin.auth().setCustomUserClaims(userId, { role: 'admin' })
+        }
+
+        const planCredits = {
+          starter: { apify: 100, whatsapp: 1000, inmoxil: 50 },
+          growth: { apify: 1000, whatsapp: 10000, inmoxil: 500 },
+          enterprise: { apify: 999999, whatsapp: 999999, inmoxil: 999999 },
+        }
+
+        await db.collection('usuarios_admin').doc(userId).set({
+          email: customerEmail,
+          nombre: customerName || customerEmail.split('@')[0],
+          role: 'admin',
+          plan: plan,
+          stripe_customer_id: session.customer,
+          stripe_subscription_id: session.subscription,
+          api_credits: planCredits[plan] || planCredits.starter,
+          fecha_creacion: new Date(),
+          activo: true,
+        }, { merge: true })
+
+        console.log('Customer provisioned:', { userId, email: customerEmail, plan })
+      }
 
       if (leadId) {
         await db.collection('leads').doc(leadId).update({
           estado_proceso: 'cliente_activo',
+          user_id: userId,
           stripe_customer_id: session.customer,
           stripe_subscription_id: session.subscription,
           fecha_pago: new Date(),
@@ -270,10 +311,46 @@ app.post('/webhooks/stripe', async (req, res) => {
       }
     }
 
+    if (event.type === 'customer.subscription.deleted') {
+      const subscription = event.data.object
+      const customer = await stripe.customers.retrieve(subscription.customer)
+      
+      if (customer.metadata?.user_id) {
+        await db.collection('usuarios_admin').doc(customer.metadata.user_id).update({
+          plan: 'inactive',
+          activo: false,
+          fecha_desactivacion: new Date(),
+        })
+      }
+    }
+
     res.json({ received: true })
   } catch (error) {
     console.error('Stripe webhook error:', error)
     res.status(500).json({ error: 'Webhook handler failed' })
+  }
+})
+
+// ============ STRIPE CHECKOUT ============
+
+app.post('/api/create-checkout-session', async (req, res) => {
+  try {
+    const { priceId, leadId } = req.body
+    const stripe = require('stripe')(STRIPE_SECRET_KEY)
+
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      payment_method_types: ['card'],
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${req.headers.origin || 'https://revendr-9add8.web.app'}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${req.headers.origin || 'https://revendr-9add8.web.app'}/pricing`,
+      metadata: { leadId: leadId || '' },
+    })
+
+    res.json({ sessionId: session.id })
+  } catch (error) {
+    console.error('Error creating checkout session:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
 
