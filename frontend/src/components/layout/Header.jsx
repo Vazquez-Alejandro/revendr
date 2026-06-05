@@ -1,9 +1,13 @@
 import { useAuth } from '../../contexts/AuthContext'
-import { Bell, Search, ChevronDown } from 'lucide-react'
+import { useTheme } from '../../contexts/ThemeContext'
+import { useI18n } from '../../contexts/I18nContext'
+import { Bell, Search, Sun, Moon, Globe } from 'lucide-react'
 import { useState } from 'react'
 
 export function Header() {
   const { user, adminData } = useAuth()
+  const { theme, toggleTheme } = useTheme()
+  const { locale, changeLocale } = useI18n()
   const [showSearch, setShowSearch] = useState(false)
 
   return (
@@ -21,7 +25,24 @@ export function Header() {
         </button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={() => changeLocale(locale === 'es' ? 'en' : 'es')}
+          className="p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-800 rounded-lg transition-all duration-200 flex items-center gap-1"
+          title={locale === 'es' ? 'Switch to English' : 'Cambiar a Español'}
+        >
+          <Globe className="w-5 h-5" />
+          <span className="text-xs font-medium">{locale.toUpperCase()}</span>
+        </button>
+
+        <button
+          onClick={toggleTheme}
+          className="p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-800 rounded-lg transition-all duration-200"
+          title={theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+        >
+          {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+        </button>
+
         <button className="relative p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-800 rounded-lg transition-all duration-200">
           <Bell className="w-5 h-5" />
           <span className="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full"></span>

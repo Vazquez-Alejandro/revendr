@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
 import { db } from '../config/firebase'
+import { useI18n } from '../contexts/I18nContext'
 import { 
   Megaphone, 
   Users, 
@@ -27,6 +28,7 @@ import {
 const COLORS = ['#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444']
 
 export default function Dashboard() {
+  const { t, locale } = useI18n()
   const [stats, setStats] = useState({
     totalCampaigns: 0,
     activeCampaigns: 0,
@@ -129,24 +131,24 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      title: 'Campañas Activas',
+      title: t('activeCampaigns'),
       value: stats.activeCampaigns,
       total: stats.totalCampaigns,
       icon: Megaphone,
       color: 'brand',
-      change: '+2 esta semana',
+      change: locale === 'es' ? '+2 esta semana' : '+2 this week',
       positive: true,
     },
     {
-      title: 'Total Leads',
+      title: t('totalLeads'),
       value: stats.totalLeads,
       icon: Users,
       color: 'emerald',
-      change: `+${stats.leadsHoy} hoy`,
+      change: `+${stats.leadsHoy} ${locale === 'es' ? 'hoy' : 'today'}`,
       positive: true,
     },
     {
-      title: 'Demos Generadas',
+      title: t('demosGenerated'),
       value: stats.demosGeneradas,
       icon: TrendingUp,
       color: 'violet',
@@ -154,7 +156,7 @@ export default function Dashboard() {
       positive: true,
     },
     {
-      title: 'Tasa Conversión',
+      title: t('conversionRate'),
       value: `${stats.conversionRate}%`,
       icon: MessageCircle,
       color: 'amber',
@@ -178,13 +180,21 @@ export default function Dashboard() {
       interesado: 'badge-success',
       cliente_activo: 'badge-success',
     }
-    const labels = {
+    const labelsEs = {
       scraped: 'Scrapeado',
       demo_generada: 'Demo Generada',
       mensaje_enviado: 'Mensaje Enviado',
       interesado: 'Interesado',
       cliente_activo: 'Cliente Activo',
     }
+    const labelsEn = {
+      scraped: 'Scraped',
+      demo_generada: 'Demo Generated',
+      mensaje_enviado: 'Message Sent',
+      interesado: 'Interested',
+      cliente_activo: 'Active Client',
+    }
+    const labels = locale === 'es' ? labelsEs : labelsEn
     return (
       <span className={`badge ${badges[status] || 'badge-info'}`}>
         {labels[status] || status}
@@ -207,7 +217,7 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="text-dark-400">Cargando datos del dashboard...</div>
+        <div className="text-dark-400">{locale === 'es' ? 'Cargando datos del dashboard...' : 'Loading dashboard...'}</div>
       </div>
     )
   }
@@ -215,8 +225,8 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark-50">Dashboard</h1>
-        <p className="text-dark-400 mt-1">Vista general de tu plataforma SaaS</p>
+        <h1 className="text-2xl font-bold text-dark-50">{t('dashboard')}</h1>
+        <p className="text-dark-400 mt-1">{locale === 'es' ? 'Vista general de tu plataforma SaaS' : 'Overview of your SaaS platform'}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -249,7 +259,7 @@ export default function Dashboard() {
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 card">
-          <h2 className="text-lg font-semibold text-dark-100 mb-4">Leads por Día</h2>
+          <h2 className="text-lg font-semibold text-dark-100 mb-4">{t('leadsPerDay')}</h2>
           {chartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <AreaChart data={chartData}>
@@ -275,13 +285,13 @@ export default function Dashboard() {
             </ResponsiveContainer>
           ) : (
             <div className="h-[300px] flex items-center justify-center text-dark-500">
-              Sin datos para mostrar
+              {locale === 'es' ? 'Sin datos para mostrar' : 'No data to show'}
             </div>
           )}
         </div>
 
         <div className="card">
-          <h2 className="text-lg font-semibold text-dark-100 mb-4">Leads por Estado</h2>
+          <h2 className="text-lg font-semibold text-dark-100 mb-4">{t('leadsByStatus')}</h2>
           {statusData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
@@ -303,7 +313,7 @@ export default function Dashboard() {
             </ResponsiveContainer>
           ) : (
             <div className="h-[300px] flex items-center justify-center text-dark-500">
-              Sin datos para mostrar
+              {locale === 'es' ? 'Sin datos para mostrar' : 'No data to show'}
             </div>
           )}
           <div className="flex flex-wrap gap-2 mt-2">
@@ -319,7 +329,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <h2 className="text-lg font-semibold text-dark-100 mb-4">Leads por Rubro</h2>
+          <h2 className="text-lg font-semibold text-dark-100 mb-4">{t('leadsByNiche')}</h2>
           {rubroData.length > 0 ? (
             <ResponsiveContainer width="100%" height={250}>
               <BarChart data={rubroData}>
@@ -332,22 +342,22 @@ export default function Dashboard() {
             </ResponsiveContainer>
           ) : (
             <div className="h-[250px] flex items-center justify-center text-dark-500">
-              Sin datos para mostrar
+              {locale === 'es' ? 'Sin datos para mostrar' : 'No data to show'}
             </div>
           )}
         </div>
 
         <div className="card">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-dark-100">Leads Recientes</h2>
+            <h2 className="text-lg font-semibold text-dark-100">{t('recentLeads')}</h2>
             <a href="/dashboard/leads" className="text-brand-400 hover:text-brand-300 text-sm font-medium">
-              Ver todos →
+              {t('viewAll')}
             </a>
           </div>
           <div className="space-y-3">
             {recentLeads.length === 0 ? (
               <div className="py-8 text-center text-dark-400">
-                No hay leads aún. Crea una campaña para empezar.
+                {t('noLeadsYet')}
               </div>
             ) : (
               recentLeads.map((lead) => (

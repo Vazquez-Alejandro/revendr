@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useI18n } from '../../contexts/I18nContext'
 import { 
   Zap, 
   Bot, 
@@ -11,7 +12,7 @@ import {
   Sparkles
 } from 'lucide-react'
 
-const features = [
+const featuresEs = [
   {
     icon: Bot,
     title: 'Scraping Automatizado',
@@ -44,22 +45,66 @@ const features = [
   },
 ]
 
-const niches = [
-  { name: 'Inmobiliarias', apps: 'Inmoxil', color: 'from-blue-500 to-blue-700' },
-  { name: 'Estética / Peluquería', apps: 'TurnosPro', color: 'from-pink-500 to-pink-700' },
-  { name: 'Clínicas Médicas', apps: 'MediCita', color: 'from-emerald-500 to-emerald-700' },
-  { name: 'Restaurantes', apps: 'MenuDigital', color: 'from-amber-500 to-amber-700' },
-  { name: 'Gimnasios', apps: 'FitGym', color: 'from-violet-500 to-violet-700' },
+const featuresEn = [
+  {
+    icon: Bot,
+    title: 'Automated Scraping',
+    description: 'Connect with Google Maps and Instagram to get hundreds of qualified leads per niche and city.',
+  },
+  {
+    icon: Sparkles,
+    title: 'Personalized Demos',
+    description: 'Generate unique demos for each lead using real business data. Zero manual work.',
+  },
+  {
+    icon: MessageCircle,
+    title: 'WhatsApp at Scale',
+    description: 'Send personalized messages with the demo included. Delays to avoid bans.',
+  },
+  {
+    icon: CreditCard,
+    title: 'Stripe Payments',
+    description: 'Clients pay directly from the demo. Automatic account setup on payment confirmation.',
+  },
+  {
+    icon: BarChart3,
+    title: 'Real-Time Dashboard',
+    description: 'Visualize the full pipeline: leads → demos → sends → conversions. All in one place.',
+  },
+  {
+    icon: Shield,
+    title: 'Multi-Niche',
+    description: 'Real estate, salons, clinics, restaurants. One system to resell multiple apps.',
+  },
 ]
 
-const stats = [
+const niches = [
+  { nameEs: 'Inmobiliarias', nameEn: 'Real Estate', apps: 'Inmoxil', color: 'from-blue-500 to-blue-700' },
+  { nameEs: 'Estética / Peluquería', nameEn: 'Beauty / Salon', apps: 'TurnosPro', color: 'from-pink-500 to-pink-700' },
+  { nameEs: 'Clínicas Médicas', nameEn: 'Medical Clinics', apps: 'MediCita', color: 'from-emerald-500 to-emerald-700' },
+  { nameEs: 'Restaurantes', nameEn: 'Restaurants', apps: 'MenuDigital', color: 'from-amber-500 to-amber-700' },
+  { nameEs: 'Gimnasios', nameEn: 'Gyms', apps: 'FitGym', color: 'from-violet-500 to-violet-700' },
+]
+
+const statsEs = [
   { value: '10,000+', label: 'Leads procesados' },
   { value: '500+', label: 'Demos generadas' },
   { value: '95%', label: 'Tasa de entrega' },
   { value: '3x', label: 'Más conversiones' },
 ]
 
+const statsEn = [
+  { value: '10,000+', label: 'Leads processed' },
+  { value: '500+', label: 'Demos generated' },
+  { value: '95%', label: 'Delivery rate' },
+  { value: '3x', label: 'More conversions' },
+]
+
 export default function Landing() {
+  const { t, locale } = useI18n()
+  const features = locale === 'es' ? featuresEs : featuresEn
+  const stats = locale === 'es' ? statsEs : statsEn
+
   return (
     <div className="min-h-screen bg-dark-950">
       {/* Navbar */}
@@ -73,10 +118,10 @@ export default function Landing() {
           </div>
           <div className="flex items-center gap-4">
             <Link to="/login" className="text-dark-400 hover:text-dark-200 transition-colors">
-              Iniciar Sesión
+              {t('login')}
             </Link>
             <Link to="/register" className="btn-primary">
-              Empezar Gratis
+              {t('landing.getStarted')}
             </Link>
           </div>
         </div>
@@ -89,23 +134,21 @@ export default function Landing() {
           <div className="text-center max-w-4xl mx-auto">
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 border border-brand-500/20 rounded-full text-brand-400 text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
-              Automatización B2B Inteligente
+              {locale === 'es' ? 'Automatización B2B Inteligente' : 'Smart B2B Automation'}
             </div>
             <h1 className="text-5xl md:text-6xl font-bold text-dark-50 leading-tight mb-6">
-              Revendé tus apps de forma{' '}
-              <span className="text-gradient">masiva y automatizada</span>
+              {t('landing.title')}
             </h1>
             <p className="text-xl text-dark-400 mb-8 max-w-2xl mx-auto">
-              Un motor SaaS que scrapea leads, genera demos personalizadas, envía WhatsApp 
-              y cobra con Stripe. Todo automático, por rubro.
+              {t('landing.subtitle')}
             </p>
             <div className="flex items-center justify-center gap-4">
               <Link to="/register" className="btn-primary text-lg px-8 py-3 flex items-center gap-2">
-                Comenzar Ahora
+                {t('landing.getStarted')}
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a href="#features" className="btn-secondary text-lg px-8 py-3">
-                Ver Features
+                {t('landing.seeFeatures')}
               </a>
             </div>
           </div>
@@ -127,10 +170,10 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-dark-50 mb-4">
-              Todo lo que necesitás para revender
+              {t('landing.features')}
             </h2>
             <p className="text-dark-400 text-lg max-w-2xl mx-auto">
-              Un pipeline completo que funciona solo. Desde el scraping hasta el cobro.
+              {t('landing.featuresDesc')}
             </p>
           </div>
 
@@ -153,20 +196,20 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-3xl md:text-4xl font-bold text-dark-50 mb-4">
-              Un sistema, múltiples rubros
+              {t('landing.multiNiche')}
             </h2>
             <p className="text-dark-400 text-lg max-w-2xl mx-auto">
-              Configurá una campaña por rubro y el sistema se adapta automáticamente.
+              {t('landing.multiNicheDesc')}
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
             {niches.map((niche) => (
-              <div key={niche.name} className="card-hover text-center group">
+              <div key={niche.nameEs} className="card-hover text-center group">
                 <div className={`w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br ${niche.color} flex items-center justify-center mb-4`}>
-                  <span className="text-2xl font-bold text-white">{niche.name[0]}</span>
+                  <span className="text-2xl font-bold text-white">{(locale === 'es' ? niche.nameEs : niche.nameEn)[0]}</span>
                 </div>
-                <h3 className="font-semibold text-dark-100 mb-1">{niche.name}</h3>
+                <h3 className="font-semibold text-dark-100 mb-1">{locale === 'es' ? niche.nameEs : niche.nameEn}</h3>
                 <p className="text-xs text-dark-400">{niche.apps}</p>
               </div>
             ))}
@@ -178,13 +221,13 @@ export default function Landing() {
       <section className="py-24 border-t border-dark-800">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-dark-50 mb-6">
-            ¿Listo para escalar tus ventas?
+            {t('landing.cta')}
           </h2>
           <p className="text-dark-400 text-lg mb-8">
-            Unite a cientos de revendedores que ya automatizan su prospección.
+            {t('landing.ctaDesc')}
           </p>
           <Link to="/register" className="btn-primary text-lg px-10 py-4 inline-flex items-center gap-2">
-            Crear Cuenta Gratis
+            {t('landing.getStarted')}
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -201,7 +244,7 @@ export default function Landing() {
               <span className="font-bold text-dark-100">Revendr</span>
             </div>
             <p className="text-dark-500 text-sm">
-              © 2024 Revendr. Todos los derechos reservados.
+              © 2024 Revendr. {locale === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}
             </p>
           </div>
         </div>
