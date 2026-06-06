@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useI18n } from '../contexts/I18nContext'
 import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { 
@@ -9,7 +10,6 @@ import {
   Shield, 
   Save, 
   Loader2, 
-  CheckCircle,
   AlertCircle,
   ExternalLink,
   Copy
@@ -18,6 +18,7 @@ import toast from 'react-hot-toast'
 
 export default function Settings() {
   const { adminData, user } = useAuth()
+  const { t, locale } = useI18n()
   const [activeTab, setActiveTab] = useState('api')
   const [saving, setSaving] = useState(false)
   const [apiKeys, setApiKeys] = useState({
@@ -43,10 +44,10 @@ export default function Settings() {
         api_keys: apiKeys,
         fecha_actualizacion: new Date(),
       })
-      toast.success('API keys guardadas correctamente')
+      toast.success(locale === 'es' ? 'API keys guardadas correctamente' : 'API keys saved successfully')
     } catch (error) {
       console.error('Error saving API keys:', error)
-      toast.error('Error al guardar las API keys')
+      toast.error(locale === 'es' ? 'Error al guardar las API keys' : 'Error saving API keys')
     } finally {
       setSaving(false)
     }
@@ -54,21 +55,21 @@ export default function Settings() {
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text)
-    toast.success('Copiado al portapapeles')
+    toast.success(locale === 'es' ? 'Copiado al portapapeles' : 'Copied to clipboard')
   }
 
   const tabs = [
-    { id: 'api', label: 'API Keys', icon: Key },
-    { id: 'billing', label: 'Facturación', icon: CreditCard },
-    { id: 'notifications', label: 'Notificaciones', icon: Bell },
-    { id: 'security', label: 'Seguridad', icon: Shield },
+    { id: 'api', label: t('apiKeysTab'), icon: Key },
+    { id: 'billing', label: t('billingTab'), icon: CreditCard },
+    { id: 'notifications', label: t('notificationsTab'), icon: Bell },
+    { id: 'security', label: t('securityTab'), icon: Shield },
   ]
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-dark-50">Configuración</h1>
-        <p className="text-dark-400 mt-1">Gestioná tus API keys, facturación y preferencias</p>
+        <h1 className="text-2xl font-bold text-dark-50">{t('settings')}</h1>
+        <p className="text-dark-400 mt-1">{t('settingsDesc')}</p>
       </div>
 
       <div className="flex gap-6">
@@ -97,10 +98,10 @@ export default function Settings() {
           {activeTab === 'api' && (
             <div className="card space-y-6">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-dark-100">API Keys</h2>
+                <h2 className="text-lg font-semibold text-dark-100">{t('apiKeysTab')}</h2>
                 <div className="flex items-center gap-2 text-xs text-dark-400">
                   <AlertCircle className="w-4 h-4" />
-                  Las keys se almacenan encriptadas
+                  {t('keysEncrypted')}
                 </div>
               </div>
 
@@ -128,9 +129,9 @@ export default function Settings() {
                   </button>
                 </div>
                 <p className="text-xs text-dark-500">
-                  Para scraping de Google Maps e Instagram.{' '}
+                  {t('forScraping')}{' '}
                   <a href="https://console.apify.com/account/integrations" target="_blank" rel="noopener" className="text-brand-400 hover:text-brand-300">
-                    Obtener key <ExternalLink className="w-3 h-3 inline" />
+                    {t('obtainKey')} <ExternalLink className="w-3 h-3 inline" />
                   </a>
                 </p>
               </div>
@@ -184,9 +185,9 @@ export default function Settings() {
                   placeholder="EAAxxxxx"
                 />
                 <p className="text-xs text-dark-500">
-                  Token de Meta Business Platform.{' '}
+                  {locale === 'es' ? 'Token de Meta Business Platform.' : 'Meta Business Platform token.'}{' '}
                   <a href="https://developers.facebook.com/apps/" target="_blank" rel="noopener" className="text-brand-400 hover:text-brand-300">
-                    Obtener token <ExternalLink className="w-3 h-3 inline" />
+                    {t('obtainKey')} <ExternalLink className="w-3 h-3 inline" />
                   </a>
                 </p>
               </div>
@@ -251,7 +252,7 @@ export default function Settings() {
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  Guardar API Keys
+                  {t('saveApiKeys')}
                 </button>
               </div>
             </div>
@@ -259,21 +260,21 @@ export default function Settings() {
 
           {activeTab === 'billing' && (
             <div className="card">
-              <h2 className="text-lg font-semibold text-dark-100 mb-6">Facturación</h2>
+              <h2 className="text-lg font-semibold text-dark-100 mb-6">{t('billingTitle')}</h2>
               
               <div className="grid md:grid-cols-3 gap-4 mb-6">
                 <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
-                  <div className="text-sm text-dark-400 mb-1">Plan Actual</div>
+                  <div className="text-sm text-dark-400 mb-1">{t('currentPlan')}</div>
                   <div className="text-xl font-bold text-brand-400">Enterprise</div>
                 </div>
                 <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
-                  <div className="text-sm text-dark-400 mb-1">Créditos API</div>
+                  <div className="text-sm text-dark-400 mb-1">{t('apiCredits')}</div>
                   <div className="text-xl font-bold text-emerald-400">
                     {adminData?.api_credits?.apify || 0}
                   </div>
                 </div>
                 <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
-                  <div className="text-sm text-dark-400 mb-1">Próximo cobro</div>
+                  <div className="text-sm text-dark-400 mb-1">{t('nextBilling')}</div>
                   <div className="text-xl font-bold text-dark-100">$399/mes</div>
                 </div>
               </div>
@@ -281,10 +282,10 @@ export default function Settings() {
               <div className="border border-dark-700 rounded-xl p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="font-medium text-dark-100">Método de pago</h3>
+                    <h3 className="font-medium text-dark-100">{t('paymentMethod')}</h3>
                     <p className="text-sm text-dark-400">•••• •••• •••• 4242</p>
                   </div>
-                  <button className="btn-secondary text-sm">Actualizar</button>
+                  <button className="btn-secondary text-sm">{t('update')}</button>
                 </div>
               </div>
             </div>
@@ -292,14 +293,14 @@ export default function Settings() {
 
           {activeTab === 'notifications' && (
             <div className="card">
-              <h2 className="text-lg font-semibold text-dark-100 mb-6">Notificaciones</h2>
+              <h2 className="text-lg font-semibold text-dark-100 mb-6">{t('notificationsTitle')}</h2>
               <div className="space-y-4">
                 {[
-                  { label: 'Nuevo lead registrado', description: 'Cuando el scraper agrega un lead nuevo', enabled: true },
-                  { label: 'Demo generada', description: 'Cuando se completa una demo personalizada', enabled: true },
-                  { label: 'Mensaje enviado', description: 'Confirmación de envío WhatsApp', enabled: false },
-                  { label: 'Lead convertido', description: 'Cuando un lead se vuelve cliente activo', enabled: true },
-                  { label: 'Error en scraping', description: 'Si el scraper falla', enabled: true },
+                  { label: t('newLeadNotif'), description: t('newLeadDesc'), enabled: true },
+                  { label: t('demoGeneratedNotif'), description: t('demoGeneratedDesc'), enabled: true },
+                  { label: t('messageSentNotif'), description: t('messageSentDesc'), enabled: false },
+                  { label: t('leadConvertedNotif'), description: t('leadConvertedDesc'), enabled: true },
+                  { label: t('scrapingErrorNotif'), description: t('scrapingErrorDesc'), enabled: true },
                 ].map((notif, i) => (
                   <div key={i} className="flex items-center justify-between p-4 bg-dark-900 rounded-xl">
                     <div>
@@ -318,21 +319,21 @@ export default function Settings() {
 
           {activeTab === 'security' && (
             <div className="card">
-              <h2 className="text-lg font-semibold text-dark-100 mb-6">Seguridad</h2>
+              <h2 className="text-lg font-semibold text-dark-100 mb-6">{t('securityTitle')}</h2>
               <div className="space-y-4">
                 <div className="p-4 bg-dark-900 rounded-xl">
-                  <h3 className="font-medium text-dark-100 mb-1">Email</h3>
+                  <h3 className="font-medium text-dark-100 mb-1">{t('email')}</h3>
                   <p className="text-sm text-dark-400">{user?.email}</p>
                 </div>
                 <div className="p-4 bg-dark-900 rounded-xl">
-                  <h3 className="font-medium text-dark-100 mb-1">Contraseña</h3>
+                  <h3 className="font-medium text-dark-100 mb-1">{t('password')}</h3>
                   <p className="text-sm text-dark-400">••••••••</p>
                   <button className="text-sm text-brand-400 hover:text-brand-300 mt-2">
-                    Cambiar contraseña
+                    {t('changePassword')}
                   </button>
                 </div>
                 <div className="p-4 bg-dark-900 rounded-xl">
-                  <h3 className="font-medium text-dark-100 mb-1">Rol</h3>
+                  <h3 className="font-medium text-dark-100 mb-1">{t('role')}</h3>
                   <p className="text-sm text-dark-400 capitalize">{adminData?.role || 'admin'}</p>
                 </div>
               </div>

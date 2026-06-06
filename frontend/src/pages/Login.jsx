@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useI18n } from '../contexts/I18nContext'
 import { Loader2, AlertCircle } from 'lucide-react'
 
 export default function Login() {
@@ -9,6 +10,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const { signIn, isAuthenticated } = useAuth()
+  const { t, locale } = useI18n()
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -20,7 +22,7 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault()
     if (!email || !password) {
-      setError('Por favor completa todos los campos')
+      setError(locale === 'es' ? 'Por favor completa todos los campos' : 'Please fill in all fields')
       return
     }
 
@@ -45,7 +47,7 @@ export default function Login() {
             <span className="text-3xl">⚡</span>
           </div>
           <h1 className="text-2xl font-bold text-dark-50">Revendr</h1>
-          <p className="text-dark-400 mt-2">SaaS Engine - Panel de Control</p>
+          <p className="text-dark-400 mt-2">{locale === 'es' ? 'SaaS Engine - Panel de Control' : 'SaaS Engine - Control Panel'}</p>
         </div>
 
         <div className="card">
@@ -59,7 +61,7 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
-                Correo Electrónico
+                {t('email')}
               </label>
               <input
                 type="email"
@@ -73,7 +75,7 @@ export default function Login() {
 
             <div>
               <label className="block text-sm font-medium text-dark-300 mb-2">
-                Contraseña
+                {t('password')}
               </label>
               <input
                 type="password"
@@ -93,19 +95,19 @@ export default function Login() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Iniciando sesión...
+                  {locale === 'es' ? 'Iniciando sesión...' : 'Signing in...'}
                 </>
               ) : (
-                'Iniciar Sesión'
+                t('login')
               )}
             </button>
           </form>
 
           <div className="mt-6 text-center">
             <p className="text-dark-400 text-sm">
-              ¿No tenés cuenta?{' '}
+              {locale === 'es' ? '¿No tenés cuenta?' : "Don't have an account?"}{' '}
               <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium">
-                Crear Cuenta
+                {t('register')}
               </Link>
             </p>
           </div>

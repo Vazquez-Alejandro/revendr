@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
+import { useI18n } from '../../contexts/I18nContext'
 import { 
   LayoutDashboard, 
   Megaphone, 
@@ -10,16 +11,17 @@ import {
 } from 'lucide-react'
 import clsx from 'clsx'
 
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Campañas', href: '/dashboard/campanias', icon: Megaphone },
-  { name: 'Leads', href: '/dashboard/leads', icon: Users },
-  { name: 'Configuración', href: '/dashboard/settings', icon: Settings },
-]
-
 export function Sidebar() {
   const { signOut } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
+
+  const navigation = [
+    { name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { name: t('campaigns'), href: '/dashboard/campanias', icon: Megaphone },
+    { name: t('leads'), href: '/dashboard/leads', icon: Users },
+    { name: t('settings'), href: '/dashboard/settings', icon: Settings },
+  ]
 
   const handleSignOut = async () => {
     await signOut()
@@ -66,7 +68,7 @@ export function Sidebar() {
           className="flex items-center gap-3 w-full px-4 py-3 rounded-lg text-sm font-medium text-dark-400 hover:text-red-400 hover:bg-red-500/10 transition-all duration-200"
         >
           <LogOut className="w-5 h-5" />
-          Cerrar Sesión
+          {t('logout')}
         </button>
       </div>
     </aside>

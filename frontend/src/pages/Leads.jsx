@@ -6,12 +6,11 @@ import {
   where, 
   orderBy,
   limit,
-  startAfter
 } from 'firebase/firestore'
 import { db } from '../config/firebase'
+import { useI18n } from '../contexts/I18nContext'
 import { 
   Users, 
-  Filter, 
   Download, 
   Loader2,
   Search,
@@ -20,25 +19,42 @@ import {
 } from 'lucide-react'
 
 const RUBROS = [
-  { value: 'todos', label: 'Todos los Rubros' },
-  { value: 'inmobiliaria', label: 'Inmobiliarias' },
-  { value: 'estetica', label: 'Estética / Peluquería' },
-  { value: 'clinica', label: 'Clínicas Médicas' },
-  { value: 'restaurante', label: 'Restaurantes' },
-  { value: 'gimnasio', label: 'Gimnasios' },
+  { value: 'todos', labelEs: 'Todos los Rubros', labelEn: 'All Niches' },
+  { value: 'inmobiliaria', labelEs: 'Inmobiliarias', labelEn: 'Real Estate' },
+  { value: 'estetica', labelEs: 'Estética / Peluquería', labelEn: 'Beauty / Salon' },
+  { value: 'clinica', labelEs: 'Clínicas Médicas', labelEn: 'Medical Clinics' },
+  { value: 'restaurante', labelEs: 'Restaurantes', labelEn: 'Restaurants' },
+  { value: 'gimnasio', labelEs: 'Gimnasios', labelEn: 'Gyms' },
 ]
 
 const ESTADOS = {
-  scraped: { label: 'Scrapeado', class: 'badge-info' },
-  demo_generada: { label: 'Demo Generada', class: 'badge-warning' },
-  mensaje_enviado: { label: 'Mensaje Enviado', class: 'badge-info' },
-  interesado: { label: 'Interesado', class: 'badge-success' },
-  cliente_activo: { label: 'Cliente Activo', class: 'badge-success' },
+  scraped: { class: 'badge-info' },
+  demo_generada: { class: 'badge-warning' },
+  mensaje_enviado: { class: 'badge-info' },
+  interesado: { class: 'badge-success' },
+  cliente_activo: { class: 'badge-success' },
+}
+
+const ESTADOS_LABELS_ES = {
+  scraped: 'Scrapeado',
+  demo_generada: 'Demo Generada',
+  mensaje_enviado: 'Mensaje Enviado',
+  interesado: 'Interesado',
+  cliente_activo: 'Cliente Activo',
+}
+
+const ESTADOS_LABELS_EN = {
+  scraped: 'Scraped',
+  demo_generada: 'Demo Generated',
+  mensaje_enviado: 'Message Sent',
+  interesado: 'Interested',
+  cliente_activo: 'Active Client',
 }
 
 const PAGE_SIZE = 20
 
 export default function Leads() {
+  const { t, locale } = useI18n()
   const [leads, setLeads] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterRubro, setFilterRubro] = useState('todos')
@@ -116,7 +132,9 @@ export default function Leads() {
   })
 
   const exportToCSV = () => {
-    const headers = ['Nombre', 'Teléfono', 'Email', 'Rubro', 'Estado', 'URL Origen', 'Fecha']
+    const headers = locale === 'es' 
+      ? ['Nombre', 'Teléfono', 'Email', 'Rubro', 'Estado', 'URL Origen', 'Fecha']
+      : ['Name', 'Phone', 'Email', 'Niche', 'Status', 'Source URL', 'Date']
     const rows = filteredLeads.map(lead => [
       lead.nombre_negocio,
       lead.telefono_whatsapp,
@@ -124,7 +142,7 @@ export default function Leads() {
       lead.rubro,
       lead.estado_proceso,
       lead.url_origen,
-      lead.fecha_creacion?.toDate?.()?.toLocaleDateString('es-AR'),
+      lead.fecha_creacion?.toDate?.()?.toLocaleDateString(locale === 'es' ? 'es-AR' : 'en-US'),
     ])
 
     const csv = [headers, ...rows].map(row => row.join(',')).join('\n')
@@ -136,29 +154,31 @@ export default function Leads() {
     a.click()
   }
 
+  const ESTADOS_LABELS = locale === 'es' ? ESTADOS_LABELS_ES : ESTADOS_LABELS_EN
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-dark-50">Leads</h1>
-          <p className="text-dark-400 mt-1">Gestiona y filtra todos tus leads</p>
+          <h1 className="text-2xl font-bold text-dark-50">{t('leads')}</h1>
+          <p className="text-dark-400 mt-1">{t('leadsDesc')}</p>
         </div>
         <button
           onClick={exportToCSV}
           className="btn-secondary flex items-center gap-2"
         >
           <Download className="w-4 h-4" />
-          Exportar CSV
+          {t('exportCSV')}
         </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         {[
-          { label: 'Total', value: stats.total, color: 'text-dark-100' },
-          { label: 'Scrapeados', value: stats.scraped, color: 'text-brand-400' },
-          { label: 'Demos', value: stats.demo_generada, color: 'text-amber-400' },
-          { label: 'Enviados', value: stats.mensaje_enviado, color: 'text-violet-400' },
-          { label: 'Clientes', value: stats.cliente_activo, color: 'text-emerald-400' },
+          { label: t('total'), value: stats.total, color: 'text-dark-100' },
+          { label: t('scrapedEs'), value: stats.scraped, color: 'text-brand-400' },
+          { label: t('demosEs'), value: stats.demo_generada, color: 'text-amber-400' },
+          { label: t('sentEs'), value: stats.mensaje_enviado, color: 'text-violet-400' },
+          { label: t('clientsEs'), value: stats.cliente_activo, color: 'text-emerald-400' },
         ].map(stat => (
           <div key={stat.label} className="card text-center py-3">
             <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
@@ -176,7 +196,7 @@ export default function Leads() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="input-field pl-10"
-              placeholder="Buscar por nombre, teléfono o email..."
+              placeholder={t('searchPlaceholder')}
             />
           </div>
           <select
@@ -185,7 +205,7 @@ export default function Leads() {
             className="select-field w-full md:w-48"
           >
             {RUBROS.map(r => (
-              <option key={r.value} value={r.value}>{r.label}</option>
+              <option key={r.value} value={r.value}>{locale === 'es' ? r.labelEs : r.labelEn}</option>
             ))}
           </select>
           <select
@@ -193,9 +213,9 @@ export default function Leads() {
             onChange={(e) => setFilterEstado(e.target.value)}
             className="select-field w-full md:w-48"
           >
-            <option value="todos">Todos los Estados</option>
-            {Object.entries(ESTADOS).map(([key, val]) => (
-              <option key={key} value={key}>{val.label}</option>
+            <option value="todos">{t('allStatuses')}</option>
+            {Object.entries(ESTADOS_LABELS).map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
             ))}
           </select>
         </div>
@@ -208,10 +228,10 @@ export default function Leads() {
           <div className="text-center py-12">
             <Users className="w-12 h-12 mx-auto text-dark-500 mb-4" />
             <h3 className="text-lg font-medium text-dark-200 mb-2">
-              No se encontraron leads
+              {t('noLeadsFound')}
             </h3>
             <p className="text-dark-400">
-              {searchTerm ? 'Intenta con otros términos de búsqueda' : 'Los leads aparecerán aquí cuando crees campañas'}
+              {searchTerm ? t('tryOtherSearch') : t('leadsWillAppear')}
             </p>
           </div>
         ) : (
@@ -221,22 +241,22 @@ export default function Leads() {
                 <thead>
                   <tr className="border-b border-dark-700">
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                      Negocio
+                      {t('business')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                      Contacto
+                      {t('contact')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                      Rubro
+                      {t('niche')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                      Estado
+                      {t('status')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                      Fuente
+                      {t('source')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                      Fecha
+                      {t('date')}
                     </th>
                   </tr>
                 </thead>
@@ -264,7 +284,7 @@ export default function Leads() {
                       </td>
                       <td className="py-3 px-4">
                         <span className={`badge ${ESTADOS[lead.estado_proceso]?.class || 'badge-info'}`}>
-                          {ESTADOS[lead.estado_proceso]?.label || lead.estado_proceso}
+                          {ESTADOS_LABELS[lead.estado_proceso] || lead.estado_proceso}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -278,7 +298,7 @@ export default function Leads() {
                         </a>
                       </td>
                       <td className="py-3 px-4 text-sm text-dark-400">
-                        {lead.fecha_creacion?.toDate?.()?.toLocaleDateString('es-AR') || 'N/A'}
+                        {lead.fecha_creacion?.toDate?.()?.toLocaleDateString(locale === 'es' ? 'es-AR' : 'en-US') || 'N/A'}
                       </td>
                     </tr>
                   ))}
@@ -288,7 +308,7 @@ export default function Leads() {
 
             <div className="flex items-center justify-between mt-4 pt-4 border-t border-dark-700">
               <p className="text-sm text-dark-400">
-                Mostrando {filteredLeads.length} leads
+                {t('showing')} {filteredLeads.length} {t('leadsUnit')}
               </p>
               <div className="flex items-center gap-2">
                 <button
