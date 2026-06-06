@@ -14,9 +14,11 @@ import Pricing from './pages/public/Pricing'
 import PrivacyPolicy from './pages/public/PrivacyPolicy'
 import TermsOfService from './pages/public/TermsOfService'
 import Help from './pages/public/Help'
+import Onboarding from './pages/public/Onboarding'
 import DemoBooking from './pages/public/DemoBooking'
 import DemoProperties from './pages/public/DemoProperties'
 import DemoClinic from './pages/public/DemoClinic'
+import DemoWhatsApp from './pages/public/DemoWhatsApp'
 
 function App() {
   return (
@@ -28,11 +30,13 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/help" element={<Help />} />
+        <Route path="/onboarding" element={<Onboarding />} />
         
         {/* Demo routes (public, no auth) */}
         <Route path="/demo/estetica/:demoId" element={<DemoBooking />} />
         <Route path="/demo/inmobiliaria/:demoId" element={<DemoProperties />} />
         <Route path="/demo/clinica/:demoId" element={<DemoClinic />} />
+        <Route path="/demo/whatsapp/:demoId" element={<DemoWhatsApp />} />
         
         {/* Auth routes */}
         <Route path="/login" element={<Login />} />
