@@ -6,6 +6,7 @@ import App from './App.jsx'
 import { AuthProvider } from './contexts/AuthContext.jsx'
 import { ThemeProvider } from './contexts/ThemeContext.jsx'
 import { I18nProvider } from './contexts/I18nContext.jsx'
+import { NotificationProvider } from './contexts/NotificationContext.jsx'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -14,31 +15,33 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <I18nProvider>
         <ThemeProvider>
           <AuthProvider>
-            <App />
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 4000,
-                style: {
-                  background: '#1e293b',
-                  color: '#f1f5f9',
-                  border: '1px solid #334155',
-                  borderRadius: '0.75rem',
-                },
-                success: {
-                  iconTheme: {
-                    primary: '#10b981',
-                    secondary: '#f1f5f9',
+            <NotificationProvider>
+              <App />
+              <Toaster
+                position="top-right"
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: '#1e293b',
+                    color: '#f1f5f9',
+                    border: '1px solid #334155',
+                    borderRadius: '0.75rem',
                   },
-                },
-                error: {
-                  iconTheme: {
-                    primary: '#ef4444',
-                    secondary: '#f1f5f9',
+                  success: {
+                    iconTheme: {
+                      primary: '#10b981',
+                      secondary: '#f1f5f9',
+                    },
                   },
-                },
-              }}
-            />
+                  error: {
+                    iconTheme: {
+                      primary: '#ef4444',
+                      secondary: '#f1f5f9',
+                    },
+                  },
+                }}
+              />
+            </NotificationProvider>
           </AuthProvider>
         </ThemeProvider>
       </I18nProvider>
