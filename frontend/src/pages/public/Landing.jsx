@@ -243,6 +243,17 @@ export default function Landing() {
               </div>
               <span className="font-bold text-dark-100">Revendr</span>
             </div>
+            <div className="flex items-center gap-6 text-sm text-dark-400">
+              <Link to="/help" className="hover:text-dark-200 transition-colors">
+                {locale === 'es' ? 'Ayuda' : 'Help'}
+              </Link>
+              <Link to="/privacy" className="hover:text-dark-200 transition-colors">
+                {locale === 'es' ? 'Privacidad' : 'Privacy'}
+              </Link>
+              <Link to="/terms" className="hover:text-dark-200 transition-colors">
+                {locale === 'es' ? 'Términos' : 'Terms'}
+              </Link>
+            </div>
             <p className="text-dark-500 text-sm">
               © 2024 Revendr. {locale === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}
             </p>
