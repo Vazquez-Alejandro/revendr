@@ -26,7 +26,7 @@ app.get('/health', (req, res) => {
 
 // ============ CAMPAIGNS ============
 
-app.get('/api/campaigns', async (req, res) => {
+app.get('/campaigns', async (req, res) => {
   try {
     const snapshot = await db.collection('campanias')
       .orderBy('fecha_creacion', 'desc')
@@ -41,7 +41,7 @@ app.get('/api/campaigns', async (req, res) => {
   }
 })
 
-app.post('/api/campaigns', async (req, res) => {
+app.post('/campaigns', async (req, res) => {
   try {
     const { nombre, rubro_objetivo, mensaje_template, ciudad } = req.body
 
@@ -85,7 +85,7 @@ app.patch('/api/campaigns/:id/status', async (req, res) => {
 
 // ============ LEADS ============
 
-app.get('/api/leads', async (req, res) => {
+app.get('/leads', async (req, res) => {
   try {
     const { rubro, estado, limit = 50 } = req.query
     let query = db.collection('leads')
@@ -106,7 +106,7 @@ app.get('/api/leads', async (req, res) => {
   }
 })
 
-app.get('/api/leads/stats', async (req, res) => {
+app.get('/leads/stats', async (req, res) => {
   try {
     const snapshot = await db.collection('leads').get()
     const stats = { total: 0, byRubro: {}, byStatus: {} }
@@ -125,7 +125,7 @@ app.get('/api/leads/stats', async (req, res) => {
   }
 })
 
-app.post('/api/leads/:leadId/generate-demo', async (req, res) => {
+app.post('/leads/:leadId/generate-demo', async (req, res) => {
   try {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) {
@@ -149,7 +149,7 @@ app.post('/api/leads/:leadId/generate-demo', async (req, res) => {
   }
 })
 
-app.post('/api/leads/:leadId/send-whatsapp', async (req, res) => {
+app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
   try {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) {
@@ -333,7 +333,7 @@ app.post('/webhook/stripe', async (req, res) => {
 
 // ============ STRIPE CHECKOUT ============
 
-app.post('/api/create-checkout-session', async (req, res) => {
+app.post('/create-checkout-session', async (req, res) => {
   try {
     const { priceId, leadId } = req.body
     const stripe = require('stripe')(STRIPE_SECRET_KEY)
@@ -356,7 +356,7 @@ app.post('/api/create-checkout-session', async (req, res) => {
 
 // ============ STATS ============
 
-app.get('/api/stats/dashboard', async (req, res) => {
+app.get('/stats/dashboard', async (req, res) => {
   try {
     const [campaignsSnap, leadsSnap] = await Promise.all([
       db.collection('campanias').get(),

@@ -95,11 +95,11 @@ export default function Pricing() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto items-start">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative card ${plan.popular ? 'border-brand-500 bg-dark-800/50' : ''}`}
+              className={`relative card flex flex-col ${plan.popular ? 'border-brand-500 bg-dark-800/50' : ''}`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">
@@ -124,7 +124,7 @@ export default function Pricing() {
                 <span className="text-dark-400 text-sm">/mes</span>
               </div>
 
-              <ul className="space-y-3 mb-8">
+              <ul className="space-y-3 mb-8 flex-1">
                 {plan.features.map((feature) => (
                   <li key={feature} className="flex items-center gap-3 text-sm text-dark-300">
                     <Check className={`w-4 h-4 flex-shrink-0 ${plan.popular ? 'text-brand-400' : 'text-dark-500'}`} />
