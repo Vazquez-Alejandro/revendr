@@ -355,12 +355,12 @@ app.post('/create-checkout-session', async (req, res) => {
       mode: 'subscription',
       payment_method_types: ['card'],
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${req.headers.origin || 'https://revendr-9add8.web.app'}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${req.headers.origin || 'https://revendr-9add8.web.app'}/pricing`,
+      success_url: `https://revendr-9add8.web.app/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `https://revendr-9add8.web.app/pricing`,
       metadata: { leadId: leadId || '' },
     })
 
-    res.json({ sessionId: session.id })
+    res.json({ url: session.url, sessionId: session.id })
   } catch (error) {
     console.error('Error creating checkout session:', error.message)
     res.status(500).json({ success: false, error: { message: error.message } })

@@ -1,14 +1,3 @@
-import { loadStripe } from '@stripe/stripe-js'
-
-let stripePromise = null
-
-const getStripe = () => {
-  if (!stripePromise) {
-    stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '')
-  }
-  return stripePromise
-}
-
 export const createCheckoutSession = async (priceId, leadId = null) => {
   const apiUrl = import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
   
@@ -20,16 +9,11 @@ export const createCheckoutSession = async (priceId, leadId = null) => {
 
   const data = await response.json()
 
-  if (!response.ok || !data.sessionId) {
+  if (!response.ok || !data.url) {
     throw new Error(data.error?.message || 'Failed to create checkout session')
   }
 
-  const stripe = await getStripe()
-  const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId })
-  
-  if (error) {
-    throw new Error(error.message)
-  }
+  window.location.href = data.url
 }
 
 export const PRICES = {
