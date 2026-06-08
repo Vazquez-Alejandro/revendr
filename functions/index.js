@@ -240,7 +240,7 @@ app.post('/webhooks/apify', async (req, res) => {
   }
 })
 
-app.post('/webhooks/stripe', async (req, res) => {
+app.post('/webhook/stripe', async (req, res) => {
   try {
     const stripe = require('stripe')(STRIPE_SECRET_KEY)
     const webhookSecret = STRIPE_WEBHOOK_SECRET

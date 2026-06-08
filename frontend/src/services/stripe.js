@@ -11,7 +11,8 @@ const getStripe = () => {
 
 export const createCheckoutSession = async (priceId, leadId = null) => {
   try {
-    const response = await fetch('/api/create-checkout-session', {
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+    const response = await fetch(`${apiUrl}/create-checkout-session`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ priceId, leadId }),
@@ -28,22 +29,22 @@ export const createCheckoutSession = async (priceId, leadId = null) => {
 
 export const PRICES = {
   starter: {
-    monthly: 'price_starter_monthly',
-    annual: 'price_starter_annual',
+    monthly: 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
     name: 'Starter',
     monthlyAmount: 4900,
     annualAmount: 3900,
   },
   growth: {
-    monthly: 'price_growth_monthly',
-    annual: 'price_growth_annual',
+    monthly: 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
     name: 'Growth',
     monthlyAmount: 14900,
     annualAmount: 11900,
   },
   enterprise: {
-    monthly: 'price_enterprise_monthly',
-    annual: 'price_enterprise_annual',
+    monthly: 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
     name: 'Enterprise',
     monthlyAmount: 39900,
     annualAmount: 31900,
