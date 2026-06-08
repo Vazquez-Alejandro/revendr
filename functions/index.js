@@ -494,6 +494,183 @@ app.get('/landing/stats/:productId', async (req, res) => {
   }
 })
 
+// ============ LANDING ENGAGEMENT TRACKING ============
+
+app.post('/landing/engagement', async (req, res) => {
+  try {
+    const { productId, leadId, eventType, data } = req.body
+    if (!productId || !eventType) {
+      return res.status(400).json({ success: false, error: { message: 'productId and eventType required' } })
+    }
+
+    await db.collection('landing_engagement').add({
+      product_id: productId,
+      lead_id: leadId || null,
+      event_type: eventType,
+      data: data || {},
+      timestamp: new Date(),
+    })
+
+    if (leadId) {
+      const leadRef = db.collection('leads').doc(leadId)
+      const leadDoc = await leadRef.get()
+      if (leadDoc.exists) {
+        const lead = leadDoc.data()
+        const updates = { fecha_ultima_actividad: new Date(), fecha_actualizacion: new Date() }
+
+        if (eventType === 'cta_click') {
+          updates.cta_clicks = (lead.cta_clicks || 0) + 1
+        }
+        if (eventType === 'page_view') {
+          updates.landing_views = (lead.landing_views || 0) + 1
+        }
+        if (eventType === 'time_on_page') {
+          updates.tiempo_total_landing = (lead.tiempo_total_landing || 0) + (data.seconds || 0)
+        }
+
+        await leadRef.update(updates)
+        await autoScoreLead(leadId, { ...lead, ...updates })
+      }
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error tracking engagement:', error)
+    res.json({ success: true })
+  }
+})
+
+// ============ AUTO-SCORING ============
+
+async function autoScoreLead(leadId, lead) {
+  let score = 0
+  if (lead.cta_clicks > 0) score += 3
+  if (lead.landing_views > 1) score += 2
+  if (lead.tiempo_total_landing > 60) score += 2
+  if (lead.telefono_whatsapp) score += 1
+  if (lead.email) score += 1
+  if (lead.rating >= 4) score += 1
+
+  let temperatura = 'cold'
+  if (score >= 6) temperatura = 'hot'
+  else if (score >= 3) temperatura = 'warm'
+
+  await db.collection('leads').doc(leadId).update({
+    lead_score: score,
+    temperatura,
+  })
+}
+
+// ============ FOLLOW-UPS ============
+
+app.post('/campaigns/:campaignId/followups', async (req, res) => {
+  try {
+    const { followups } = req.body
+    if (!followups || !Array.isArray(followups)) {
+      return res.status(400).json({ success: false, error: { message: 'followups array required' } })
+    }
+
+    await db.collection('campanias').doc(req.params.campaignId).update({
+      followups,
+      fecha_actualizacion: new Date(),
+    })
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error saving followups:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/campaigns/:campaignId/process-followups', async (req, res) => {
+  try {
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const campaign = campaignDoc.data()
+    if (!campaign.followups || campaign.followups.length === 0) {
+      return res.json({ success: true, data: { sent: 0, message: 'No followups configured' } })
+    }
+
+    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+      return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
+    }
+
+    if (isCampaignExpired(campaign)) {
+      return res.status(400).json({ success: false, error: { message: 'Campaign expired' } })
+    }
+
+    if (!isBusinessHours()) {
+      return res.status(400).json({ success: false, error: { message: 'Outside business hours' } })
+    }
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', req.params.campaignId)
+      .where('estado_proceso', '==', 'mensaje_enviado')
+      .get()
+
+    let sent = 0
+
+    for (const leadDoc of leadsSnapshot.docs) {
+      const lead = leadDoc.data()
+      if (!lead.telefono_whatsapp) continue
+
+      for (const followup of campaign.followups) {
+        const daysSinceSend = lead.fecha_envio_whatsapp
+          ? Math.floor((Date.now() - lead.fecha_envio_whatsapp.toDate().getTime()) / (1000 * 60 * 60 * 24))
+          : 0
+
+        if (daysSinceSend < followup.delayDays) continue
+
+        const followupKey = `followup_${followup.delayDays}_sent`
+        if (lead[followupKey]) continue
+
+        const message = followup.message
+          .replace(/{nombre_negocio}/g, lead.nombre_negocio)
+          .replace(/{url_demo}/g, lead.url_demo)
+          .replace(/{rubro}/g, lead.rubro)
+
+        try {
+          await axios.post(
+            `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
+            {
+              messaging_product: 'whatsapp',
+              to: lead.telefono_whatsapp.replace(/\D/g, ''),
+              type: 'text',
+              text: { body: message },
+            },
+            {
+              headers: {
+                'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+                'Content-Type': 'application/json',
+              },
+            }
+          )
+
+          await db.collection('leads').doc(leadDoc.id).update({
+            [followupKey]: true,
+            fecha_ultimo_followup: new Date(),
+            fecha_actualizacion: new Date(),
+          })
+
+          const delay = Math.floor(Math.random() * 60000) + 30000
+          await new Promise(resolve => setTimeout(resolve, delay))
+          sent++
+        } catch (err) {
+          console.error(`Followup error for lead ${leadDoc.id}:`, err.message)
+        }
+      }
+    }
+
+    res.json({ success: true, data: { sent } })
+  } catch (error) {
+    console.error('Error processing followups:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 // ============ WHATSAPP SENDING ============
 
 app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
@@ -588,9 +765,17 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
 
     let sent = 0
     let failed = 0
+    const DELAY_BETWEEN_MESSAGES = 45000
+    const MAX_PER_BATCH = 10
+    const BATCH_PAUSE = 180000
 
-    for (const leadDoc of leadsSnapshot.docs) {
+    for (let i = 0; i < leadsSnapshot.docs.length; i++) {
+      if (i > 0 && i % MAX_PER_BATCH === 0) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_PAUSE))
+      }
+
       try {
+        const leadDoc = leadsSnapshot.docs[i]
         const lead = leadDoc.data()
 
         if (!lead.url_demo || !lead.telefono_whatsapp) {
@@ -604,8 +789,8 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
           .replace(/{url_demo}/g, lead.url_demo)
           .replace(/{rubro}/g, lead.rubro)
 
-        const delay = Math.floor(Math.random() * 60000) + 30000
-        await new Promise(resolve => setTimeout(resolve, delay))
+        const jitter = Math.floor(Math.random() * 20000)
+        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_MESSAGES + jitter))
 
         const response = await axios.post(
           `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,

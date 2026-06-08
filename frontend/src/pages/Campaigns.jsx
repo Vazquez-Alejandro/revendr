@@ -66,6 +66,8 @@ export default function Campaigns() {
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [analyticsCampaign, setAnalyticsCampaign] = useState(null)
+  const [followupsCampaign, setFollowupsCampaign] = useState(null)
+  const [followups, setFollowups] = useState([])
   const [formData, setFormData] = useState({
     nombre: '',
     producto_id: '',
@@ -367,6 +369,66 @@ export default function Campaigns() {
     return new Date() > fechaFin
   }
 
+  const openFollowups = (campaign) => {
+    setFollowupsCampaign(campaign)
+    setFollowups(campaign.followups || [
+      { delayDays: 2, message: 'Hola {nombre_negocio}, ¿viste tu demo? Si tenés dudas te la explico.' },
+      { delayDays: 5, message: 'Hola {nombre_negocio}, te cuento que tenemos 20% off esta semana. ¡No lo dejes pasar!' },
+    ])
+  }
+
+  const saveFollowups = async () => {
+    try {
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${followupsCampaign.id}/followups`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ followups }),
+        }
+      )
+      toast.success(locale === 'es' ? 'Follow-ups guardados' : 'Follow-ups saved')
+      setFollowupsCampaign(null)
+      loadCampaigns()
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error al guardar' : 'Error saving')
+    }
+  }
+
+  const addFollowup = () => {
+    setFollowups([...followups, { delayDays: 7, message: '' }])
+  }
+
+  const updateFollowup = (index, field, value) => {
+    const updated = [...followups]
+    updated[index] = { ...updated[index], [field]: value }
+    setFollowups(updated)
+  }
+
+  const removeFollowup = (index) => {
+    setFollowups(followups.filter((_, i) => i !== index))
+  }
+
+  const processFollowups = async (campaignId) => {
+    setProcessingAction(`${campaignId}-followups`)
+    toast.loading(locale === 'es' ? 'Procesando follow-ups...' : 'Processing follow-ups...', { id: 'followups' })
+    try {
+      const result = await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/process-followups`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+      ).then(r => r.json())
+      toast.success(
+        locale === 'es' ? `${result.data?.sent || 0} follow-ups enviados` : `${result.data?.sent || 0} follow-ups sent`,
+        { id: 'followups' }
+      )
+      loadCampaigns()
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error' : 'Error', { id: 'followups' })
+    } finally {
+      setProcessingAction(null)
+    }
+  }
+
   const getScrapingBadge = (status) => {
     const badges = {
       running: 'badge-warning',
@@ -502,6 +564,13 @@ export default function Campaigns() {
                     title={locale === 'es' ? 'Editar' : 'Edit'}
                   >
                     <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openFollowups(campaign)}
+                    className="p-2 text-dark-400 hover:text-amber-400 hover:bg-amber-500/10 rounded-lg transition-all"
+                    title={locale === 'es' ? 'Follow-ups' : 'Follow-ups'}
+                  >
+                    <MessageCircle className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => handleDuplicateCampaign(campaign)}
@@ -848,6 +917,77 @@ export default function Campaigns() {
                 {locale === 'es' ? 'Iniciada:' : 'Started:'} {analyticsCampaign.fecha_inicio?.toDate?.()?.toLocaleDateString('es-AR')}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Follow-ups Modal */}
+      {followupsCampaign && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-dark-100 flex items-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                {locale === 'es' ? 'Follow-ups para' : 'Follow-ups for'} {followupsCampaign.nombre}
+              </h2>
+              <button onClick={() => setFollowupsCampaign(null)} className="text-dark-400 hover:text-dark-200">✕</button>
+            </div>
+
+            <p className="text-sm text-dark-400 mb-4">
+              {locale === 'es'
+                ? 'Mensajes automáticos que se envían después de X días si el lead no respondió.'
+                : 'Auto-messages sent after X days if lead didn\'t respond.'}
+            </p>
+
+            <div className="space-y-4">
+              {followups.map((fu, i) => (
+                <div key={i} className="bg-dark-900 rounded-lg p-4 border border-dark-700">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-dark-400">
+                        {locale === 'es' ? 'Día' : 'Day'}
+                      </span>
+                      <input
+                        type="number"
+                        value={fu.delayDays}
+                        onChange={(e) => updateFollowup(i, 'delayDays', parseInt(e.target.value) || 1)}
+                        className="w-16 px-2 py-1 bg-dark-800 border border-dark-600 rounded text-sm text-dark-100 text-center"
+                        min="1"
+                        max="30"
+                      />
+                    </div>
+                    <button
+                      onClick={() => removeFollowup(i)}
+                      className="text-dark-500 hover:text-red-400 text-sm"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <textarea
+                    value={fu.message}
+                    onChange={(e) => updateFollowup(i, 'message', e.target.value)}
+                    className="input-field min-h-[80px] text-sm"
+                    placeholder="Hola {nombre_negocio}, ..."
+                  />
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={addFollowup}
+              className="w-full mt-4 py-2 border border-dashed border-dark-600 rounded-lg text-sm text-dark-400 hover:text-dark-200 hover:border-dark-400 transition-all"
+            >
+              + {locale === 'es' ? 'Agregar follow-up' : 'Add follow-up'}
+            </button>
+
+            <div className="flex gap-3 mt-6">
+              <button onClick={() => setFollowupsCampaign(null)} className="btn-secondary flex-1">
+                {t('cancel')}
+              </button>
+              <button onClick={saveFollowups} className="btn-primary flex-1">
+                {locale === 'es' ? 'Guardar' : 'Save'}
+              </button>
+            </div>
           </div>
         </div>
       )}

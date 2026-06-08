@@ -394,6 +394,9 @@ export default function Leads() {
                       {locale === 'es' ? 'Temp.' : 'Temp.'}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
+                      {locale === 'es' ? 'Score' : 'Score'}
+                    </th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
                       {locale === 'es' ? 'Demo' : 'Demo'}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
@@ -443,6 +446,15 @@ export default function Leads() {
                           'bg-dark-800 text-dark-500'
                         }`}>
                           {lead.temperatura === 'hot' ? '🔥' : lead.temperatura === 'warm' ? '🟡' : lead.temperatura === 'cold' ? '❄️' : '—'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`text-xs font-medium ${
+                          (lead.lead_score || 0) >= 6 ? 'text-red-400' :
+                          (lead.lead_score || 0) >= 3 ? 'text-amber-400' :
+                          'text-dark-500'
+                        }`}>
+                          {lead.lead_score || 0}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -598,6 +610,40 @@ export default function Leads() {
                   ))}
                 </div>
               </div>
+
+              {/* Engagement Stats */}
+              {(selectedLead.cta_clicks > 0 || selectedLead.landing_views > 0 || selectedLead.tiempo_total_landing > 0) && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    {locale === 'es' ? 'Actividad en Landing' : 'Landing Activity'}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-dark-900 rounded-lg p-2 text-center">
+                      <div className="text-lg font-bold text-brand-400">{selectedLead.landing_views || 0}</div>
+                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Visitas' : 'Views'}</div>
+                    </div>
+                    <div className="bg-dark-900 rounded-lg p-2 text-center">
+                      <div className="text-lg font-bold text-emerald-400">{selectedLead.cta_clicks || 0}</div>
+                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks CTA' : 'CTA Clicks'}</div>
+                    </div>
+                    <div className="bg-dark-900 rounded-lg p-2 text-center">
+                      <div className="text-lg font-bold text-amber-400">{selectedLead.tiempo_total_landing || 0}s</div>
+                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Tiempo' : 'Time'}</div>
+                    </div>
+                  </div>
+                  {selectedLead.lead_score > 0 && (
+                    <div className="mt-2 text-center">
+                      <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                        selectedLead.lead_score >= 6 ? 'bg-red-500/20 text-red-400' :
+                        selectedLead.lead_score >= 3 ? 'bg-amber-500/20 text-amber-400' :
+                        'bg-blue-500/20 text-blue-400'
+                      }`}>
+                        Score: {selectedLead.lead_score}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Demo Link */}
               {selectedLead.url_demo && (

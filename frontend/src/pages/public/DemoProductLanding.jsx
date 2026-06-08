@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { Loader2, MessageCircle, ArrowRight, Shield } from 'lucide-react'
+
+const API_BASE = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
 
 export default function DemoProductLanding() {
   const { productId } = useParams()
@@ -10,12 +12,35 @@ export default function DemoProductLanding() {
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const startTimeRef = useRef(Date.now())
+  const hasTrackedView = useRef(false)
 
   const negocio = searchParams.get('negocio') || 'Tu negocio'
   const telefono = searchParams.get('telefono') || ''
+  const leadId = searchParams.get('leadId') || ''
+
+  const trackEngagement = (eventType, data = {}) => {
+    fetch(`${API_BASE}/landing/engagement`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productId, leadId, eventType, data }),
+    }).catch(() => {})
+  }
 
   useEffect(() => {
     loadProduct()
+
+    const handleBeforeUnload = () => {
+      const seconds = Math.floor((Date.now() - startTimeRef.current) / 1000)
+      if (seconds > 0) {
+        navigator.sendBeacon(`${API_BASE}/landing/engagement`, new Blob([
+          JSON.stringify({ productId, leadId, eventType: 'time_on_page', data: { seconds } })
+        ], { type: 'application/json' }))
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [productId])
 
   const loadProduct = async () => {
@@ -24,12 +49,10 @@ export default function DemoProductLanding() {
       const docSnap = await getDoc(docRef)
       if (docSnap.exists()) {
         setProduct({ id: docSnap.id, ...docSnap.data() })
-        // Track view
-        fetch('https://us-central1-revendr-9add8.cloudfunctions.net/api/landing/view', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ productId }),
-        }).catch(() => {})
+        if (!hasTrackedView.current) {
+          hasTrackedView.current = true
+          trackEngagement('page_view')
+        }
       } else {
         setError('Producto no encontrado')
       }
@@ -38,6 +61,10 @@ export default function DemoProductLanding() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCTAClick = () => {
+    trackEngagement('cta_click')
   }
 
   if (loading) {
@@ -96,6 +123,7 @@ export default function DemoProductLanding() {
               href={productUrl}
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleCTAClick}
               className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 text-white font-semibold rounded-xl transition-all"
               style={{ backgroundColor: product.landing_color || '#6366f1' }}
             >
@@ -108,6 +136,7 @@ export default function DemoProductLanding() {
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackEngagement('whatsapp_click')}
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all"
               >
                 <MessageCircle className="w-5 h-5" />
