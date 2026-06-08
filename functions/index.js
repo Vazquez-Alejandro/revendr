@@ -17,7 +17,15 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
 const app = express()
 
 app.use(cors({ origin: true }))
-app.use(express.json())
+
+// Raw body for Stripe webhook, JSON for everything else
+app.use((req, res, next) => {
+  if (req.originalUrl === '/webhook/stripe') {
+    express.raw({ type: 'application/json' })(req, res, next)
+  } else {
+    express.json()(req, res, next)
+  }
+})
 
 // Health check
 app.get('/health', (req, res) => {
@@ -336,6 +344,11 @@ app.post('/webhook/stripe', async (req, res) => {
 app.post('/create-checkout-session', async (req, res) => {
   try {
     const { priceId, leadId } = req.body
+    
+    if (!priceId) {
+      return res.status(400).json({ success: false, error: { message: 'priceId is required' } })
+    }
+
     const stripe = require('stripe')(STRIPE_SECRET_KEY)
 
     const session = await stripe.checkout.sessions.create({
@@ -349,7 +362,7 @@ app.post('/create-checkout-session', async (req, res) => {
 
     res.json({ sessionId: session.id })
   } catch (error) {
-    console.error('Error creating checkout session:', error)
+    console.error('Error creating checkout session:', error.message)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })

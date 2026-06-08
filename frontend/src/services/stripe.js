@@ -10,20 +10,25 @@ const getStripe = () => {
 }
 
 export const createCheckoutSession = async (priceId, leadId = null) => {
-  try {
-    const apiUrl = import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-    const response = await fetch(`${apiUrl}/create-checkout-session`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ priceId, leadId }),
-    })
+  const apiUrl = import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+  
+  const response = await fetch(`${apiUrl}/create-checkout-session`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ priceId, leadId }),
+  })
 
-    const { sessionId } = await response.json()
-    const stripe = await getStripe()
-    await stripe.redirectToCheckout({ sessionId })
-  } catch (error) {
-    console.error('Stripe checkout error:', error)
-    throw error
+  const data = await response.json()
+
+  if (!response.ok || !data.sessionId) {
+    throw new Error(data.error?.message || 'Failed to create checkout session')
+  }
+
+  const stripe = await getStripe()
+  const { error } = await stripe.redirectToCheckout({ sessionId: data.sessionId })
+  
+  if (error) {
+    throw new Error(error.message)
   }
 }
 
