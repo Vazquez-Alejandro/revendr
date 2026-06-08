@@ -37,6 +37,12 @@ const isBusinessHours = () => {
   return hour >= 9 && hour < 18
 }
 
+const isCampaignExpired = (campaign) => {
+  if (!campaign.fecha_fin) return false
+  const fechaFin = campaign.fecha_fin.toDate ? campaign.fecha_fin.toDate() : new Date(campaign.fecha_fin)
+  return new Date() > fechaFin
+}
+
 const app = express()
 app.use(cors({ origin: true }))
 
@@ -564,6 +570,10 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
 
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
       return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
+    }
+
+    if (isCampaignExpired(campaign)) {
+      return res.status(400).json({ success: false, error: { message: 'Campaign has expired' } })
     }
 
     if (!isBusinessHours()) {

@@ -164,6 +164,32 @@ export default function Leads() {
     }
   }
 
+  const updateLeadTemperature = async (leadId, temp) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId), {
+        temperatura: temp,
+        fecha_actualizacion: new Date(),
+      })
+      setSelectedLead({ ...selectedLead, temperatura: temp })
+      toast.success(locale === 'es' ? 'Temperatura actualizada' : 'Temperature updated')
+    } catch (error) {
+      console.error('Error updating temperature:', error)
+    }
+  }
+
+  const updateLeadNotes = async (leadId, notes) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId), {
+        notas: notes,
+        fecha_actualizacion: new Date(),
+      })
+      setSelectedLead({ ...selectedLead, notas: notes })
+      toast.success(locale === 'es' ? 'Nota guardada' : 'Note saved')
+    } catch (error) {
+      console.error('Error updating notes:', error)
+    }
+  }
+
   const handleImportCSV = async (e) => {
     const file = e.target.files[0]
     if (!file) return
@@ -222,14 +248,16 @@ export default function Leads() {
 
   const exportToCSV = () => {
     const headers = locale === 'es' 
-      ? ['Nombre', 'Teléfono', 'Email', 'Rubro', 'Estado', 'URL Origen', 'Fecha']
-      : ['Name', 'Phone', 'Email', 'Niche', 'Status', 'Source URL', 'Date']
+      ? ['Nombre', 'Teléfono', 'Email', 'Rubro', 'Estado', 'Temperatura', 'Notas', 'URL Origen', 'Fecha']
+      : ['Name', 'Phone', 'Email', 'Niche', 'Status', 'Temperature', 'Notes', 'Source URL', 'Date']
     const rows = filteredLeads.map(lead => [
       lead.nombre_negocio,
       lead.telefono_whatsapp,
       lead.email,
       lead.rubro,
       lead.estado_proceso,
+      lead.temperatura || '',
+      lead.notas || '',
       lead.url_origen,
       lead.fecha_creacion?.toDate?.()?.toLocaleDateString(locale === 'es' ? 'es-AR' : 'en-US'),
     ])
@@ -363,6 +391,9 @@ export default function Leads() {
                       {t('status')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
+                      {locale === 'es' ? 'Temp.' : 'Temp.'}
+                    </th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
                       {locale === 'es' ? 'Demo' : 'Demo'}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
@@ -402,6 +433,16 @@ export default function Leads() {
                       <td className="py-3 px-4">
                         <span className={`badge ${ESTADOS[lead.estado_proceso]?.class || 'badge-info'}`}>
                           {ESTADOS_LABELS[lead.estado_proceso] || lead.estado_proceso}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          lead.temperatura === 'hot' ? 'bg-red-500/20 text-red-400' :
+                          lead.temperatura === 'warm' ? 'bg-amber-500/20 text-amber-400' :
+                          lead.temperatura === 'cold' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-dark-800 text-dark-500'
+                        }`}>
+                          {lead.temperatura === 'hot' ? '🔥' : lead.temperatura === 'warm' ? '🟡' : lead.temperatura === 'cold' ? '❄️' : '—'}
                         </span>
                       </td>
                       <td className="py-3 px-4">
@@ -532,6 +573,32 @@ export default function Leads() {
                 </select>
               </div>
 
+              {/* Temperature */}
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Temperatura' : 'Temperature'}
+                </label>
+                <div className="flex gap-2">
+                  {[
+                    { value: 'hot', emoji: '🔥', label: 'Hot', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
+                    { value: 'warm', emoji: '🟡', label: 'Warm', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
+                    { value: 'cold', emoji: '❄️', label: 'Cold', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+                  ].map(t => (
+                    <button
+                      key={t.value}
+                      onClick={() => updateLeadTemperature(selectedLead.id, t.value)}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
+                        selectedLead.temperatura === t.value
+                          ? t.color
+                          : 'bg-dark-900 text-dark-400 border-dark-700 hover:border-dark-500'
+                      }`}
+                    >
+                      {t.emoji} {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Demo Link */}
               {selectedLead.url_demo && (
                 <div>
@@ -550,35 +617,42 @@ export default function Leads() {
                 </div>
               )}
 
-              {/* WhatsApp */}
+              {/* WhatsApp - Quick Send */}
               {selectedLead.telefono_whatsapp && (
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">
                     WhatsApp
                   </label>
-                  <a
-                    href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-all"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    {locale === 'es' ? 'Abrir WhatsApp' : 'Open WhatsApp'}
-                  </a>
+                  <div className="flex gap-2">
+                    <a
+                      href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu demo: ${selectedLead.url_demo || ''}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-all"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      {locale === 'es' ? 'Enviar WhatsApp' : 'Send WhatsApp'}
+                    </a>
+                  </div>
                 </div>
               )}
 
-              {/* Notes */}
-              {selectedLead.notas && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    {locale === 'es' ? 'Notas' : 'Notes'}
-                  </label>
-                  <p className="text-sm text-dark-300 bg-dark-900 rounded-lg p-3">
-                    {selectedLead.notas}
-                  </p>
-                </div>
-              )}
+              {/* Notes - Editable */}
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Notas' : 'Notes'}
+                </label>
+                <textarea
+                  value={selectedLead.notas || ''}
+                  onChange={(e) => setSelectedLead({ ...selectedLead, notas: e.target.value })}
+                  onBlur={(e) => updateLeadNotes(selectedLead.id, e.target.value)}
+                  className="input-field min-h-[80px]"
+                  placeholder={locale === 'es' ? 'Ej: Interesado en descuento 20%...' : 'E.g.: Interested in 20% discount...'}
+                />
+                <p className="text-xs text-dark-500 mt-1">
+                  {locale === 'es' ? 'Se guarda automáticamente al salir del campo' : 'Auto-saves on blur'}
+                </p>
+              </div>
             </div>
           </div>
         </div>

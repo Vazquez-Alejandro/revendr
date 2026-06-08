@@ -27,7 +27,10 @@ import {
   Search,
   Package,
   Copy,
-  Edit3
+  Edit3,
+  BarChart3,
+  Eye,
+  Send
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -62,6 +65,7 @@ export default function Campaigns() {
   const [processingAction, setProcessingAction] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [analyticsCampaign, setAnalyticsCampaign] = useState(null)
   const [formData, setFormData] = useState({
     nombre: '',
     producto_id: '',
@@ -131,6 +135,7 @@ export default function Campaigns() {
         estado: 'activa',
         fecha_inicio: new Date(),
         fecha_creacion: new Date(),
+        fecha_fin: formData.fecha_fin || null,
         leads_count: 0,
         demos_generadas: 0,
         mensajes_enviados: 0,
@@ -287,6 +292,7 @@ export default function Campaigns() {
         rubro_objetivo: selectedProduct?.nicho || formData.rubro_objetivo,
         mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
         ciudad: formData.ciudad,
+        fecha_fin: formData.fecha_fin || null,
         fecha_actualizacion: new Date(),
       })
       toast.success(locale === 'es' ? 'Campaña actualizada' : 'Campaign updated')
@@ -336,6 +342,7 @@ export default function Campaigns() {
       rubro_objetivo: campaign.rubro_objetivo || '',
       mensaje_template: campaign.mensaje_template || '',
       ciudad: campaign.ciudad || '',
+      fecha_fin: campaign.fecha_fin || '',
     })
     setEditingId(campaign.id)
     setShowCreateModal(true)
@@ -353,6 +360,12 @@ export default function Campaigns() {
   })
 
   const ESTADOS = locale === 'es' ? ESTADOS_ES : ESTADOS_EN
+
+  const isCampaignExpired = (campaign) => {
+    if (!campaign.fecha_fin) return false
+    const fechaFin = campaign.fecha_fin?.toDate ? campaign.fecha_fin.toDate() : new Date(campaign.fecha_fin)
+    return new Date() > fechaFin
+  }
 
   const getScrapingBadge = (status) => {
     const badges = {
@@ -449,9 +462,40 @@ export default function Campaigns() {
                         {campaign.producto_nombre}
                       </span>
                     )}
+                    {campaign.fecha_fin && (
+                      <span className={`badge ${
+                        isCampaignExpired(campaign)
+                          ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                          : 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                      }`}>
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {isCampaignExpired(campaign)
+                          ? (locale === 'es' ? 'Expirada' : 'Expired')
+                          : (locale === 'es' ? 'Fin:' : 'End:') + ' ' + campaign.fecha_fin?.toDate?.()?.toLocaleDateString(locale === 'es' ? 'es-AR' : 'en-US')
+                        }
+                      </span>
+                    )}
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => setAnalyticsCampaign(campaign)}
+                    className="p-2 text-dark-400 hover:text-brand-400 hover:bg-brand-500/10 rounded-lg transition-all"
+                    title={locale === 'es' ? 'Analytics' : 'Analytics'}
+                  >
+                    <BarChart3 className="w-4 h-4" />
+                  </button>
+                  {campaign.producto_url_demo && (
+                    <a
+                      href={campaign.producto_url_demo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-2 text-dark-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all"
+                      title={locale === 'es' ? 'Ver Landing' : 'View Landing'}
+                    >
+                      <Eye className="w-4 h-4" />
+                    </a>
+                  )}
                   <button
                     onClick={() => startEditCampaign(campaign)}
                     className="p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all"
@@ -678,7 +722,7 @@ export default function Campaigns() {
 
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">
-                  {t('messageTemplate')}
+                  {locale === 'es' ? 'Mensaje de WhatsApp' : 'WhatsApp Message'}
                 </label>
                 <textarea
                   value={formData.mensaje_template}
@@ -688,6 +732,21 @@ export default function Campaigns() {
                 />
                 <p className="text-xs text-dark-500 mt-1">
                   {locale === 'es' ? 'Variables disponibles:' : 'Available variables:'} {'{nombre_negocio}'}, {'{url_demo}'}, {'{rubro}'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Fecha de fin (opcional)' : 'End date (optional)'}
+                </label>
+                <input
+                  type="date"
+                  value={formData.fecha_fin || ''}
+                  onChange={(e) => setFormData({ ...formData, fecha_fin: e.target.value })}
+                  className="input-field"
+                />
+                <p className="text-xs text-dark-500 mt-1">
+                  {locale === 'es' ? 'La campaña se pausa automáticamente después de esta fecha' : 'Campaign auto-pauses after this date'}
                 </p>
               </div>
 
@@ -715,6 +774,80 @@ export default function Campaigns() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Modal */}
+      {analyticsCampaign && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-lg animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-dark-100 flex items-center gap-2">
+                <BarChart3 className="w-5 h-5" />
+                {locale === 'es' ? 'Analytics de' : 'Analytics for'} {analyticsCampaign.nombre}
+              </h2>
+              <button
+                onClick={() => setAnalyticsCampaign(null)}
+                className="text-dark-400 hover:text-dark-200"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="bg-dark-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-orange-400">{analyticsCampaign.leads_count || 0}</div>
+                <div className="text-xs text-dark-400">{locale === 'es' ? 'Leads Scrapeados' : 'Leads Scraped'}</div>
+              </div>
+              <div className="bg-dark-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-violet-400">{analyticsCampaign.demos_generadas || 0}</div>
+                <div className="text-xs text-dark-400">{locale === 'es' ? 'Demos Generadas' : 'Demos Generated'}</div>
+              </div>
+              <div className="bg-dark-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-emerald-400">{analyticsCampaign.mensajes_enviados || 0}</div>
+                <div className="text-xs text-dark-400">{locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent'}</div>
+              </div>
+              <div className="bg-dark-900 rounded-lg p-4 text-center">
+                <div className="text-2xl font-bold text-amber-400">
+                  {analyticsCampaign.leads_count > 0
+                    ? Math.round((analyticsCampaign.mensajes_enviados / analyticsCampaign.leads_count) * 100)
+                    : 0}%
+                </div>
+                <div className="text-xs text-dark-400">{locale === 'es' ? 'Tasa de Envío' : 'Send Rate'}</div>
+              </div>
+            </div>
+
+            {/* Funnel */}
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium text-dark-300 mb-2">{locale === 'es' ? 'Funnel' : 'Funnel'}</h3>
+              {[
+                { label: locale === 'es' ? 'Leads Scrapeados' : 'Leads Scraped', value: analyticsCampaign.leads_count || 0, color: 'bg-orange-500' },
+                { label: locale === 'es' ? 'Demos Generadas' : 'Demos Generated', value: analyticsCampaign.demos_generadas || 0, color: 'bg-violet-500' },
+                { label: locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent', value: analyticsCampaign.mensajes_enviados || 0, color: 'bg-emerald-500' },
+              ].map((step, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="w-32 text-xs text-dark-400 shrink-0">{step.label}</div>
+                  <div className="flex-1 bg-dark-900 rounded-full h-6 overflow-hidden">
+                    <div
+                      className={`h-full ${step.color} rounded-full transition-all`}
+                      style={{
+                        width: `${analyticsCampaign.leads_count > 0
+                          ? (step.value / analyticsCampaign.leads_count) * 100
+                          : 0}%`
+                      }}
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-dark-200 w-8 text-right">{step.value}</span>
+                </div>
+              ))}
+            </div>
+
+            {analyticsCampaign.fecha_inicio && (
+              <div className="mt-4 text-xs text-dark-500">
+                {locale === 'es' ? 'Iniciada:' : 'Started:'} {analyticsCampaign.fecha_inicio?.toDate?.()?.toLocaleDateString('es-AR')}
+              </div>
+            )}
           </div>
         </div>
       )}
