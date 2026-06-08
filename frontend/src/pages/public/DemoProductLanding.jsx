@@ -24,6 +24,12 @@ export default function DemoProductLanding() {
       const docSnap = await getDoc(docRef)
       if (docSnap.exists()) {
         setProduct({ id: docSnap.id, ...docSnap.data() })
+        // Track view
+        fetch('https://us-central1-revendr-9add8.cloudfunctions.net/api/landing/view', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ productId }),
+        }).catch(() => {})
       } else {
         setError('Producto no encontrado')
       }

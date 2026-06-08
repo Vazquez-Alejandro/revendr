@@ -411,6 +411,42 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
   }
 })
 
+// ============ LANDING PAGE VIEW TRACKING ============
+
+app.post('/landing/view', async (req, res) => {
+  try {
+    const { productId, leadId } = req.body
+    if (!productId) {
+      return res.status(400).json({ success: false, error: { message: 'productId required' } })
+    }
+
+    await db.collection('landing_views').add({
+      product_id: productId,
+      lead_id: leadId || null,
+      timestamp: new Date(),
+      ip: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || null,
+    })
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error tracking view:', error)
+    res.json({ success: true })
+  }
+})
+
+app.get('/landing/stats/:productId', async (req, res) => {
+  try {
+    const viewsSnapshot = await db.collection('landing_views')
+      .where('product_id', '==', req.params.productId)
+      .get()
+
+    res.json({ success: true, data: { views: viewsSnapshot.size } })
+  } catch (error) {
+    console.error('Error getting landing stats:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 // ============ WHATSAPP SENDING ============
 
 app.post('/leads/:leadId/send-whatsapp', async (req, res) => {

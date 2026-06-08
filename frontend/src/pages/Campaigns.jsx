@@ -337,9 +337,17 @@ export default function Campaigns() {
                     </h3>
                     {getScrapingBadge(campaign.scraping_status)}
                   </div>
-                  <span className={`badge ${ESTADOS[campaign.estado]?.class || 'badge-info'}`}>
-                    {ESTADOS[campaign.estado]?.label || campaign.estado}
-                  </span>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className={`badge ${ESTADOS[campaign.estado]?.class || 'badge-info'}`}>
+                      {ESTADOS[campaign.estado]?.label || campaign.estado}
+                    </span>
+                    {campaign.producto_nombre && (
+                      <span className="badge bg-violet-500/10 text-violet-400 border border-violet-500/20">
+                        <Package className="w-3 h-3 mr-1" />
+                        {campaign.producto_nombre}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <button
@@ -436,6 +444,26 @@ export default function Campaigns() {
                   {locale === 'es' ? 'WhatsApp' : 'WhatsApp'}
                 </button>
               </div>
+
+              {/* Preview del mensaje */}
+              {(campaign.producto_mensaje || campaign.mensaje_template) && (
+                <div className="mt-3 bg-dark-900 rounded-lg p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <MessageCircle className="w-3 h-3 text-emerald-400" />
+                    <span className="text-xs font-medium text-dark-400">
+                      {locale === 'es' ? 'Preview del mensaje' : 'Message preview'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-dark-300 whitespace-pre-line leading-relaxed">
+                    {(campaign.producto_mensaje || campaign.mensaje_template || '')
+                      .replace(/{nombre_negocio}/g, 'Ej: Inmoxil Propiedades')
+                      .replace(/{url_demo}/g, 'https://revendr-9add8.web.app/...')
+                      .replace(/{rubro}/g, 'inmobiliaria')
+                      .substring(0, 200)}
+                    {(campaign.producto_mensaje || campaign.mensaje_template || '').length > 200 && '...'}
+                  </p>
+                </div>
+              )}
             </div>
           ))}
         </div>

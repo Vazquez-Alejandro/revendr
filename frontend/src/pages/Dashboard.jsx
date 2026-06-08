@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore'
+import { db, auth } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { 
   Megaphone, 
   Users, 
   TrendingUp, 
   MessageCircle,
+  Package,
   ArrowUpRight,
   ArrowDownRight
 } from 'lucide-react'
@@ -36,6 +37,8 @@ export default function Dashboard() {
     leadsHoy: 0,
     conversionRate: 0,
     demosGeneradas: 0,
+    totalProducts: 0,
+    mensajesEnviados: 0,
   })
   const [recentLeads, setRecentLeads] = useState([])
   const [chartData, setChartData] = useState([])
@@ -49,6 +52,7 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
+      const userId = auth.currentUser?.uid
       const campaignsRef = collection(db, 'campanias')
       const campaignsSnapshot = await getDocs(campaignsRef)
       
@@ -62,6 +66,7 @@ export default function Dashboard() {
       let leadsHoy = 0
       let demosGeneradas = 0
       let clientesActivos = 0
+      let mensajesEnviados = 0
       const today = new Date().toDateString()
       
       const leadsByDate = {}
@@ -69,13 +74,15 @@ export default function Dashboard() {
       const leadsByRubro = {}
 
       campaignsSnapshot.docs.forEach(doc => {
-        if (doc.data().estado === 'activa') activeCampaigns++
+        const c = doc.data()
+        if (c.estado === 'activa') activeCampaigns++
+        mensajesEnviados += c.mensajes_enviados || 0
       })
 
       allLeadsSnapshot.docs.forEach(doc => {
         const lead = doc.data()
         if (lead.fecha_creacion?.toDate?.()?.toDateString() === today) leadsHoy++
-        if (lead.estado_proceso === 'demo_generadas') demosGeneradas++
+        if (lead.estado_proceso === 'demo_generada') demosGeneradas++
         if (lead.estado_proceso === 'cliente_activo') clientesActivos++
 
         const date = lead.fecha_creacion?.toDate?.()
@@ -87,6 +94,13 @@ export default function Dashboard() {
         leadsByStatus[lead.estado_proceso] = (leadsByStatus[lead.estado_proceso] || 0) + 1
         leadsByRubro[lead.rubro] = (leadsByRubro[lead.rubro] || 0) + 1
       })
+
+      let totalProducts = 0
+      if (userId) {
+        const productsQuery = query(collection(db, 'productos'), where('user_id', '==', userId))
+        const productsSnapshot = await getDocs(productsQuery)
+        totalProducts = productsSnapshot.size
+      }
 
       const chartDataArr = Object.entries(leadsByDate)
         .slice(-7)
@@ -116,6 +130,8 @@ export default function Dashboard() {
           ? ((clientesActivos / allLeadsSnapshot.size) * 100).toFixed(1)
           : 0,
         demosGeneradas,
+        totalProducts,
+        mensajesEnviados,
       })
 
       setRecentLeads(leadsData)
@@ -131,12 +147,20 @@ export default function Dashboard() {
 
   const statCards = [
     {
+      title: locale === 'es' ? 'Productos' : 'Products',
+      value: stats.totalProducts,
+      icon: Package,
+      color: 'violet',
+      change: locale === 'es' ? 'registrados' : 'registered',
+      positive: true,
+    },
+    {
       title: t('activeCampaigns'),
       value: stats.activeCampaigns,
       total: stats.totalCampaigns,
       icon: Megaphone,
       color: 'brand',
-      change: locale === 'es' ? '+2 esta semana' : '+2 this week',
+      change: locale === 'es' ? 'activas' : 'active',
       positive: true,
     },
     {
@@ -148,19 +172,11 @@ export default function Dashboard() {
       positive: true,
     },
     {
-      title: t('demosGenerated'),
-      value: stats.demosGeneradas,
-      icon: TrendingUp,
-      color: 'violet',
-      change: '+12%',
-      positive: true,
-    },
-    {
-      title: t('conversionRate'),
-      value: `${stats.conversionRate}%`,
+      title: locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent',
+      value: stats.mensajesEnviados,
       icon: MessageCircle,
       color: 'amber',
-      change: '+2.3%',
+      change: `${stats.demosGeneradas} ${locale === 'es' ? 'demos' : 'demos'}`,
       positive: true,
     },
   ]
