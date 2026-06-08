@@ -24,6 +24,14 @@ service cloud.firestore {
       allow delete: if request.auth != null;
     }
 
+    // Products collection
+    match /productos/{productId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+      allow delete: if request.auth != null;
+    }
+
     // Demo configurations
     match /config_demos/{nicheId} {
       allow read: if request.auth != null;

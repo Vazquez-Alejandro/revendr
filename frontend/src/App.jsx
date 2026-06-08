@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Campaigns from './pages/Campaigns'
 import Leads from './pages/Leads'
 import Settings from './pages/Settings'
+import Products from './pages/Products'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import NotFound from './pages/NotFound'
@@ -19,6 +20,7 @@ import DemoBooking from './pages/public/DemoBooking'
 import DemoProperties from './pages/public/DemoProperties'
 import DemoClinic from './pages/public/DemoClinic'
 import DemoWhatsApp from './pages/public/DemoWhatsApp'
+import DemoProductLanding from './pages/public/DemoProductLanding'
 
 function App() {
   return (
@@ -37,6 +39,7 @@ function App() {
         <Route path="/demo/inmobiliaria/:demoId" element={<DemoProperties />} />
         <Route path="/demo/clinica/:demoId" element={<DemoClinic />} />
         <Route path="/demo/whatsapp/:demoId" element={<DemoWhatsApp />} />
+        <Route path="/demo/producto/:productId" element={<DemoProductLanding />} />
         
         {/* Auth routes */}
         <Route path="/login" element={<Login />} />
@@ -52,6 +55,7 @@ function App() {
           }
         >
           <Route index element={<Dashboard />} />
+          <Route path="productos" element={<Products />} />
           <Route path="campanias" element={<Campaigns />} />
           <Route path="leads" element={<Leads />} />
           <Route path="settings" element={<Settings />} />

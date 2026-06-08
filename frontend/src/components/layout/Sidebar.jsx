@@ -7,7 +7,8 @@ import {
   Users, 
   Settings,
   LogOut,
-  Zap
+  Zap,
+  Package
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -18,6 +19,7 @@ export function Sidebar() {
 
   const navigation = [
     { name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { name: t('myProducts'), href: '/dashboard/productos', icon: Package },
     { name: t('campaigns'), href: '/dashboard/campanias', icon: Megaphone },
     { name: t('leads'), href: '/dashboard/leads', icon: Users },
     { name: t('settings'), href: '/dashboard/settings', icon: Settings },

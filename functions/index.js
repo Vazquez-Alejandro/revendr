@@ -14,11 +14,23 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
 
-const app = express()
+const APIFY_ACTORS = {
+  google_maps: 'compass~crawler-google-places',
+  instagram: 'apify~instagram-profile-scraper',
+}
 
+const RUBRO_SEARCH_TERMS = {
+  inmobiliaria: 'inmobiliaria',
+  estetica: 'peluqueria estetica',
+  clinica: 'clinica medica',
+  restaurante: 'restaurante',
+  gimnasio: 'gimnasio',
+  otro: 'negocio',
+}
+
+const app = express()
 app.use(cors({ origin: true }))
 
-// Raw body for Stripe webhook, JSON for everything else
 app.use((req, res, next) => {
   if (req.originalUrl === '/webhook/stripe') {
     express.raw({ type: 'application/json' })(req, res, next)
@@ -27,7 +39,6 @@ app.use((req, res, next) => {
   }
 })
 
-// Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
@@ -40,7 +51,6 @@ app.get('/campaigns', async (req, res) => {
       .orderBy('fecha_creacion', 'desc')
       .limit(50)
       .get()
-
     const campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
     res.json({ success: true, data: campaigns })
   } catch (error) {
@@ -52,7 +62,6 @@ app.get('/campaigns', async (req, res) => {
 app.post('/campaigns', async (req, res) => {
   try {
     const { nombre, rubro_objetivo, mensaje_template, ciudad } = req.body
-
     if (!nombre || !rubro_objetivo) {
       return res.status(400).json({ success: false, error: { message: 'Nombre y rubro requeridos' } })
     }
@@ -77,7 +86,7 @@ app.post('/campaigns', async (req, res) => {
   }
 })
 
-app.patch('/api/campaigns/:id/status', async (req, res) => {
+app.patch('/campaigns/:id/status', async (req, res) => {
   try {
     const { estado } = req.body
     await db.collection('campanias').doc(req.params.id).update({
@@ -91,19 +100,162 @@ app.patch('/api/campaigns/:id/status', async (req, res) => {
   }
 })
 
+// ============ APIFY SCRAPING ============
+
+app.post('/campaigns/:campaignId/scrape', async (req, res) => {
+  try {
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const campaign = campaignDoc.data()
+    const { ciudad, rubro_objetivo } = campaign
+    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''}`.trim()
+
+    if (!APIFY_TOKEN) {
+      return res.status(500).json({ success: false, error: { message: 'Apify token not configured' } })
+    }
+
+    await db.collection('campanias').doc(req.params.campaignId).update({
+      scraping_status: 'running',
+      scraping_started_at: new Date(),
+    })
+
+    const runResponse = await axios.post(
+      `https://api.apify.com/v2/acts/${APIFY_ACTORS.google_maps}/runs`,
+      {
+        searchStringsArray: [searchTerm],
+        maxCrawledPlacesPerSearch: 50,
+        language: 'es',
+      },
+      { params: { token: APIFY_TOKEN } }
+    )
+
+    const runId = runResponse.data.data.id
+
+    res.json({ success: true, data: { runId, status: 'running' } })
+
+    pollApifyRun(runId, req.params.campaignId, rubro_objetivo).catch(err => {
+      console.error('Background scraping error:', err)
+    })
+  } catch (error) {
+    console.error('Error starting scrape:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+async function pollApifyRun(runId, campaignId, rubro) {
+  const maxAttempts = 60
+  let attempts = 0
+
+  while (attempts < maxAttempts) {
+    await new Promise(resolve => setTimeout(resolve, 10000))
+    attempts++
+
+    try {
+      const statusResponse = await axios.get(
+        `https://api.apify.com/v2/actor-runs/${runId}`,
+        { params: { token: APIFY_TOKEN } }
+      )
+
+      const run = statusResponse.data.data
+
+      if (run.status === 'SUCCEEDED') {
+        const datasetId = run.defaultDatasetId
+        await processApifyResults(datasetId, campaignId, rubro)
+        return
+      }
+
+      if (run.status === 'FAILED' || run.status === 'ABORTED') {
+        await db.collection('campanias').doc(campaignId).update({
+          scraping_status: 'failed',
+          scraping_error: run.status,
+          scraping_completed_at: new Date(),
+        })
+        return
+      }
+    } catch (error) {
+      console.error('Error polling Apify:', error.message)
+    }
+  }
+
+  await db.collection('campanias').doc(campaignId).update({
+    scraping_status: 'timeout',
+    scraping_completed_at: new Date(),
+  })
+}
+
+async function processApifyResults(datasetId, campaignId, rubro) {
+  try {
+    const response = await axios.get(
+      `https://api.apify.com/v2/datasets/${datasetId}/items`,
+      { params: { token: APIFY_TOKEN, format: 'json' } }
+    )
+
+    const leads = response.data || []
+    let saved = 0
+
+    for (const raw of leads) {
+      const phone = raw.phone || raw.telefono || ''
+      const phoneClean = phone.replace(/\D/g, '')
+
+      if (!phoneClean || phoneClean.length < 8) continue
+
+      const leadData = {
+        id_campania: campaignId,
+        nombre_negocio: raw.name || raw.title || raw.nombre || 'Sin nombre',
+        telefono_whatsapp: phoneClean.startsWith('54') ? `+${phoneClean}` : `+54${phoneClean}`,
+        email: raw.email || '',
+        rubro: rubro || 'general',
+        ciudad: raw.city || raw.location || '',
+        direccion: raw.address || raw.direccion || '',
+        url_origen: raw.url || raw.placeId || '',
+        url_google_maps: raw.url || '',
+        calificacion: raw.totalScore || raw.rating || null,
+        datos_personalizados: {
+          logo: raw.image || raw.photos?.[0] || '',
+          horarios: raw.openingHours || [],
+          website: raw.website || '',
+        },
+        estado_proceso: 'scraped',
+        fecha_creacion: new Date(),
+      }
+
+      await db.collection('leads').add(leadData)
+      saved++
+    }
+
+    await db.collection('campanias').doc(campaignId).update({
+      scraping_status: 'completed',
+      scraping_completed_at: new Date(),
+      leads_count: admin.firestore.FieldValue.increment(saved),
+    })
+
+    console.log(`Scraping completed for campaign ${campaignId}: ${saved} leads saved`)
+  } catch (error) {
+    console.error('Error processing Apify results:', error)
+    await db.collection('campanias').doc(campaignId).update({
+      scraping_status: 'error',
+      scraping_error: error.message,
+      scraping_completed_at: new Date(),
+    })
+  }
+}
+
 // ============ LEADS ============
 
 app.get('/leads', async (req, res) => {
   try {
-    const { rubro, estado, limit = 50 } = req.query
+    const { rubro, estado, limit: limitParam = 50 } = req.query
     let query = db.collection('leads')
 
-    if (rubro) query = query.where('rubro', '==', rubro)
-    if (estado) query = query.where('estado_proceso', '==', estado)
+    if (rubro && rubro !== 'todos') query = query.where('rubro', '==', rubro)
+    if (estado && estado !== 'todos') query = query.where('estado_proceso', '==', estado)
 
     const snapshot = await query
       .orderBy('fecha_creacion', 'desc')
-      .limit(parseInt(limit))
+      .limit(parseInt(limitParam))
       .get()
 
     const leads = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
@@ -133,6 +285,8 @@ app.get('/leads/stats', async (req, res) => {
   }
 })
 
+// ============ DEMO GENERATION ============
+
 app.post('/leads/:leadId/generate-demo', async (req, res) => {
   try {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
@@ -142,20 +296,122 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
 
     const lead = leadDoc.data()
     const demoId = `demo-${lead.rubro}-${req.params.leadId}`
-    const demoUrl = `https://revendr-9add8.web.app/demo/${lead.rubro}/${demoId}`
+
+    const demoData = {
+      lead_id: req.params.leadId,
+      nombre_negocio: lead.nombre_negocio,
+      rubro: lead.rubro,
+      ciudad: lead.ciudad || 'Argentina',
+      direccion: lead.direccion || '',
+      telefono_whatsapp: lead.telefono_whatsapp || '',
+      calificacion: lead.calificacion || 4.8,
+      logo: lead.datos_personalizados?.logo || '',
+      website: lead.datos_personalizados?.website || '',
+      horarios: lead.datos_personalizados?.horarios || [],
+      url_demo: `https://revendr-9add8.web.app/demo/${lead.rubro}/${demoId}`,
+      fecha_creacion: new Date(),
+    }
+
+    await db.collection('demos').doc(demoId).set(demoData)
 
     await db.collection('leads').doc(req.params.leadId).update({
       estado_proceso: 'demo_generada',
-      url_demo: demoUrl,
+      url_demo: demoData.url_demo,
+      demo_id: demoId,
+      fecha_generacion_demo: new Date(),
       fecha_actualizacion: new Date(),
     })
 
-    res.json({ success: true, data: { demoUrl } })
+    if (lead.id_campania) {
+      await db.collection('campanias').doc(lead.id_campania).update({
+        demos_generadas: admin.firestore.FieldValue.increment(1),
+      })
+    }
+
+    res.json({ success: true, data: { demoUrl: demoData.url_demo, demoId } })
   } catch (error) {
     console.error('Error generating demo:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
+
+app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId
+    const { limit: limitParam = 10 } = req.body
+
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+    const campaign = campaignDoc.data()
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', campaignId)
+      .where('estado_proceso', '==', 'scraped')
+      .limit(parseInt(limitParam))
+      .get()
+
+    let processed = 0
+    const results = []
+
+    for (const leadDoc of leadsSnapshot.docs) {
+      try {
+        const lead = leadDoc.data()
+        const demoId = `demo-${lead.rubro}-${leadDoc.id}`
+
+        const demoUrl = campaign.producto_id
+          ? `https://revendr-9add8.web.app/demo/producto/${campaign.producto_id}?negocio=${encodeURIComponent(lead.nombre_negocio)}&telefono=${encodeURIComponent(lead.telefono_whatsapp || '')}`
+          : campaign.producto_url_demo
+            ? `${campaign.producto_url_demo}?negocio=${encodeURIComponent(lead.nombre_negocio)}&ciudad=${encodeURIComponent(lead.ciudad || '')}`
+            : `https://revendr-9add8.web.app/demo/${lead.rubro}/${demoId}`
+
+        const demoData = {
+          lead_id: leadDoc.id,
+          nombre_negocio: lead.nombre_negocio,
+          rubro: lead.rubro,
+          ciudad: lead.ciudad || 'Argentina',
+          direccion: lead.direccion || '',
+          telefono_whatsapp: lead.telefono_whatsapp || '',
+          calificacion: lead.calificacion || 4.8,
+          logo: lead.datos_personalizados?.logo || '',
+          website: lead.datos_personalizados?.website || '',
+          horarios: lead.datos_personalizados?.horarios || [],
+          url_demo: demoUrl,
+          producto_url: campaign.producto_url_demo || null,
+          fecha_creacion: new Date(),
+        }
+
+        await db.collection('demos').doc(demoId).set(demoData)
+        await db.collection('leads').doc(leadDoc.id).update({
+          estado_proceso: 'demo_generada',
+          url_demo: demoData.url_demo,
+          demo_id: demoId,
+          fecha_generacion_demo: new Date(),
+          fecha_actualizacion: new Date(),
+        })
+
+        processed++
+        results.push({ leadId: leadDoc.id, demoUrl: demoData.url_demo })
+      } catch (err) {
+        console.error(`Error generating demo for lead ${leadDoc.id}:`, err.message)
+      }
+    }
+
+    if (processed > 0) {
+      await db.collection('campanias').doc(campaignId).update({
+        demos_generadas: admin.firestore.FieldValue.increment(processed),
+      })
+    }
+
+    res.json({ success: true, data: { processed, results } })
+  } catch (error) {
+    console.error('Error batch generating demos:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ WHATSAPP SENDING ============
 
 app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
   try {
@@ -169,14 +425,23 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
       return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
     }
 
-    const axios = require('axios')
-    const message = `Hola ${lead.nombre_negocio}, te propuse algo especial...\n\nMirá tu demo: ${lead.url_demo}`
+    if (!lead.url_demo) {
+      return res.status(400).json({ success: false, error: { message: 'Lead has no demo URL. Generate demo first.' } })
+    }
+
+    const customMessage = req.body.customMessage
+    const message = customMessage
+      ? customMessage
+        .replace(/{nombre_negocio}/g, lead.nombre_negocio)
+        .replace(/{url_demo}/g, lead.url_demo)
+        .replace(/{rubro}/g, lead.rubro)
+      : `Hola ${lead.nombre_negocio}, te propuse algo especial para tu ${lead.rubro}.\n\nMirá tu demo personalizada: ${lead.url_demo}\n\n¿Te gustaría que hablemos?`
 
     const response = await axios.post(
-      `https://graph.facebook.com/v17.0/${PHONE_NUMBER_ID}/messages`,
+      `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
       {
         messaging_product: 'whatsapp',
-        to: lead.telefono_whatsapp,
+        to: lead.telefono_whatsapp.replace(/\D/g, ''),
         type: 'text',
         text: { body: message },
       },
@@ -195,9 +460,101 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
       fecha_actualizacion: new Date(),
     })
 
+    if (lead.id_campania) {
+      await db.collection('campanias').doc(lead.id_campania).update({
+        mensajes_enviados: admin.firestore.FieldValue.increment(1),
+      })
+    }
+
     res.json({ success: true, data: { messageId: response.data.messages?.[0]?.id } })
   } catch (error) {
-    console.error('Error sending WhatsApp:', error)
+    console.error('Error sending WhatsApp:', error.response?.data || error.message)
+    res.status(500).json({ success: false, error: { message: error.response?.data?.error?.message || error.message } })
+  }
+})
+
+app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId
+    const { limit: limitParam = 10 } = req.body
+
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const campaign = campaignDoc.data()
+
+    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+      return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
+    }
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', campaignId)
+      .where('estado_proceso', '==', 'demo_generada')
+      .limit(parseInt(limitParam))
+      .get()
+
+    let sent = 0
+    let failed = 0
+
+    for (const leadDoc of leadsSnapshot.docs) {
+      try {
+        const lead = leadDoc.data()
+
+        if (!lead.url_demo || !lead.telefono_whatsapp) {
+          failed++
+          continue
+        }
+
+        const messageTemplate = campaign.producto_mensaje || campaign.mensaje_template || `Hola {nombre_negocio}, te propuse algo especial para tu {rubro}.\n\nMirá tu demo: {url_demo}`
+        const message = messageTemplate
+          .replace(/{nombre_negocio}/g, lead.nombre_negocio)
+          .replace(/{url_demo}/g, lead.url_demo)
+          .replace(/{rubro}/g, lead.rubro)
+
+        const delay = Math.floor(Math.random() * 60000) + 30000
+        await new Promise(resolve => setTimeout(resolve, delay))
+
+        const response = await axios.post(
+          `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
+          {
+            messaging_product: 'whatsapp',
+            to: lead.telefono_whatsapp.replace(/\D/g, ''),
+            type: 'text',
+            text: { body: message },
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+              'Content-Type': 'application/json',
+            },
+          }
+        )
+
+        await db.collection('leads').doc(leadDoc.id).update({
+          estado_proceso: 'mensaje_enviado',
+          whatsapp_message_id: response.data.messages?.[0]?.id,
+          fecha_envio_whatsapp: new Date(),
+          fecha_actualizacion: new Date(),
+        })
+
+        sent++
+      } catch (err) {
+        console.error(`Error sending to lead ${leadDoc.id}:`, err.response?.data || err.message)
+        failed++
+      }
+    }
+
+    if (sent > 0) {
+      await db.collection('campanias').doc(campaignId).update({
+        mensajes_enviados: admin.firestore.FieldValue.increment(sent),
+      })
+    }
+
+    res.json({ success: true, data: { sent, failed, total: leadsSnapshot.size } })
+  } catch (error) {
+    console.error('Error batch sending messages:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
@@ -206,42 +563,9 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
 
 app.post('/webhooks/apify', async (req, res) => {
   try {
-    const { defaultDatasetId, campaignId } = req.body
-
-    const response = await axios.get(
-      `https://api.apify.com/v2/datasets/${defaultDatasetId}/items`,
-      { params: { token: APIFY_TOKEN, format: 'json' } }
-    )
-
-    const leads = response.data
-    let saved = 0
-
-    for (const raw of leads) {
-      const leadData = {
-        id_campania: campaignId || '',
-        nombre_negocio: raw.name || raw.title || 'Sin nombre',
-        telefono_whatsapp: raw.phone || '',
-        email: raw.email || '',
-        rubro: req.body.rubro || 'general',
-        url_origen: raw.url || '',
-        estado_proceso: 'scraped',
-        fecha_creacion: new Date(),
-      }
-
-      if (leadData.telefono_whatsapp) {
-        await db.collection('leads').add(leadData)
-        saved++
-      }
-    }
-
-    if (campaignId) {
-      await db.collection('campanias').doc(campaignId).update({
-        leads_count: admin.firestore.FieldValue.increment(saved),
-        scraping_completed_at: new Date(),
-      })
-    }
-
-    res.json({ success: true, data: { leadsProcessed: saved } })
+    const { defaultDatasetId, campaignId, rubro } = req.body
+    await processApifyResults(defaultDatasetId, campaignId, rubro || 'general')
+    res.json({ success: true })
   } catch (error) {
     console.error('Error processing Apify webhook:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
@@ -300,6 +624,7 @@ app.post('/webhook/stripe', async (req, res) => {
           stripe_customer_id: session.customer,
           stripe_subscription_id: session.subscription,
           api_credits: planCredits[plan] || planCredits.starter,
+          permissions: ['campaigns', 'leads', 'settings', 'billing'],
           fecha_creacion: new Date(),
           activo: true,
         }, { merge: true })
@@ -319,16 +644,41 @@ app.post('/webhook/stripe', async (req, res) => {
       }
     }
 
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object
+      const stripe = require('stripe')(STRIPE_SECRET_KEY)
+      const customer = await stripe.customers.retrieve(subscription.customer)
+
+      if (customer.email) {
+        try {
+          const user = await admin.auth().getUserByEmail(customer.email)
+          await db.collection('usuarios_admin').doc(user.uid).update({
+            stripe_subscription_status: subscription.status,
+            fecha_actualizacion: new Date(),
+          })
+        } catch (err) {
+          console.error('Error updating subscription status:', err.message)
+        }
+      }
+    }
+
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object
+      const stripe = require('stripe')(STRIPE_SECRET_KEY)
       const customer = await stripe.customers.retrieve(subscription.customer)
-      
-      if (customer.metadata?.user_id) {
-        await db.collection('usuarios_admin').doc(customer.metadata.user_id).update({
-          plan: 'inactive',
-          activo: false,
-          fecha_desactivacion: new Date(),
-        })
+
+      if (customer.email) {
+        try {
+          const user = await admin.auth().getUserByEmail(customer.email)
+          await db.collection('usuarios_admin').doc(user.uid).update({
+            plan: 'inactive',
+            activo: false,
+            stripe_subscription_status: 'canceled',
+            fecha_desactivacion: new Date(),
+          })
+        } catch (err) {
+          console.error('Error deactivating user:', err.message)
+        }
       }
     }
 
@@ -343,8 +693,8 @@ app.post('/webhook/stripe', async (req, res) => {
 
 app.post('/create-checkout-session', async (req, res) => {
   try {
-    const { priceId, leadId } = req.body
-    
+    const { priceId, leadId, plan } = req.body
+
     if (!priceId) {
       return res.status(400).json({ success: false, error: { message: 'priceId is required' } })
     }
@@ -357,7 +707,7 @@ app.post('/create-checkout-session', async (req, res) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `https://revendr-9add8.web.app/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `https://revendr-9add8.web.app/pricing`,
-      metadata: { leadId: leadId || '' },
+      metadata: { leadId: leadId || '', plan: plan || 'growth' },
     })
 
     res.json({ url: session.url, sessionId: session.id })
@@ -379,7 +729,6 @@ app.get('/stats/dashboard', async (req, res) => {
     let activeCampaigns = 0
     let demosGeneradas = 0
     let clientesActivos = 0
-    const today = new Date().toDateString()
 
     campaignsSnap.docs.forEach(doc => {
       if (doc.data().estado === 'activa') activeCampaigns++
@@ -387,7 +736,7 @@ app.get('/stats/dashboard', async (req, res) => {
 
     leadsSnap.docs.forEach(doc => {
       const lead = doc.data()
-      if (lead.estado_proceso === 'demo_generadas') demosGeneradas++
+      if (lead.estado_proceso === 'demo_generada') demosGeneradas++
       if (lead.estado_proceso === 'cliente_activo') clientesActivos++
     })
 

@@ -15,7 +15,9 @@ import {
   Loader2,
   Search,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  ExternalLink,
+  Sparkles
 } from 'lucide-react'
 
 const RUBROS = [
@@ -253,6 +255,9 @@ export default function Leads() {
                       {t('status')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
+                      {locale === 'es' ? 'Demo' : 'Demo'}
+                    </th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
                       {t('source')}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
@@ -286,6 +291,21 @@ export default function Leads() {
                         <span className={`badge ${ESTADOS[lead.estado_proceso]?.class || 'badge-info'}`}>
                           {ESTADOS_LABELS[lead.estado_proceso] || lead.estado_proceso}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {lead.url_demo ? (
+                          <a 
+                            href={lead.url_demo} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2 py-1 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-xs font-medium hover:bg-brand-500/20 transition-all"
+                          >
+                            <ExternalLink className="w-3 h-3" />
+                            {locale === 'es' ? 'Ver' : 'View'}
+                          </a>
+                        ) : lead.estado_proceso === 'scraped' ? (
+                          <span className="text-xs text-dark-500">{locale === 'es' ? 'Pendiente' : 'Pending'}</span>
+                        ) : null}
                       </td>
                       <td className="py-3 px-4">
                         <a 
