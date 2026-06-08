@@ -25,7 +25,9 @@ import {
   Sparkles,
   MessageCircle,
   Search,
-  Package
+  Package,
+  Copy,
+  Edit3
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -58,6 +60,8 @@ export default function Campaigns() {
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [creating, setCreating] = useState(false)
   const [processingAction, setProcessingAction] = useState(null)
+  const [editingId, setEditingId] = useState(null)
+  const [searchTerm, setSearchTerm] = useState('')
   const [formData, setFormData] = useState({
     nombre: '',
     producto_id: '',
@@ -264,6 +268,90 @@ export default function Campaigns() {
     }
   }
 
+  const handleEditCampaign = async (e) => {
+    e.preventDefault()
+    if (!formData.nombre) {
+      toast.error(locale === 'es' ? 'Completá el nombre' : 'Fill in the name')
+      return
+    }
+
+    setCreating(true)
+    try {
+      const selectedProduct = products.find(p => p.id === formData.producto_id)
+      await updateDoc(doc(db, 'campanias', editingId), {
+        nombre: formData.nombre,
+        producto_id: formData.producto_id || null,
+        producto_nombre: selectedProduct?.nombre || null,
+        producto_url_demo: selectedProduct?.url_demo || null,
+        producto_mensaje: selectedProduct?.mensaje_whatsapp || null,
+        rubro_objetivo: selectedProduct?.nicho || formData.rubro_objetivo,
+        mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
+        ciudad: formData.ciudad,
+        fecha_actualizacion: new Date(),
+      })
+      toast.success(locale === 'es' ? 'Campaña actualizada' : 'Campaign updated')
+      setShowCreateModal(false)
+      setEditingId(null)
+      setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', ciudad: '' })
+      loadCampaigns()
+    } catch (error) {
+      console.error('Error updating campaign:', error)
+      toast.error(locale === 'es' ? 'Error al actualizar' : 'Error updating')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const handleDuplicateCampaign = async (campaign) => {
+    try {
+      const newCampaign = {
+        nombre: `${campaign.nombre} (copia)`,
+        producto_id: campaign.producto_id || null,
+        producto_nombre: campaign.producto_nombre || null,
+        producto_url_demo: campaign.producto_url_demo || null,
+        producto_mensaje: campaign.producto_mensaje || null,
+        rubro_objetivo: campaign.rubro_objetivo,
+        mensaje_template: campaign.mensaje_template || '',
+        ciudad: campaign.ciudad || '',
+        estado: 'activa',
+        fecha_inicio: new Date(),
+        fecha_creacion: new Date(),
+        leads_count: 0,
+        demos_generadas: 0,
+        mensajes_enviados: 0,
+      }
+      await addDoc(collection(db, 'campanias'), newCampaign)
+      toast.success(locale === 'es' ? 'Campaña duplicada' : 'Campaign duplicated')
+      loadCampaigns()
+    } catch (error) {
+      console.error('Error duplicating campaign:', error)
+      toast.error(locale === 'es' ? 'Error al duplicar' : 'Error duplicating')
+    }
+  }
+
+  const startEditCampaign = (campaign) => {
+    setFormData({
+      nombre: campaign.nombre || '',
+      producto_id: campaign.producto_id || '',
+      rubro_objetivo: campaign.rubro_objetivo || '',
+      mensaje_template: campaign.mensaje_template || '',
+      ciudad: campaign.ciudad || '',
+    })
+    setEditingId(campaign.id)
+    setShowCreateModal(true)
+  }
+
+  const filteredCampaigns = campaigns.filter(c => {
+    if (!searchTerm) return true
+    const search = searchTerm.toLowerCase()
+    return (
+      c.nombre?.toLowerCase().includes(search) ||
+      c.producto_nombre?.toLowerCase().includes(search) ||
+      c.ciudad?.toLowerCase().includes(search) ||
+      c.rubro_objetivo?.toLowerCase().includes(search)
+    )
+  })
+
   const ESTADOS = locale === 'es' ? ESTADOS_ES : ESTADOS_EN
 
   const getScrapingBadge = (status) => {
@@ -305,6 +393,20 @@ export default function Campaigns() {
         </button>
       </div>
 
+      {/* Search */}
+      {campaigns.length > 0 && (
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="input-field pl-10"
+            placeholder={locale === 'es' ? 'Buscar campañas...' : 'Search campaigns...'}
+          />
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center h-64">
           <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
@@ -327,7 +429,7 @@ export default function Campaigns() {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {campaigns.map((campaign) => (
+          {filteredCampaigns.map((campaign) => (
             <div key={campaign.id} className="card-hover">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex-1">
@@ -350,6 +452,20 @@ export default function Campaigns() {
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => startEditCampaign(campaign)}
+                    className="p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all"
+                    title={locale === 'es' ? 'Editar' : 'Edit'}
+                  >
+                    <Edit3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDuplicateCampaign(campaign)}
+                    className="p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all"
+                    title={locale === 'es' ? 'Duplicar' : 'Duplicate'}
+                  >
+                    <Copy className="w-4 h-4" />
+                  </button>
                   <button
                     onClick={() => toggleCampaignStatus(campaign.id, campaign.estado)}
                     className="p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-700 rounded-lg transition-all"
@@ -474,17 +590,19 @@ export default function Campaigns() {
           <div className="card w-full max-w-lg animate-slide-up">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-dark-100">
-                {t('newCampaign')}
+                {editingId
+                  ? (locale === 'es' ? 'Editar Campaña' : 'Edit Campaign')
+                  : t('newCampaign')}
               </h2>
               <button
-                onClick={() => setShowCreateModal(false)}
+                onClick={() => { setShowCreateModal(false); setEditingId(null); setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', ciudad: '' }) }}
                 className="text-dark-400 hover:text-dark-200"
               >
                 ✕
               </button>
             </div>
 
-            <form onSubmit={handleCreateCampaign} className="space-y-4">
+            <form onSubmit={editingId ? handleEditCampaign : handleCreateCampaign} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">
                   {t('campaignName')} *
@@ -576,7 +694,7 @@ export default function Campaigns() {
               <div className="flex items-center gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => setShowCreateModal(false)}
+                  onClick={() => { setShowCreateModal(false); setEditingId(null); setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', ciudad: '' }) }}
                   className="btn-secondary flex-1"
                 >
                   {t('cancel')}

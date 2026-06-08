@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { 
   collection, 
   getDocs, 
+  addDoc,
+  updateDoc,
+  doc,
   query, 
   where, 
   orderBy,
   limit,
 } from 'firebase/firestore'
-import { db } from '../config/firebase'
+import { db, auth } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { 
   Users, 
@@ -17,8 +20,18 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Upload,
+  X,
+  Eye,
+  Phone,
+  Mail,
+  MapPin,
+  Star,
+  Calendar,
+  MessageCircle
 } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const RUBROS = [
   { value: 'todos', labelEs: 'Todos los Rubros', labelEn: 'All Niches' },
@@ -62,6 +75,9 @@ export default function Leads() {
   const [filterRubro, setFilterRubro] = useState('todos')
   const [filterEstado, setFilterEstado] = useState('todos')
   const [searchTerm, setSearchTerm] = useState('')
+  const [selectedLead, setSelectedLead] = useState(null)
+  const [importing, setImporting] = useState(false)
+  const fileInputRef = useRef(null)
   const [lastVisible, setLastVisible] = useState(null)
   const [hasMore, setHasMore] = useState(true)
   const [stats, setStats] = useState({
@@ -133,6 +149,77 @@ export default function Leads() {
     return true
   })
 
+  const updateLeadStatus = async (leadId, newStatus) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId), {
+        estado_proceso: newStatus,
+        fecha_actualizacion: new Date(),
+      })
+      toast.success(locale === 'es' ? 'Estado actualizado' : 'Status updated')
+      setSelectedLead({ ...selectedLead, estado_proceso: newStatus })
+      loadLeads()
+    } catch (error) {
+      console.error('Error updating lead:', error)
+      toast.error(locale === 'es' ? 'Error al actualizar' : 'Error updating')
+    }
+  }
+
+  const handleImportCSV = async (e) => {
+    const file = e.target.files[0]
+    if (!file) return
+
+    setImporting(true)
+    try {
+      const text = await file.text()
+      const lines = text.split('\n').filter(l => l.trim())
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+
+      const nombreIdx = headers.findIndex(h => h.includes('nombre') || h.includes('name'))
+      const telefonoIdx = headers.findIndex(h => h.includes('telefono') || h.includes('phone') || h.includes('whatsapp'))
+      const emailIdx = headers.findIndex(h => h.includes('email') || h.includes('correo'))
+      const direccionIdx = headers.findIndex(h => h.includes('direccion') || h.includes('address'))
+      const rubroIdx = headers.findIndex(h => h.includes('rubro') || h.includes('niche') || h.includes('category'))
+
+      if (nombreIdx === -1) {
+        toast.error(locale === 'es' ? 'El CSV debe tener columna "nombre"' : 'CSV must have "name" column')
+        return
+      }
+
+      let imported = 0
+      const userId = auth.currentUser?.uid
+
+      for (let i = 1; i < lines.length; i++) {
+        const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''))
+        if (!cols[nombreIdx]) continue
+
+        await addDoc(collection(db, 'leads'), {
+          nombre_negocio: cols[nombreIdx] || '',
+          telefono_whatsapp: cols[telefonoIdx] || '',
+          email: cols[emailIdx] || '',
+          direccion: cols[direccionIdx] || '',
+          rubro: cols[rubroIdx] || 'otro',
+          estado_proceso: 'scraped',
+          id_campania: null,
+          fecha_creacion: new Date(),
+          user_id: userId,
+          source: 'csv_import',
+        })
+        imported++
+      }
+
+      toast.success(
+        locale === 'es' ? `${imported} leads importados` : `${imported} leads imported`
+      )
+      loadLeads()
+    } catch (error) {
+      console.error('Error importing CSV:', error)
+      toast.error(locale === 'es' ? 'Error al importar' : 'Error importing')
+    } finally {
+      setImporting(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
+
   const exportToCSV = () => {
     const headers = locale === 'es' 
       ? ['Nombre', 'Teléfono', 'Email', 'Rubro', 'Estado', 'URL Origen', 'Fecha']
@@ -165,13 +252,34 @@ export default function Leads() {
           <h1 className="text-2xl font-bold text-dark-50">{t('leads')}</h1>
           <p className="text-dark-400 mt-1">{t('leadsDesc')}</p>
         </div>
-        <button
-          onClick={exportToCSV}
-          className="btn-secondary flex items-center gap-2"
-        >
-          <Download className="w-4 h-4" />
-          {t('exportCSV')}
-        </button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleImportCSV}
+            className="hidden"
+          />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={importing}
+            className="btn-secondary flex items-center gap-2"
+          >
+            {importing ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Upload className="w-4 h-4" />
+            )}
+            {locale === 'es' ? 'Importar CSV' : 'Import CSV'}
+          </button>
+          <button
+            onClick={exportToCSV}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            {t('exportCSV')}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
@@ -267,7 +375,11 @@ export default function Leads() {
                 </thead>
                 <tbody className="divide-y divide-dark-700">
                   {filteredLeads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-dark-700/50 transition-colors">
+                    <tr 
+                      key={lead.id} 
+                      className="hover:bg-dark-700/50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedLead(lead)}
+                    >
                       <td className="py-3 px-4">
                         <div className="text-sm font-medium text-dark-100">
                           {lead.nombre_negocio}
@@ -348,6 +460,129 @@ export default function Leads() {
           </>
         )}
       </div>
+
+      {/* Lead Detail Modal */}
+      {selectedLead && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-dark-100">
+                {selectedLead.nombre_negocio}
+              </h2>
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="text-dark-400 hover:text-dark-200"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Contact Info */}
+              <div className="bg-dark-900 rounded-lg p-4 space-y-3">
+                {selectedLead.telefono_whatsapp && (
+                  <div className="flex items-center gap-3">
+                    <Phone className="w-4 h-4 text-dark-400" />
+                    <span className="text-sm text-dark-200">{selectedLead.telefono_whatsapp}</span>
+                  </div>
+                )}
+                {selectedLead.email && (
+                  <div className="flex items-center gap-3">
+                    <Mail className="w-4 h-4 text-dark-400" />
+                    <span className="text-sm text-dark-200">{selectedLead.email}</span>
+                  </div>
+                )}
+                {selectedLead.direccion && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-4 h-4 text-dark-400" />
+                    <span className="text-sm text-dark-200">{selectedLead.direccion}</span>
+                  </div>
+                )}
+                {selectedLead.calificacion && (
+                  <div className="flex items-center gap-3">
+                    <Star className="w-4 h-4 text-amber-400" />
+                    <span className="text-sm text-dark-200">{selectedLead.calificacion} ⭐</span>
+                  </div>
+                )}
+                {selectedLead.fecha_creacion && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-4 h-4 text-dark-400" />
+                    <span className="text-sm text-dark-200">
+                      {selectedLead.fecha_creacion?.toDate?.()?.toLocaleDateString('es-AR')}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Status */}
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Estado' : 'Status'}
+                </label>
+                <select
+                  value={selectedLead.estado_proceso}
+                  onChange={(e) => updateLeadStatus(selectedLead.id, e.target.value)}
+                  className="select-field"
+                >
+                  <option value="scraped">{ESTADOS_LABELS_ES.scraped}</option>
+                  <option value="demo_generada">{ESTADOS_LABELS_ES.demo_generada}</option>
+                  <option value="mensaje_enviado">{ESTADOS_LABELS_ES.mensaje_enviado}</option>
+                  <option value="interesado">{ESTADOS_LABELS_ES.interesado}</option>
+                  <option value="cliente_activo">{ESTADOS_LABELS_ES.cliente_activo}</option>
+                </select>
+              </div>
+
+              {/* Demo Link */}
+              {selectedLead.url_demo && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    {locale === 'es' ? 'Demo' : 'Demo'}
+                  </label>
+                  <a
+                    href={selectedLead.url_demo}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-sm font-medium hover:bg-brand-500/20 transition-all"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                    {locale === 'es' ? 'Ver Landing' : 'View Landing'}
+                  </a>
+                </div>
+              )}
+
+              {/* WhatsApp */}
+              {selectedLead.telefono_whatsapp && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    WhatsApp
+                  </label>
+                  <a
+                    href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-all"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    {locale === 'es' ? 'Abrir WhatsApp' : 'Open WhatsApp'}
+                  </a>
+                </div>
+              )}
+
+              {/* Notes */}
+              {selectedLead.notas && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    {locale === 'es' ? 'Notas' : 'Notes'}
+                  </label>
+                  <p className="text-sm text-dark-300 bg-dark-900 rounded-lg p-3">
+                    {selectedLead.notas}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

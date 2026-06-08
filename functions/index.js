@@ -13,6 +13,7 @@ const WHATSAPP_TOKEN = process.env.WHATSAPP_TOKEN
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
+const RESEND_API_KEY = process.env.RESEND_API_KEY
 
 const APIFY_ACTORS = {
   google_maps: 'compass~crawler-google-places',
@@ -26,6 +27,14 @@ const RUBRO_SEARCH_TERMS = {
   restaurante: 'restaurante',
   gimnasio: 'gimnasio',
   otro: 'negocio',
+}
+
+const isBusinessHours = () => {
+  const now = new Date()
+  const hour = now.getHours()
+  const day = now.getDay()
+  if (day === 0 || day === 6) return false
+  return hour >= 9 && hour < 18
 }
 
 const app = express()
@@ -427,6 +436,38 @@ app.post('/landing/view', async (req, res) => {
       ip: req.headers['x-forwarded-for'] || req.connection?.remoteAddress || null,
     })
 
+    // Send email notification to product owner
+    try {
+      const productDoc = await db.collection('productos').doc(productId).get()
+      if (productDoc.exists) {
+        const product = productDoc.data()
+        const ownerDoc = await db.collection('usuarios_admin').doc(product.user_id).get()
+        if (ownerDoc.exists && ownerDoc.data().email && RESEND_API_KEY) {
+          const lead = leadId ? await db.collection('leads').doc(leadId).get() : null
+          const leadName = lead?.exists ? lead.data().nombre_negocio : 'Alguien'
+
+          await axios.post('https://api.resend.com/emails', {
+            from: 'Revendr <notifications@revendr.app>',
+            to: ownerDoc.data().email,
+            subject: `${leadName} vio tu landing de ${product.nombre}`,
+            html: `
+              <h2>Alguien vio tu producto</h2>
+              <p><strong>${leadName}</strong> abrió la landing de <strong>${product.nombre}</strong>.</p>
+              <p>Es un buen momento para contactarlos.</p>
+              <p><small>Revendr - SaaS Engine</small></p>
+            `,
+          }, {
+            headers: {
+              'Authorization': `Bearer ${RESEND_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+          })
+        }
+      }
+    } catch (emailErr) {
+      console.error('Email notification error (non-critical):', emailErr.message)
+    }
+
     res.json({ success: true })
   } catch (error) {
     console.error('Error tracking view:', error)
@@ -523,6 +564,10 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
 
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
       return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
+    }
+
+    if (!isBusinessHours()) {
+      return res.status(400).json({ success: false, error: { message: 'Outside business hours (Mon-Fri 9-18hs)' } })
     }
 
     const leadsSnapshot = await db.collection('leads')
