@@ -31,7 +31,8 @@ import {
   Calendar,
   MessageCircle,
   LayoutGrid,
-  List
+  List,
+  Megaphone
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
@@ -74,9 +75,11 @@ const PAGE_SIZE = 20
 export default function Leads() {
   const { t, locale } = useI18n()
   const [leads, setLeads] = useState([])
+  const [campaigns, setCampaigns] = useState([])
   const [loading, setLoading] = useState(true)
   const [filterRubro, setFilterRubro] = useState('todos')
   const [filterEstado, setFilterEstado] = useState('todos')
+  const [filterCampania, setFilterCampania] = useState('todas')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLead, setSelectedLead] = useState(null)
   const [importing, setImporting] = useState(false)
@@ -95,7 +98,18 @@ export default function Leads() {
 
   useEffect(() => {
     loadLeads(true)
-  }, [filterRubro, filterEstado])
+    loadCampaigns()
+  }, [filterRubro, filterEstado, filterCampania])
+
+  const loadCampaigns = async () => {
+    try {
+      const q = query(collection(db, 'campanias'), orderBy('fecha_inicio', 'desc'))
+      const snapshot = await getDocs(q)
+      setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+    } catch (error) {
+      console.error('Error loading campaigns:', error)
+    }
+  }
 
   const loadLeads = async (reset = false) => {
     setLoading(true)
@@ -107,6 +121,9 @@ export default function Leads() {
       }
       if (filterEstado !== 'todos') {
         q = query(q, where('estado_proceso', '==', filterEstado))
+      }
+      if (filterCampania !== 'todas') {
+        q = query(q, where('id_campania', '==', filterCampania))
       }
 
       q = query(q, limit(PAGE_SIZE))
@@ -358,6 +375,16 @@ export default function Leads() {
             <option value="todos">{t('allStatuses')}</option>
             {Object.entries(ESTADOS_LABELS).map(([key, label]) => (
               <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+          <select
+            value={filterCampania}
+            onChange={(e) => setFilterCampania(e.target.value)}
+            className="select-field w-full md:w-48"
+          >
+            <option value="todas">{locale === 'es' ? 'Todas las campañas' : 'All campaigns'}</option>
+            {campaigns.map(c => (
+              <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
           </select>
           <div className="flex border border-dark-700 rounded-lg overflow-hidden">
