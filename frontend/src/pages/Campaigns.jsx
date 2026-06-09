@@ -102,6 +102,17 @@ export default function Campaigns() {
     loadProducts()
   }, [])
 
+  useEffect(() => {
+    const hasRunning = campaigns.some(c => c.scraping_status === 'running')
+    if (!hasRunning) return
+
+    const interval = setInterval(() => {
+      loadCampaigns()
+    }, 10000)
+
+    return () => clearInterval(interval)
+  }, [campaigns])
+
   const loadCampaigns = async () => {
     try {
       const q = query(
@@ -110,6 +121,19 @@ export default function Campaigns() {
       )
       const snapshot = await getDocs(q)
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+
+      data.forEach(newCamp => {
+        const oldCamp = campaigns.find(c => c.id === newCamp.id)
+        if (oldCamp?.scraping_status === 'running' && newCamp.scraping_status === 'completed') {
+          toast.success(
+            locale === 'es'
+              ? `${newCamp.nombre}: ${newCamp.leads_count || 0} leads encontrados`
+              : `${newCamp.nombre}: ${newCamp.leads_count || 0} leads found`,
+            { duration: 5000 }
+          )
+        }
+      })
+
       setCampaigns(data)
     } catch (error) {
       console.error('Error loading campaigns:', error)
