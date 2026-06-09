@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { 
   collection, 
   getDocs, 
@@ -45,6 +45,18 @@ const RUBROS = [
   { value: 'otro', labelEs: 'Otro', labelEn: 'Other' },
 ]
 
+const CIUDADES_ARGENTINA = [
+  'Buenos Aires', 'Córdoba', 'Rosario', 'Mendoza', 'Tucumán',
+  'La Plata', 'Mar del Plata', 'Salta', 'Santa Fe', 'San Juan',
+  'Resistencia', 'Santiago del Estero', 'Corrientes', 'Neuquén', 'Posadas',
+  'Paraná', 'San Salvador de Jujuy', 'Bahía Blanca', 'Formosa', 'San Luis',
+  'La Rioja', 'Catamarca', 'Rawson', 'San Carlos de Bariloche', 'Concepción del Uruguay',
+  'Gualeguaychú', 'Villa Carlos Paz', 'San Rafael', 'Junín', 'Pergamino',
+  'Olavarría', 'Chivilcoy', 'Lobos', 'Bragado', '25 de Mayo',
+  'Nueve de Julio', 'Mercedes', 'Dolores', 'San Clemente del Tuyú', 'Pinamar',
+  'Cariló', 'Villa Gesell', 'Mar de Ajó', 'San Bernardo', 'Miramar',
+]
+
 const ESTADOS_ES = {
   activa: { label: 'Activa', class: 'badge-success' },
   pausada: { label: 'Pausada', class: 'badge-warning' },
@@ -74,6 +86,9 @@ export default function Campaigns() {
   const [roiData, setRoiData] = useState(null)
   const [revenueModal, setRevenueModal] = useState(null)
   const [revenueForm, setRevenueForm] = useState({ leadId: '', amount: '', notes: '' })
+  const [showCityDropdown, setShowCityDropdown] = useState(false)
+  const [cityFilter, setCityFilter] = useState('')
+  const cityInputRef = useRef(null)
   const [formData, setFormData] = useState({
     nombre: '',
     producto_id: '',
@@ -854,17 +869,51 @@ export default function Campaigns() {
                 </select>
               </div>
 
-              <div>
+              <div className="relative">
                 <label className="block text-sm font-medium text-dark-300 mb-2">
                   {t('city')}
                 </label>
                 <input
+                  ref={cityInputRef}
                   type="text"
                   value={formData.ciudad}
-                  onChange={(e) => setFormData({ ...formData, ciudad: e.target.value })}
+                  onChange={(e) => {
+                    setFormData({ ...formData, ciudad: e.target.value })
+                    setCityFilter(e.target.value)
+                    setShowCityDropdown(true)
+                  }}
+                  onFocus={() => {
+                    setCityFilter(formData.ciudad)
+                    setShowCityDropdown(true)
+                  }}
+                  onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
                   className="input-field"
                   placeholder={locale === 'es' ? 'Ej: Buenos Aires, Córdoba, etc.' : 'E.g.: Buenos Aires, Córdoba, etc.'}
                 />
+                {showCityDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-dark-800 border border-dark-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {CIUDADES_ARGENTINA
+                      .filter(c => c.toLowerCase().includes(cityFilter.toLowerCase()))
+                      .slice(0, 10)
+                      .map(ciudad => (
+                        <button
+                          key={ciudad}
+                          onMouseDown={() => {
+                            setFormData({ ...formData, ciudad })
+                            setShowCityDropdown(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-dark-200 hover:bg-dark-700 transition-colors"
+                        >
+                          {ciudad}
+                        </button>
+                      ))}
+                    {CIUDADES_ARGENTINA.filter(c => c.toLowerCase().includes(cityFilter.toLowerCase())).length === 0 && (
+                      <div className="px-4 py-2 text-sm text-dark-500">
+                        {locale === 'es' ? 'Escribí para buscar...' : 'Type to search...'}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
