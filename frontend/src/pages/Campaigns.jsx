@@ -30,7 +30,9 @@ import {
   Edit3,
   BarChart3,
   Eye,
-  Send
+  Send,
+  DollarSign,
+  RefreshCw
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -68,6 +70,10 @@ export default function Campaigns() {
   const [analyticsCampaign, setAnalyticsCampaign] = useState(null)
   const [followupsCampaign, setFollowupsCampaign] = useState(null)
   const [followups, setFollowups] = useState([])
+  const [roiCampaign, setRoiCampaign] = useState(null)
+  const [roiData, setRoiData] = useState(null)
+  const [revenueModal, setRevenueModal] = useState(null)
+  const [revenueForm, setRevenueForm] = useState({ leadId: '', amount: '', notes: '' })
   const [formData, setFormData] = useState({
     nombre: '',
     producto_id: '',
@@ -429,6 +435,60 @@ export default function Campaigns() {
     }
   }
 
+  const loadROI = async (campaignId) => {
+    try {
+      const result = await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/roi`
+      ).then(r => r.json())
+      setRoiData(result.data)
+    } catch (error) {
+      console.error('Error loading ROI:', error)
+    }
+  }
+
+  const openROI = async (campaign) => {
+    setRoiCampaign(campaign)
+    await loadROI(campaign.id)
+  }
+
+  const addRevenue = async (e) => {
+    e.preventDefault()
+    if (!revenueForm.amount) return
+    try {
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${revenueModal.id}/revenue`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(revenueForm),
+        }
+      )
+      toast.success(locale === 'es' ? 'Ingreso registrado' : 'Revenue recorded')
+      setRevenueModal(null)
+      setRevenueForm({ leadId: '', amount: '', notes: '' })
+      loadCampaigns()
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error' : 'Error')
+    }
+  }
+
+  const toggleAutoScrape = async (campaignId, current) => {
+    try {
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/set-schedule`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ auto_scrape: !current, scrape_schedule: 'weekly' }),
+        }
+      )
+      toast.success(locale === 'es' ? 'Scraping automático actualizado' : 'Auto-scrape updated')
+      loadCampaigns()
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error' : 'Error')
+    }
+  }
+
   const getScrapingBadge = (status) => {
     const badges = {
       running: 'badge-warning',
@@ -546,6 +606,24 @@ export default function Campaigns() {
                     title={locale === 'es' ? 'Analytics' : 'Analytics'}
                   >
                     <BarChart3 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => openROI(campaign)}
+                    className="p-2 text-dark-400 hover:text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-all"
+                    title="ROI"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => toggleAutoScrape(campaign.id, campaign.auto_scrape)}
+                    className={`p-2 rounded-lg transition-all ${
+                      campaign.auto_scrape
+                        ? 'text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20'
+                        : 'text-dark-400 hover:text-dark-200 hover:bg-dark-700'
+                    }`}
+                    title={locale === 'es' ? 'Scraping automático' : 'Auto-scrape'}
+                  >
+                    <RefreshCw className="w-4 h-4" />
                   </button>
                   {campaign.producto_url_demo && (
                     <a
@@ -988,6 +1066,121 @@ export default function Campaigns() {
                 {locale === 'es' ? 'Guardar' : 'Save'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ROI Modal */}
+      {roiCampaign && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-lg animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-dark-100 flex items-center gap-2">
+                <DollarSign className="w-5 h-5" />
+                ROI — {roiCampaign.nombre}
+              </h2>
+              <button onClick={() => { setRoiCampaign(null); setRoiData(null) }} className="text-dark-400 hover:text-dark-200">✕</button>
+            </div>
+
+            {roiData ? (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-dark-900 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-emerald-400">${roiData.totalRevenue}</div>
+                    <div className="text-xs text-dark-400">{locale === 'es' ? 'Ingresos' : 'Revenue'}</div>
+                  </div>
+                  <div className="bg-dark-900 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-brand-400">{roiData.totalClients}</div>
+                    <div className="text-xs text-dark-400">{locale === 'es' ? 'Clientes' : 'Clients'}</div>
+                  </div>
+                  <div className="bg-dark-900 rounded-lg p-4 text-center">
+                    <div className="text-2xl font-bold text-amber-400">${roiData.estimatedCost}</div>
+                    <div className="text-xs text-dark-400">{locale === 'es' ? 'Costo Est.' : 'Est. Cost'}</div>
+                  </div>
+                  <div className="bg-dark-900 rounded-lg p-4 text-center">
+                    <div className={`text-2xl font-bold ${roiData.roi > 0 ? 'text-emerald-400' : 'text-dark-400'}`}>
+                      {roiData.roi}%
+                    </div>
+                    <div className="text-xs text-dark-400">ROI</div>
+                  </div>
+                </div>
+
+                <div className="bg-dark-900 rounded-lg p-3">
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-dark-400">{locale === 'es' ? 'Tasa de Conversión' : 'Conversion Rate'}</span>
+                    <span className="text-dark-200 font-medium">{roiData.conversionRate}%</span>
+                  </div>
+                  <div className="w-full bg-dark-800 rounded-full h-2">
+                    <div
+                      className="bg-brand-500 h-2 rounded-full transition-all"
+                      style={{ width: `${Math.min(roiData.conversionRate, 100)}%` }}
+                    />
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => { setRoiCampaign(null); setRoiData(null); setRevenueModal(roiCampaign) }}
+                  className="btn-primary w-full"
+                >
+                  {locale === 'es' ? '+ Registrar Ingreso' : '+ Record Revenue'}
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-32">
+                <Loader2 className="w-6 h-6 text-brand-500 animate-spin" />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Revenue Modal */}
+      {revenueModal && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-dark-100">
+                {locale === 'es' ? 'Registrar Ingreso' : 'Record Revenue'}
+              </h2>
+              <button onClick={() => setRevenueModal(null)} className="text-dark-400 hover:text-dark-200">✕</button>
+            </div>
+
+            <form onSubmit={addRevenue} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Monto' : 'Amount'}
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={revenueForm.amount}
+                  onChange={(e) => setRevenueForm({ ...revenueForm, amount: e.target.value })}
+                  className="input-field"
+                  placeholder="0.00"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Notas (opcional)' : 'Notes (optional)'}
+                </label>
+                <input
+                  type="text"
+                  value={revenueForm.notes}
+                  onChange={(e) => setRevenueForm({ ...revenueForm, notes: e.target.value })}
+                  className="input-field"
+                  placeholder={locale === 'es' ? 'Ej: Plan anual' : 'E.g.: Annual plan'}
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setRevenueModal(null)} className="btn-secondary flex-1">
+                  {t('cancel')}
+                </button>
+                <button type="submit" className="btn-primary flex-1">
+                  {locale === 'es' ? 'Guardar' : 'Save'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

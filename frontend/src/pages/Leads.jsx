@@ -29,9 +29,12 @@ import {
   MapPin,
   Star,
   Calendar,
-  MessageCircle
+  MessageCircle,
+  LayoutGrid,
+  List
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import LeadPipeline from './LeadPipeline'
 
 const RUBROS = [
   { value: 'todos', labelEs: 'Todos los Rubros', labelEn: 'All Niches' },
@@ -88,6 +91,7 @@ export default function Leads() {
     interesado: 0,
     cliente_activo: 0,
   })
+  const [viewMode, setViewMode] = useState('table')
 
   useEffect(() => {
     loadLeads(true)
@@ -356,6 +360,28 @@ export default function Leads() {
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
+          <div className="flex border border-dark-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setViewMode('table')}
+              className={`px-3 py-2 text-sm font-medium transition-all ${
+                viewMode === 'table'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-dark-800 text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              <List className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('kanban')}
+              className={`px-3 py-2 text-sm font-medium transition-all ${
+                viewMode === 'kanban'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-dark-800 text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -372,6 +398,8 @@ export default function Leads() {
               {searchTerm ? t('tryOtherSearch') : t('leadsWillAppear')}
             </p>
           </div>
+        ) : viewMode === 'kanban' ? (
+          <LeadPipeline leads={filteredLeads} onRefresh={() => loadLeads(true)} />
         ) : (
           <>
             <div className="overflow-x-auto">

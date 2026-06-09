@@ -494,7 +494,152 @@ app.get('/landing/stats/:productId', async (req, res) => {
   }
 })
 
-// ============ LANDING ENGAGEMENT TRACKING ============
+// ============ AUTOMATED SCRAPING ============
+
+app.post('/campaigns/scheduled-scrape', async (req, res) => {
+  try {
+    const { schedule } = req.body
+    if (!schedule || !['daily', 'weekly', 'monthly'].includes(schedule)) {
+      return res.status(400).json({ success: false, error: { message: 'schedule must be daily, weekly, or monthly' } })
+    }
+
+    const activeCampaigns = await db.collection('campanias')
+      .where('estado', '==', 'activa')
+      .where('auto_scrape', '==', true)
+      .get()
+
+    let queued = 0
+    for (const doc of activeCampaigns.docs) {
+      const campaign = doc.data()
+      const shouldRun = shouldRunSchedule(campaign.last_auto_scrape, schedule)
+
+      if (shouldRun) {
+        await db.collection('campanias').doc(doc.id).update({
+          scraping_status: 'scheduled',
+          last_auto_scrape: new Date(),
+        })
+        queued++
+      }
+    }
+
+    res.json({ success: true, data: { queued, total: activeCampaigns.size } })
+  } catch (error) {
+    console.error('Error scheduling scrape:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/campaigns/:campaignId/set-schedule', async (req, res) => {
+  try {
+    const { auto_scrape, scrape_schedule } = req.body
+    await db.collection('campanias').doc(req.params.campaignId).update({
+      auto_scrape: auto_scrape || false,
+      scrape_schedule: scrape_schedule || 'weekly',
+      fecha_actualizacion: new Date(),
+    })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+function shouldRunSchedule(lastRun, schedule) {
+  if (!lastRun) return true
+  const now = new Date()
+  const last = lastRun.toDate ? lastRun.toDate() : new Date(lastRun)
+  const diffHours = (now - last) / (1000 * 60 * 60)
+  if (schedule === 'daily' && diffHours >= 24) return true
+  if (schedule === 'weekly' && diffHours >= 168) return true
+  if (schedule === 'monthly' && diffHours >= 720) return true
+  return false
+}
+
+// ============ ROI TRACKING ============
+
+app.post('/campaigns/:campaignId/revenue', async (req, res) => {
+  try {
+    const { leadId, amount, currency, notes } = req.body
+    if (!leadId || !amount) {
+      return res.status(400).json({ success: false, error: { message: 'leadId and amount required' } })
+    }
+
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    await db.collection('revenue').add({
+      campaign_id: req.params.campaignId,
+      lead_id: leadId,
+      amount: parseFloat(amount),
+      currency: currency || 'USD',
+      notes: notes || '',
+      fecha_creacion: new Date(),
+    })
+
+    await db.collection('campanias').doc(req.params.campaignId).update({
+      total_revenue: admin.firestore.FieldValue.increment(parseFloat(amount)),
+      total_clients: admin.firestore.FieldValue.increment(1),
+    })
+
+    await db.collection('leads').doc(leadId).update({
+      estado_proceso: 'cliente_activo',
+      revenue_amount: parseFloat(amount),
+      fecha_pago: new Date(),
+    })
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error tracking revenue:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/campaigns/:campaignId/roi', async (req, res) => {
+  try {
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const campaign = campaignDoc.data()
+
+    const revenueSnapshot = await db.collection('revenue')
+      .where('campaign_id', '==', req.params.campaignId)
+      .get()
+
+    let totalRevenue = 0
+    let totalClients = 0
+    const revenueByLead = []
+
+    revenueSnapshot.docs.forEach(doc => {
+      const rev = doc.data()
+      totalRevenue += rev.amount
+      totalClients++
+      revenueByLead.push({ lead_id: rev.lead_id, amount: rev.amount, date: rev.fecha_creacion })
+    })
+
+    const estimatedCost = (campaign.mensajes_enviados || 0) * 0.01
+    const roi = estimatedCost > 0 ? ((totalRevenue - estimatedCost) / estimatedCost * 100).toFixed(1) : totalRevenue > 0 ? '∞' : 0
+
+    res.json({
+      success: true,
+      data: {
+        totalRevenue,
+        totalClients,
+        estimatedCost: estimatedCost.toFixed(2),
+        roi,
+        revenueByLead,
+        leadsCount: campaign.leads_count || 0,
+        conversionRate: campaign.leads_count > 0
+          ? ((totalClients / campaign.leads_count) * 100).toFixed(1)
+          : 0,
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
 
 app.post('/landing/engagement', async (req, res) => {
   try {

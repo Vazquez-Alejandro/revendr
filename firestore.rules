@@ -55,5 +55,12 @@ service cloud.firestore {
       allow read: if request.auth != null;
       allow create: if true;
     }
+
+    // Revenue tracking
+    match /revenue/{revenueId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null;
+      allow update: if request.auth != null;
+    }
   }
 }
