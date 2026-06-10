@@ -124,12 +124,17 @@ export default function Login() {
     <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-3 mb-6">
+          <Link to="/" className="inline-flex items-center gap-3 mb-4">
             <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
               <span className="text-2xl">⚡</span>
             </div>
             <span className="text-2xl font-bold text-dark-50">Revendr</span>
           </Link>
+          <div>
+            <Link to="/" className="text-dark-400 hover:text-dark-200 text-sm inline-flex items-center gap-1 mb-4">
+              ← {locale === 'es' ? 'Volver al inicio' : 'Back to home'}
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold text-dark-50">{t('login')}</h1>
           <p className="text-dark-400 mt-2">{locale === 'es' ? 'Ingresá a tu panel de control' : 'Access your control panel'}</p>
         </div>

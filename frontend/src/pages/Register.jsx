@@ -194,6 +194,11 @@ export default function Register() {
             </div>
             <span className="text-2xl font-bold text-dark-50">Revendr</span>
           </Link>
+          <div>
+            <Link to="/" className="text-dark-400 hover:text-dark-200 text-sm inline-flex items-center gap-1 mb-4">
+              ← {locale === 'es' ? 'Volver al inicio' : 'Back to home'}
+            </Link>
+          </div>
           <h1 className="text-2xl font-bold text-dark-50">
             {locale === 'es' ? 'Creá tu cuenta' : 'Create your account'}
           </h1>
