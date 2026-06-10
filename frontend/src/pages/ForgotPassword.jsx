@@ -1,15 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { sendPasswordResetEmail } from 'firebase/auth'
-import { auth } from '../config/firebase'
+import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { Loader2, Mail, ArrowLeft, Check, Zap } from 'lucide-react'
+import { Loader2, Mail, Check, Zap, ArrowLeft } from 'lucide-react'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
+  const [sent, setSent] = useState(false)
+  const { resetPassword } = useAuth()
   const { locale } = useI18n()
 
   const handleSubmit = async (e) => {
@@ -18,23 +18,15 @@ export default function ForgotPassword() {
       setError(locale === 'es' ? 'Ingresá tu email' : 'Enter your email')
       return
     }
+
     setLoading(true)
     setError('')
+
     try {
-      await sendPasswordResetEmail(auth, email)
+      await resetPassword(email)
       setSent(true)
     } catch (err) {
-      const errorsEs = {
-        'auth/user-not-found': 'No existe una cuenta con este email',
-        'auth/invalid-email': 'Email inválido',
-        'auth/too-many-requests': 'Demasiados intentos. Esperá unos minutos',
-      }
-      const errorsEn = {
-        'auth/user-not-found': 'No account found with this email',
-        'auth/invalid-email': 'Invalid email',
-        'auth/too-many-requests': 'Too many attempts. Wait a few minutes',
-      }
-      setError((locale === 'es' ? errorsEs : errorsEn)[err.code] || err.message)
+      setError(err.message)
     } finally {
       setLoading(false)
     }
@@ -67,32 +59,20 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
-      <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center">
-          <Link to="/" className="inline-flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
+    <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
+            <span className="text-2xl font-bold text-dark-50">Revendr</span>
           </Link>
-          <div className="ml-auto">
-            <Link to="/" className="inline-flex items-center gap-2 text-dark-400 hover:text-dark-200 text-sm">
-              <ArrowLeft className="w-4 h-4" />
-              {locale === 'es' ? 'Inicio' : 'Home'}
-            </Link>
-          </div>
-        </div>
-      </nav>
-
-      <div className="flex items-center justify-center p-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-dark-50">
-              {locale === 'es' ? 'Recuperar contraseña' : 'Reset password'}
-            </h1>
+          <h1 className="text-2xl font-bold text-dark-50">
+            {locale === 'es' ? 'Recuperar contraseña' : 'Reset password'}
+          </h1>
           <p className="text-dark-400 mt-2">
-            {locale === 'es' ? 'Ingresá tu email y te enviamos un link para restablecerla' : 'Enter your email and we\'ll send you a reset link'}
+            {locale === 'es' ? 'Ingresá tu email y te enviamos un link para restablecerla' : "Enter your email and we'll send you a reset link"}
           </p>
         </div>
 
@@ -105,9 +85,7 @@ export default function ForgotPassword() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                {locale === 'es' ? 'Email' : 'Email'}
-              </label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">Email</label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
                 <input
@@ -133,6 +111,13 @@ export default function ForgotPassword() {
               {locale === 'es' ? 'Volver al login' : 'Back to login'}
             </Link>
           </div>
+        </div>
+
+        <div className="text-center mt-6">
+          <Link to="/" className="text-dark-400 hover:text-dark-200 text-sm inline-flex items-center gap-1">
+            <ArrowLeft className="w-3 h-3" />
+            {locale === 'es' ? 'Volver al inicio' : 'Back to home'}
+          </Link>
         </div>
       </div>
     </div>

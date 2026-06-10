@@ -64,21 +64,6 @@ export default function Login() {
     }
   }
 
-  const handleResetPassword = async () => {
-    if (!email) {
-      setError(locale === 'es' ? 'Ingresá tu email primero' : 'Enter your email first')
-      return
-    }
-    try {
-      const { sendPasswordResetEmail } = await import('firebase/auth')
-      const { auth } = await import('../config/firebase')
-      await sendPasswordResetEmail(auth, email)
-      alert(locale === 'es' ? 'Te enviamos un link para restablecer tu contraseña' : 'We sent you a password reset link')
-    } catch (err) {
-      setError(locale === 'es' ? 'Error al enviar email' : 'Error sending email')
-    }
-  }
-
   if (showResend && user && !user.emailVerified) {
     return (
       <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
@@ -121,30 +106,18 @@ export default function Login() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950">
-      <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center">
-          <Link to="/" className="inline-flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
+    <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <Zap className="w-6 h-6 text-white" />
             </div>
-            <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
+            <span className="text-2xl font-bold text-dark-50">Revendr</span>
           </Link>
-          <div className="ml-auto">
-            <Link to="/" className="inline-flex items-center gap-2 text-dark-400 hover:text-dark-200 text-sm">
-              <ArrowLeft className="w-4 h-4" />
-              {locale === 'es' ? 'Inicio' : 'Home'}
-            </Link>
-          </div>
+          <h1 className="text-2xl font-bold text-dark-50">{t('login')}</h1>
+          <p className="text-dark-400 mt-2">{locale === 'es' ? 'Ingresá a tu panel de control' : 'Access your control panel'}</p>
         </div>
-      </nav>
-
-      <div className="flex items-center justify-center p-4 py-12">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-dark-50">{t('login')}</h1>
-            <p className="text-dark-400 mt-2">{locale === 'es' ? 'Ingresá a tu panel de control' : 'Access your control panel'}</p>
-          </div>
 
         <div className="card">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -205,6 +178,13 @@ export default function Login() {
               </Link>
             </p>
           </div>
+        </div>
+
+        <div className="text-center mt-6">
+          <Link to="/" className="text-dark-400 hover:text-dark-200 text-sm inline-flex items-center gap-1">
+            <ArrowLeft className="w-3 h-3" />
+            {locale === 'es' ? 'Volver al inicio' : 'Back to home'}
+          </Link>
         </div>
       </div>
     </div>
