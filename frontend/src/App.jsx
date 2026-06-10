@@ -9,12 +9,14 @@ import Settings from './pages/Settings'
 import Products from './pages/Products'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ForgotPassword from './pages/ForgotPassword'
 import NotFound from './pages/NotFound'
 import Landing from './pages/public/Landing'
 import Pricing from './pages/public/Pricing'
 import PrivacyPolicy from './pages/public/PrivacyPolicy'
 import TermsOfService from './pages/public/TermsOfService'
 import Help from './pages/public/Help'
+import StatusPage from './pages/public/StatusPage'
 import Onboarding from './pages/Onboarding'
 import DemoBooking from './pages/public/DemoBooking'
 import DemoProperties from './pages/public/DemoProperties'
@@ -24,6 +26,10 @@ import DemoProductLanding from './pages/public/DemoProductLanding'
 import CRM from './pages/CRM'
 import OwnerPortal from './pages/OwnerPortal'
 import ContentGenerator from './pages/ContentGenerator'
+import AdminPanel from './pages/AdminPanel'
+import Subscription from './pages/Subscription'
+import ClientDashboard from './pages/ClientDashboard'
+import TeamManagement from './pages/TeamManagement'
 
 function App() {
   return (
@@ -35,19 +41,21 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/help" element={<Help />} />
+        <Route path="/status" element={<StatusPage />} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-        
+
         {/* Demo routes (public, no auth) */}
         <Route path="/demo/estetica/:demoId" element={<DemoBooking />} />
         <Route path="/demo/inmobiliaria/:demoId" element={<DemoProperties />} />
         <Route path="/demo/clinica/:demoId" element={<DemoClinic />} />
         <Route path="/demo/whatsapp/:demoId" element={<DemoWhatsApp />} />
         <Route path="/demo/producto/:productId" element={<DemoProductLanding />} />
-        
+
         {/* Auth routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+
         {/* Protected admin routes */}
         <Route
           path="/dashboard"
@@ -57,14 +65,18 @@ function App() {
             </ProtectedRoute>
           }
         >
-          <Route index element={<Dashboard />} />
+          <Route index element={<ClientDashboard />} />
           <Route path="productos" element={<Products />} />
           <Route path="campanias" element={<Campaigns />} />
           <Route path="leads" element={<Leads />} />
           <Route path="crm" element={<CRM />} />
           <Route path="portal" element={<OwnerPortal />} />
           <Route path="contenido" element={<ContentGenerator />} />
+          <Route path="subscription" element={<Subscription />} />
+          <Route path="team" element={<TeamManagement />} />
+          <Route path="admin" element={<AdminPanel />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="legacy" element={<Dashboard />} />
         </Route>
 
         {/* 404 */}

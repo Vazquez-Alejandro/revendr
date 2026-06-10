@@ -266,33 +266,12 @@ export default function Settings() {
           {activeTab === 'billing' && (
             <div className="card">
               <h2 className="text-lg font-semibold text-dark-100 mb-6">{t('billingTitle')}</h2>
-              
-              <div className="grid md:grid-cols-3 gap-4 mb-6">
-                <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
-                  <div className="text-sm text-dark-400 mb-1">{t('currentPlan')}</div>
-                  <div className="text-xl font-bold text-brand-400">Enterprise</div>
-                </div>
-                <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
-                  <div className="text-sm text-dark-400 mb-1">{t('apiCredits')}</div>
-                  <div className="text-xl font-bold text-emerald-400">
-                    {adminData?.api_credits?.apify || 0}
-                  </div>
-                </div>
-                <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
-                  <div className="text-sm text-dark-400 mb-1">{t('nextBilling')}</div>
-                  <div className="text-xl font-bold text-dark-100">$399/mes</div>
-                </div>
-              </div>
-
-              <div className="border border-dark-700 rounded-xl p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium text-dark-100">{t('paymentMethod')}</h3>
-                    <p className="text-sm text-dark-400">•••• •••• •••• 4242</p>
-                  </div>
-                  <button className="btn-secondary text-sm">{t('update')}</button>
-                </div>
-              </div>
+              <p className="text-dark-400 mb-4">
+                {locale === 'es' ? 'Gestioná tu suscripción, plan y métodos de pago.' : 'Manage your subscription, plan, and payment methods.'}
+              </p>
+              <a href="/dashboard/subscription" className="btn-primary inline-flex items-center gap-2">
+                {locale === 'es' ? 'Ir a Suscripción' : 'Go to Subscription'}
+              </a>
             </div>
           )}
 

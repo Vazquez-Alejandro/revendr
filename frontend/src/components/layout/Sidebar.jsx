@@ -12,6 +12,9 @@ import {
   GitBranch,
   Building2,
   Sparkles,
+  CreditCard,
+  Shield,
+  UserCog,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -21,13 +24,15 @@ export function Sidebar() {
   const navigate = useNavigate()
 
   const navigation = [
-    { name: t('dashboard'), href: '/dashboard', icon: LayoutDashboard },
+    { name: locale === 'es' ? 'Mi Dashboard' : 'My Dashboard', href: '/dashboard', icon: LayoutDashboard },
     { name: t('myProducts'), href: '/dashboard/productos', icon: Package },
     { name: t('campaigns'), href: '/dashboard/campanias', icon: Megaphone },
     { name: t('leads'), href: '/dashboard/leads', icon: Users },
     { name: 'CRM', href: '/dashboard/crm', icon: GitBranch },
-    { name: 'Portal', href: '/dashboard/portal', icon: Building2 },
-    { name: 'Contenido', href: '/dashboard/contenido', icon: Sparkles },
+    { name: locale === 'es' ? 'Contenido' : 'Content', href: '/dashboard/contenido', icon: Sparkles },
+    { name: locale === 'es' ? 'Equipo' : 'Team', href: '/dashboard/team', icon: Users },
+    { name: locale === 'es' ? 'Suscripción' : 'Subscription', href: '/dashboard/subscription', icon: CreditCard },
+    { name: locale === 'es' ? 'Admin' : 'Admin', href: '/dashboard/admin', icon: Shield },
     { name: t('settings'), href: '/dashboard/settings', icon: Settings },
   ]
 

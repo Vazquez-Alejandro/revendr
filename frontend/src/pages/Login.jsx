@@ -168,9 +168,9 @@ export default function Login() {
             </div>
 
             <div className="flex justify-end">
-              <button type="button" onClick={handleResetPassword} className="text-xs text-brand-400 hover:text-brand-300">
+              <Link to="/forgot-password" className="text-xs text-brand-400 hover:text-brand-300">
                 {locale === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot your password?'}
-              </button>
+              </Link>
             </div>
 
             <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">

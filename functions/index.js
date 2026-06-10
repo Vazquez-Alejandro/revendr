@@ -1840,23 +1840,43 @@ app.post('/webhook/stripe', async (req, res) => {
 
 // ============ STRIPE CHECKOUT ============
 
+const STRIPE_PRICES = {
+  starter: { monthly: 'price_starter_monthly', annual: 'price_starter_annual' },
+  growth: { monthly: 'price_growth_monthly', annual: 'price_growth_annual' },
+  enterprise: { monthly: 'price_enterprise_monthly', annual: 'price_enterprise_annual' },
+}
+
+const PLAN_LIMITS = {
+  starter: { leads: 100, rubros: 1, demos: 50, messages: 1000 },
+  growth: { leads: 1000, rubros: 3, demos: 500, messages: 10000 },
+  enterprise: { leads: -1, rubros: -1, demos: -1, messages: -1 },
+}
+
 app.post('/create-checkout-session', async (req, res) => {
   try {
-    const { priceId, leadId, plan } = req.body
+    const { priceId, leadId, plan, userId, billing } = req.body
 
-    if (!priceId) {
-      return res.status(400).json({ success: false, error: { message: 'priceId is required' } })
+    if (!STRIPE_SECRET_KEY) {
+      return res.status(503).json({ success: false, error: { message: 'Stripe not configured' } })
     }
 
     const stripe = require('stripe')(STRIPE_SECRET_KEY)
 
+    const priceMap = STRIPE_PRICES[plan || 'growth']
+    const billingCycle = billing === 'annual' ? 'annual' : 'monthly'
+    const finalPriceId = priceId || priceMap?.[billingCycle]
+
+    if (!finalPriceId) {
+      return res.status(400).json({ success: false, error: { message: 'Invalid plan or priceId required' } })
+    }
+
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
       payment_method_types: ['card'],
-      line_items: [{ price: priceId, quantity: 1 }],
+      line_items: [{ price: finalPriceId, quantity: 1 }],
       success_url: `https://revendr-9add8.web.app/dashboard?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `https://revendr-9add8.web.app/pricing`,
-      metadata: { leadId: leadId || '', plan: plan || 'growth' },
+      metadata: { leadId: leadId || '', plan: plan || 'growth', userId: userId || '' },
     })
 
     res.json({ url: session.url, sessionId: session.id })
@@ -1866,7 +1886,560 @@ app.post('/create-checkout-session', async (req, res) => {
   }
 })
 
-// ============ STATS ============
+// ============ SUBSCRIPTION MANAGEMENT ============
+
+app.get('/subscription/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const userDoc = await db.collection('usuarios').doc(userId).get()
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } })
+    }
+    const userData = userDoc.data()
+    const plan = userData.plan || 'starter'
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
+
+    const usage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+
+    res.json({
+      success: true,
+      data: {
+        plan,
+        status: userData.stripe_subscription_status || 'active',
+        billing: userData.billing || 'monthly',
+        limits,
+        usage,
+        stripeCustomerId: userData.stripe_customer_id || null,
+        stripeSubscriptionId: userData.stripe_subscription_id || null,
+        currentPeriodEnd: userData.current_period_end || null,
+        cancelAtPeriodEnd: userData.cancel_at_period_end || false,
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/subscription/change', async (req, res) => {
+  try {
+    const { userId, newPlan, billing } = req.body
+    if (!userId || !newPlan) {
+      return res.status(400).json({ success: false, error: { message: 'userId and newPlan required' } })
+    }
+
+    if (!STRIPE_SECRET_KEY) {
+      await db.collection('usuarios').doc(userId).update({
+        plan: newPlan,
+        billing: billing || 'monthly',
+        plan_limits: PLAN_LIMITS[newPlan],
+        fecha_actualizacion: new Date(),
+      })
+      return res.json({ success: true, data: { plan: newPlan, message: 'Plan updated (no Stripe)' } })
+    }
+
+    const userDoc = await db.collection('usuarios').doc(userId).get()
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } })
+    }
+    const userData = userDoc.data()
+
+    if (userData.stripe_subscription_id) {
+      const stripe = require('stripe')(STRIPE_SECRET_KEY)
+      const priceMap = STRIPE_PRICES[newPlan]
+      const billingCycle = billing || userData.billing || 'monthly'
+      const newPriceId = priceMap?.[billingCycle === 'annual' ? 'annual' : 'monthly']
+
+      if (newPriceId) {
+        await stripe.subscriptions.update(userData.stripe_subscription_id, {
+          items: [{ price: newPriceId }],
+          proration_behavior: 'create_prorations',
+        })
+      }
+    }
+
+    await db.collection('usuarios').doc(userId).update({
+      plan: newPlan,
+      billing: billing || 'monthly',
+      plan_limits: PLAN_LIMITS[newPlan],
+      fecha_actualizacion: new Date(),
+    })
+
+    res.json({ success: true, data: { plan: newPlan } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/subscription/cancel', async (req, res) => {
+  try {
+    const { userId } = req.body
+    if (!userId) {
+      return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    }
+
+    const userDoc = await db.collection('usuarios').doc(userId).get()
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } })
+    }
+    const userData = userDoc.data()
+
+    if (STRIPE_SECRET_KEY && userData.stripe_subscription_id) {
+      const stripe = require('stripe')(STRIPE_SECRET_KEY)
+      await stripe.subscriptions.update(userData.stripe_subscription_id, {
+        cancel_at_period_end: true,
+      })
+    }
+
+    await db.collection('usuarios').doc(userId).update({
+      cancel_at_period_end: true,
+      fecha_actualizacion: new Date(),
+    })
+
+    res.json({ success: true, data: { message: 'Subscription will cancel at period end' } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ ADMIN PANEL ============
+
+app.get('/admin/clients', async (req, res) => {
+  try {
+    const snapshot = await db.collection('usuarios')
+      .orderBy('fecha_creacion', 'desc')
+      .get()
+    const clients = snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        email: data.email,
+        nombre: data.nombre,
+        empresa: data.empresa || '',
+        plan: data.plan || 'starter',
+        activo: data.activo !== false,
+        emailVerified: data.emailVerified || false,
+        onboarding_completed: data.onboarding_completed || false,
+        fecha_creacion: data.fecha_creacion,
+        last_login: data.last_login || null,
+        usage: data.usage || { leads: 0, demos: 0, messages: 0 },
+      }
+    })
+    res.json({ success: true, data: clients })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/admin/clients/:id', async (req, res) => {
+  try {
+    const doc = await db.collection('usuarios').doc(req.params.id).get()
+    if (!doc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Client not found' } })
+    }
+    res.json({ success: true, data: { id: doc.id, ...doc.data() } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.patch('/admin/clients/:id', async (req, res) => {
+  try {
+    const { plan, activo, role, empresa } = req.body
+    const updates = { fecha_actualizacion: new Date() }
+    if (plan !== undefined) {
+      updates.plan = plan
+      updates.plan_limits = PLAN_LIMITS[plan]
+    }
+    if (activo !== undefined) updates.activo = activo
+    if (role !== undefined) updates.role = role
+    if (empresa !== undefined) updates.empresa = empresa
+
+    await db.collection('usuarios').doc(req.params.id).update(updates)
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.delete('/admin/clients/:id', async (req, res) => {
+  try {
+    await db.collection('usuarios').doc(req.params.id).update({
+      activo: false,
+      fecha_desactivacion: new Date(),
+    })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ USAGE METERING ============
+
+app.get('/usage/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+    const userDoc = await db.collection('usuarios').doc(userId).get()
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } })
+    }
+    const userData = userDoc.data()
+    const plan = userData.plan || 'starter'
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
+    const usage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+
+    const calcPct = (used, limit) => limit === -1 ? 0 : Math.min(100, Math.round((used / limit) * 100))
+
+    res.json({
+      success: true,
+      data: {
+        plan,
+        limits,
+        usage,
+        percentages: {
+          leads: calcPct(usage.leads, limits.leads),
+          demos: calcPct(usage.demos, limits.demos),
+          messages: calcPct(usage.messages, limits.messages),
+        },
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/usage/increment', async (req, res) => {
+  try {
+    const { userId, type, amount } = req.body
+    if (!userId || !type) {
+      return res.status(400).json({ success: false, error: { message: 'userId and type required' } })
+    }
+
+    const userDoc = await db.collection('usuarios').doc(userId).get()
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } })
+    }
+
+    const userData = userDoc.data()
+    const plan = userData.plan || 'starter'
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
+    const currentUsage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+    const increment = amount || 1
+
+    if (limits[type] !== -1 && currentUsage[type] + increment > limits[type]) {
+      return res.status(403).json({
+        success: false,
+        error: { message: `Plan limit exceeded for ${type}. Upgrade your plan.` },
+      })
+    }
+
+    await db.collection('usuarios').doc(userId).update({
+      [`usage.${type}`]: currentUsage[type] + increment,
+    })
+
+    res.json({ success: true, data: { [type]: currentUsage[type] + increment } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ CLIENT DASHBOARD ============
+
+app.get('/client/dashboard/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params
+
+    const [userDoc, campaignsSnap, leadsSnap] = await Promise.all([
+      db.collection('usuarios').doc(userId).get(),
+      db.collection('campanias').where('user_id', '==', userId).get(),
+      db.collection('leads').where('user_id', '==', userId).get(),
+    ])
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } })
+    }
+
+    const userData = userDoc.data()
+    const plan = userData.plan || 'starter'
+    const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
+    const usage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+
+    let activeCampaigns = 0
+    let totalDemos = 0
+    let qualifiedLeads = 0
+    let messagesSent = 0
+    let totalRevenue = 0
+
+    campaignsSnap.docs.forEach(doc => {
+      const c = doc.data()
+      if (c.estado === 'activa') activeCampaigns++
+    })
+
+    leadsSnap.docs.forEach(doc => {
+      const l = doc.data()
+      if (l.estado_proceso === 'demo_generada') totalDemos++
+      if ((l.lead_score || 0) >= 60) qualifiedLeads++
+      if (l.mensaje_enviado) messagesSent++
+      totalRevenue += l.revenue || 0
+    })
+
+    res.json({
+      success: true,
+      data: {
+        plan,
+        limits,
+        usage,
+        stats: {
+          totalCampaigns: campaignsSnap.size,
+          activeCampaigns,
+          totalLeads: leadsSnap.size,
+          totalDemos,
+          qualifiedLeads,
+          messagesSent,
+          totalRevenue,
+          conversionRate: leadsSnap.size > 0
+            ? ((qualifiedLeads / leadsSnap.size) * 100).toFixed(1)
+            : 0,
+        },
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ TEAM MANAGEMENT ============
+
+app.post('/team/invite', async (req, res) => {
+  try {
+    const { ownerUserId, email, role } = req.body
+    if (!ownerUserId || !email) {
+      return res.status(400).json({ success: false, error: { message: 'ownerUserId and email required' } })
+    }
+
+    const inviteId = `inv_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+    await db.collection('team_invites').doc(inviteId).set({
+      owner_user_id: ownerUserId,
+      email,
+      role: role || 'member',
+      status: 'pending',
+      created_at: new Date(),
+      expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    })
+
+    if (RESEND_API_KEY) {
+      try {
+        const resend = require('resend')(RESEND_API_KEY)
+        await resend.emails.send({
+          from: 'Revendr <noreply@revendr.app>',
+          to: email,
+          subject: 'Invitación a un equipo en Revendr',
+          html: `<p>Has sido invitado a un equipo en Revendr.</p><p>Haz click aquí para aceptar: <a href="https://revendr-9add8.web.app/team/accept?invite=${inviteId}">Aceptar invitación</a></p>`,
+        })
+      } catch (e) {
+        console.error('Error sending invite email:', e.message)
+      }
+    }
+
+    res.json({ success: true, data: { inviteId } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/team/members/:ownerUserId', async (req, res) => {
+  try {
+    const snapshot = await db.collection('team_members')
+      .where('owner_user_id', '==', req.params.ownerUserId)
+      .get()
+    const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    res.json({ success: true, data: members })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.delete('/team/members/:memberId', async (req, res) => {
+  try {
+    await db.collection('team_members').doc(req.params.memberId).delete()
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ CLIENT API KEYS ============
+
+app.post('/api-keys/client/generate', async (req, res) => {
+  try {
+    const { userId, name } = req.body
+    if (!userId) {
+      return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    }
+
+    const keyId = `rk_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    await db.collection('api_keys').doc(keyId).set({
+      user_id: userId,
+      name: name || 'Default Key',
+      active: true,
+      created_at: new Date(),
+      uses: 0,
+      last_used: null,
+    })
+
+    res.json({ success: true, data: { api_key: keyId, name: name || 'Default Key' } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/api-keys/client/:userId', async (req, res) => {
+  try {
+    const snapshot = await db.collection('api_keys')
+      .where('user_id', '==', req.params.userId)
+      .get()
+    const keys = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      api_key_preview: doc.id.slice(0, 12) + '...',
+    }))
+    res.json({ success: true, data: keys })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.delete('/api-keys/client/:keyId', async (req, res) => {
+  try {
+    await db.collection('api_keys').doc(req.params.keyId).update({ active: false })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ STATUS PAGE ============
+
+app.get('/status', async (req, res) => {
+  try {
+    const checks = {
+      api: { status: 'operational', latency: 0 },
+      database: { status: 'operational', latency: 0 },
+      scraping: { status: APIFY_TOKEN ? 'operational' : 'degraded', latency: 0 },
+      whatsapp: { status: WHATSAPP_TOKEN ? 'operational' : 'degraded', latency: 0 },
+      email: { status: RESEND_API_KEY ? 'operational' : 'degraded', latency: 0 },
+      stripe: { status: STRIPE_SECRET_KEY ? 'operational' : 'degraded', latency: 0 },
+    }
+
+    const dbStart = Date.now()
+    await db.collection('_health').doc('ping').set({ timestamp: new Date() })
+    checks.database.latency = Date.now() - dbStart
+    checks.api.latency = Date.now() - dbStart
+
+    const allOperational = Object.values(checks).every(c => c.status === 'operational')
+
+    res.json({
+      status: allOperational ? 'operational' : 'degraded',
+      updated: new Date().toISOString(),
+      checks,
+    })
+  } catch (error) {
+    res.json({
+      status: 'major_outage',
+      updated: new Date().toISOString(),
+      checks: { api: { status: 'major_outage' }, database: { status: 'major_outage' } },
+    })
+  }
+})
+
+// ============ EMAIL TEMPLATES ============
+
+async function sendTransactionalEmail(to, type, data = {}) {
+  if (!RESEND_API_KEY) return { sent: false, reason: 'no_api_key' }
+
+  const templates = {
+    welcome: {
+      subject: `Bienvenido a Revendr, ${data.nombre || ''}!`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#6366f1">Bienvenido a Revendr</h1>
+        <p>Hola ${data.nombre || ''},</p>
+        <p>Tu cuenta ha sido creada exitosamente. Tu plan: <strong>${data.plan || 'Starter'}</strong></p>
+        <p>Próximos pasos:</p>
+        <ol><li>Creá tu primer producto</li><li>Configurá una campaña de scraping</li><li>Generá demos y enviá WhatsApp</li></ol>
+        <a href="https://revendr-9add8.web.app/dashboard" style="display:inline-block;background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;margin-top:16px">Ir al Panel</a>
+        <p style="color:#94a3b8;font-size:12px;margin-top:32px">© 2026 Revendr</p>
+      </div>`,
+    },
+    email_verification: {
+      subject: 'Verificá tu email en Revendr',
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#6366f1">Verificá tu email</h1>
+        <p>Hacé click en el botón para verificar tu cuenta:</p>
+        <a href="${data.verificationUrl || '#'}" style="display:inline-block;background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none">Verificar Email</a>
+        <p style="color:#94a3b8;font-size:12px;margin-top:32px">Si no creaste esta cuenta, ignorá este email.</p>
+      </div>`,
+    },
+    plan_change: {
+      subject: `Tu plan cambió a ${data.newPlan || ''}`,
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#6366f1">Cambio de plan</h1>
+        <p>Tu plan ha sido cambiado a: <strong>${data.newPlan || ''}</strong></p>
+        <p>Los nuevos límites ya están activos en tu cuenta.</p>
+        <a href="https://revendr-9add8.web.app/dashboard/settings" style="display:inline-block;background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none">Ver Configuración</a>
+      </div>`,
+    },
+    payment_failed: {
+      subject: 'Problema con tu pago en Revendr',
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#ef4444">Pago fallido</h1>
+        <p>No pudimos procesar tu último pago. Por favor actualizá tu método de pago.</p>
+        <a href="https://revendr-9add8.web.app/dashboard/settings" style="display:inline-block;background:#ef4444;color:white;padding:12px 24px;border-radius:8px;text-decoration:none">Actualizar Pago</a>
+      </div>`,
+    },
+    subscription_cancelled: {
+      subject: 'Tu suscripción en Revendr',
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#f59e0b">Suscripción cancelada</h1>
+        <p>Tu suscripción será cancelada al final del período de facturación actual.</p>
+        <p>Podés seguir usando Revendr hasta esa fecha.</p>
+        <a href="https://revendr-9add8.web.app/pricing" style="display:inline-block;background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none">Reactivar</a>
+      </div>`,
+    },
+  }
+
+  const template = templates[type]
+  if (!template) return { sent: false, reason: 'unknown_template' }
+
+  try {
+    const resend = require('resend')(RESEND_API_KEY)
+    await resend.emails.send({
+      from: 'Revendr <noreply@revendr.app>',
+      to,
+      subject: template.subject,
+      html: template.html,
+    })
+    return { sent: true }
+  } catch (error) {
+    console.error('Email send error:', error.message)
+    return { sent: false, reason: error.message }
+  }
+}
+
+app.post('/email/send', async (req, res) => {
+  try {
+    const { to, type, data } = req.body
+    if (!to || !type) {
+      return res.status(400).json({ success: false, error: { message: 'to and type required' } })
+    }
+    const result = await sendTransactionalEmail(to, type, data)
+    res.json({ success: true, data: result })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ EXPORTS ============
+
+exports.api = functions.https.onRequest(app)
 
 app.get('/stats/dashboard', async (req, res) => {
   try {

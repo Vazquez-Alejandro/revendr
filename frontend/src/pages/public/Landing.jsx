@@ -247,6 +247,9 @@ export default function Landing() {
               <span className="font-bold text-dark-100">Revendr</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-dark-400">
+              <Link to="/status" className="hover:text-dark-200 transition-colors">
+                {locale === 'es' ? 'Estado' : 'Status'}
+              </Link>
               <Link to="/help" className="hover:text-dark-200 transition-colors">
                 {locale === 'es' ? 'Ayuda' : 'Help'}
               </Link>
