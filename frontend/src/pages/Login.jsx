@@ -123,14 +123,14 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-dark-950">
       <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center">
           <Link to="/" className="flex items-center gap-2 md:gap-3 flex-shrink-0">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
               <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
             <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
           </Link>
-          <Link to="/" className="text-dark-400 hover:text-dark-200 flex items-center gap-2 text-sm flex-shrink-0 ml-4">
+          <Link to="/" className="text-dark-400 hover:text-dark-200 flex items-center gap-2 text-sm flex-shrink-0 ml-auto">
             <ArrowLeft className="w-4 h-4" />
             {locale === 'es' ? 'Inicio' : 'Home'}
           </Link>
