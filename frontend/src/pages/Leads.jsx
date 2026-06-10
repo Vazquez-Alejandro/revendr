@@ -796,6 +796,80 @@ export default function Leads() {
                 </div>
               )}
 
+              {/* Email - Quick Send */}
+              {selectedLead.email && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    Email
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        try {
+                          await fetch(
+                            `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/${selectedLead.id}/send-email`,
+                            {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ messageType: 'initial' }),
+                            }
+                          )
+                          toast.success(locale === 'es' ? 'Email enviado' : 'Email sent')
+                        } catch (error) {
+                          toast.error(locale === 'es' ? 'Error' : 'Error')
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-sm font-medium hover:bg-brand-500/20 transition-all"
+                    >
+                      <Mail className="w-4 h-4" />
+                      {locale === 'es' ? 'Enviar Email' : 'Send Email'}
+                    </button>
+                  </div>
+                  {selectedLead.ultimo_email_enviado && (
+                    <p className="text-xs text-dark-500 mt-1">
+                      {locale === 'es' ? 'Último email:' : 'Last email:'} {selectedLead.ultimo_email_enviado}
+                      {selectedLead.fecha_ultimo_email?.toDate?.()?.toLocaleDateString('es-AR') && 
+                        ` (${selectedLead.fecha_ultimo_email.toDate().toLocaleDateString('es-AR')})`
+                      }
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Message Engagement */}
+              {(selectedLead.mensajes_entregados > 0 || selectedLead.mensajes_leidos > 0 || selectedLead.mensajes_clickeados > 0) && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    {locale === 'es' ? 'Engagement de Mensajes' : 'Message Engagement'}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="bg-dark-900 rounded-lg p-2 text-center">
+                      <div className="text-lg font-bold text-emerald-400">{selectedLead.mensajes_entregados || 0}</div>
+                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Entregados' : 'Delivered'}</div>
+                    </div>
+                    <div className="bg-dark-900 rounded-lg p-2 text-center">
+                      <div className="text-lg font-bold text-brand-400">{selectedLead.mensajes_leidos || 0}</div>
+                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Leídos' : 'Read'}</div>
+                    </div>
+                    <div className="bg-dark-900 rounded-lg p-2 text-center">
+                      <div className="text-lg font-bold text-amber-400">{selectedLead.mensajes_clickeados || 0}</div>
+                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks' : 'Clicks'}</div>
+                    </div>
+                  </div>
+                  {selectedLead.engagement_score > 0 && (
+                    <div className="mt-2 text-center">
+                      <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                        selectedLead.engagement_score >= 5 ? 'bg-emerald-500/20 text-emerald-400' :
+                        selectedLead.engagement_score >= 2 ? 'bg-amber-500/20 text-amber-400' :
+                        'bg-dark-800 text-dark-500'
+                      }`}>
+                        Engagement: {selectedLead.engagement_score}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               {/* Notes - Editable */}
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">

@@ -89,6 +89,9 @@ export default function Campaigns() {
   const [showCityDropdown, setShowCityDropdown] = useState(false)
   const [cityFilter, setCityFilter] = useState('')
   const cityInputRef = useRef(null)
+  const [abTestModal, setAbTestModal] = useState(null)
+  const [abTestForm, setAbTestForm] = useState({ messageA: '', messageB: '' })
+  const [abResults, setAbResults] = useState(null)
   const [formData, setFormData] = useState({
     nombre: '',
     producto_id: '',
@@ -549,6 +552,80 @@ export default function Campaigns() {
     }
   }
 
+  const processSequence = async (campaignId) => {
+    setProcessingAction(`${campaignId}-sequence`)
+    toast.loading(locale === 'es' ? 'Procesando secuencia inteligente...' : 'Processing smart sequence...', { id: 'sequence' })
+    try {
+      const result = await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/process-sequence`,
+        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
+      ).then(r => r.json())
+      toast.success(
+        locale === 'es'
+          ? `${result.data?.actions || 0} acciones ejecutadas (emails enviados)`
+          : `${result.data?.actions || 0} actions executed (emails sent)`,
+        { id: 'sequence', duration: 4000 }
+      )
+      loadCampaigns()
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error' : 'Error', { id: 'sequence' })
+    } finally {
+      setProcessingAction(null)
+    }
+  }
+
+  const openAbTest = (campaign) => {
+    setAbTestModal(campaign)
+    setAbTestForm({
+      messageA: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, te preparé algo especial: {url_demo}',
+      messageB: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, mirá lo que creamos para vos: {url_demo}',
+    })
+    loadAbResults(campaign.id)
+  }
+
+  const loadAbResults = async (campaignId) => {
+    try {
+      const result = await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/ab-results`
+      ).then(r => r.json())
+      setAbResults(result.data)
+    } catch (error) {
+      console.error('Error loading A/B results:', error)
+    }
+  }
+
+  const createAbTest = async () => {
+    if (!abTestForm.messageA || !abTestForm.messageB) {
+      toast.error(locale === 'es' ? 'Completá ambos mensajes' : 'Fill both messages')
+      return
+    }
+    try {
+      const result = await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${abTestModal.id}/ab-test`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(abTestForm),
+        }
+      ).then(r => r.json())
+
+      if (result.success) {
+        toast.success(
+          locale === 'es'
+            ? `A/B Test creado: ${result.data.groupA} vs ${result.data.groupB} leads`
+            : `A/B Test created: ${result.data.groupA} vs ${result.data.groupB} leads`,
+          { duration: 4000 }
+        )
+        setAbTestModal(null)
+        loadAbResults(abTestModal.id)
+      } else {
+        toast.error(result.error?.message || 'Error')
+      }
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error' : 'Error')
+    }
+  }
+
   const getScrapingBadge = (status) => {
     const badges = {
       running: 'badge-warning',
@@ -815,6 +892,29 @@ export default function Campaigns() {
                     <MessageCircle className="w-3 h-3" />
                   )}
                   {locale === 'es' ? 'WhatsApp' : 'WhatsApp'}
+                </button>
+              </div>
+
+              {/* Smart Sequence & A/B Testing */}
+              <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => processSequence(campaign.id)}
+                  disabled={processingAction !== null}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-lg text-xs font-medium hover:bg-cyan-500/20 transition-all disabled:opacity-50"
+                >
+                  {processingAction === `${campaign.id}-sequence` ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-3 h-3" />
+                  )}
+                  {locale === 'es' ? 'Secuencia' : 'Sequence'}
+                </button>
+                <button
+                  onClick={() => openAbTest(campaign)}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-pink-500/10 text-pink-400 border border-pink-500/20 rounded-lg text-xs font-medium hover:bg-pink-500/20 transition-all"
+                >
+                  <span className="text-xs font-bold">A/B</span>
+                  {locale === 'es' ? 'Test' : 'Test'}
                 </button>
               </div>
 
@@ -1281,6 +1381,92 @@ export default function Campaigns() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* A/B Test Modal */}
+      {abTestModal && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-dark-100 flex items-center gap-2">
+                <span className="text-pink-400 font-bold">A/B</span>
+                {locale === 'es' ? 'Test de Mensajes' : 'Message Test'} — {abTestModal.nombre}
+              </h2>
+              <button onClick={() => { setAbTestModal(null); setAbResults(null) }} className="text-dark-400 hover:text-dark-200">✕</button>
+            </div>
+
+            <p className="text-sm text-dark-400 mb-4">
+              {locale === 'es'
+                ? 'Dividí tus leads en 2 grupos y probá qué mensaje convierte más. Los leads se reparten 50/50 automáticamente.'
+                : 'Split your leads into 2 groups and test which message converts better. Leads are split 50/50 automatically.'}
+            </p>
+
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-pink-400 mb-2">Variante A</label>
+                <textarea
+                  value={abTestForm.messageA}
+                  onChange={(e) => setAbTestForm({ ...abTestForm, messageA: e.target.value })}
+                  className="input-field min-h-[120px] text-sm"
+                  placeholder="Hola {nombre_negocio}, ..."
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-cyan-400 mb-2">Variante B</label>
+                <textarea
+                  value={abTestForm.messageB}
+                  onChange={(e) => setAbTestForm({ ...abTestForm, messageB: e.target.value })}
+                  className="input-field min-h-[120px] text-sm"
+                  placeholder="Hola {nombre_negocio}, ..."
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={createAbTest}
+              className="w-full py-3 bg-pink-500/20 text-pink-400 border border-pink-500/30 rounded-lg font-medium hover:bg-pink-500/30 transition-all mb-6"
+            >
+              {locale === 'es' ? 'Crear A/B Test' : 'Create A/B Test'}
+            </button>
+
+            {/* Previous Tests */}
+            {abResults && abResults.length > 0 && (
+              <div>
+                <h3 className="text-sm font-medium text-dark-300 mb-3">
+                  {locale === 'es' ? 'Tests Anteriores' : 'Previous Tests'}
+                </h3>
+                <div className="space-y-3">
+                  {abResults.map((test) => (
+                    <div key={test.id} className="bg-dark-900 rounded-lg p-4 border border-dark-700">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs text-dark-500">
+                          {test.fecha_creacion?.toDate?.()?.toLocaleDateString('es-AR')}
+                        </span>
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          test.winner === 'A' ? 'bg-pink-500/20 text-pink-400' :
+                          test.winner === 'B' ? 'bg-cyan-500/20 text-cyan-400' :
+                          'bg-dark-700 text-dark-400'
+                        }`}>
+                          {test.winner === 'A' ? 'A ganó' : test.winner === 'B' ? 'B ganó' : 'Empate'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-pink-400">{test.groupA?.engagementRate || 0}%</div>
+                          <div className="text-xs text-dark-500">A ({test.groupA?.size || 0} leads)</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-cyan-400">{test.groupB?.engagementRate || 0}%</div>
+                          <div className="text-xs text-dark-500">B ({test.groupB?.size || 0} leads)</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

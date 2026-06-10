@@ -1054,6 +1054,476 @@ app.post('/campaigns/:campaignId/process-followups', async (req, res) => {
   }
 })
 
+// ============ EMAIL SENDING (RESEND) ============
+
+async function sendEmail(to, subject, html) {
+  if (!RESEND_API_KEY) {
+    console.log('Resend API key not configured, skipping email')
+    return null
+  }
+
+  try {
+    const response = await axios.post('https://api.resend.com/emails', {
+      from: 'Revendr <notifications@revendr.app>',
+      to: [to],
+      subject,
+      html,
+    }, {
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+    })
+    return response.data
+  } catch (error) {
+    console.error('Email send error:', error.response?.data || error.message)
+    return null
+  }
+}
+
+function generateEmailTemplate(lead, product, messageType = 'initial') {
+  const negocioName = lead.nombre_negocio || 'tu negocio'
+  const demoUrl = lead.url_demo || ''
+  const productName = product?.nombre || 'nuestro producto'
+  const ciudad = lead.ciudad || 'tu zona'
+
+  const subjects = {
+    initial: `Hola ${negocioName}, creamos algo especial para vos`,
+    reminder: `${negocioName}, ¿viste la demo que te preparé?`,
+    discount: `${negocioName}, 20% OFF exclusivo para vos`,
+    lastChance: `Última oportunidad para ${negocioName}`,
+  }
+
+  const bodies = {
+    initial: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #0ea5e9;">Hola ${negocioName} 👋</h2>
+        <p>Vi que trabajás en ${ciudad} y me pareció interesante lo que hacés.</p>
+        <p>Creamos una <strong>demo personalizada</strong> para que veas cómo ${productName} puede ayudar a tu negocio:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${demoUrl}" style="background-color: #0ea5e9; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+            Ver mi Demo →
+          </a>
+        </div>
+        <p>¿Te gustaría que hablemos? Respondé este email o escribinos por WhatsApp.</p>
+        <br>
+        <p style="color: #64748b; font-size: 12px;">Equipo Revendr</p>
+      </div>
+    `,
+    reminder: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #f59e0b;">${negocioName}, te escribí antes 👋</h2>
+        <p>Hace unos días te armé una demo personalizada. ¿La tuviste chance de ver?</p>
+        <p>Miralá acá, toma solo 2 minutos:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${demoUrl}" style="background-color: #f59e0b; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+            Revisar mi Demo →
+          </a>
+        </div>
+        <p>Si tenés dudas, respondé este email y te ayudo.</p>
+        <br>
+        <p style="color: #64748b; font-size: 12px;">Equipo Revendr</p>
+      </div>
+    `,
+    discount: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #10b981;">🎉 20% OFF para ${negocioName}</h2>
+        <p>Tenemos una oferta especial para vos: <strong>20% de descuento</strong> en tu primer mes.</p>
+        <p>Acá va la demo que te preparé:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${demoUrl}" style="background-color: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+            Ver Demo + Descuento →
+          </a>
+        </div>
+        <p style="color: #ef4444; font-weight: bold;">Oferta válida por 7 días.</p>
+        <br>
+        <p style="color: #64748b; font-size: 12px;">Equipo Revendr</p>
+      </div>
+    `,
+    lastChance: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h2 style="color: #ef4444;">Última oportunidad, ${negocioName}</h2>
+        <p>Quería avisarte que la demo personalizada que te armé va a expirar pronto.</p>
+        <p>Si querés aprovecharla, hacelo ahora:</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${demoUrl}" style="background-color: #ef4444; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+            Última chance →
+          </a>
+        </div>
+        <p>Si no es de tu interés, no te preocupes. ¡Éxitos con tu negocio!</p>
+        <br>
+        <p style="color: #64748b; font-size: 12px;">Equipo Revendr</p>
+      </div>
+    `,
+  }
+
+  return {
+    subject: subjects[messageType] || subjects.initial,
+    html: bodies[messageType] || bodies.initial,
+  }
+}
+
+app.post('/leads/:leadId/send-email', async (req, res) => {
+  try {
+    const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
+    if (!leadDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    }
+
+    const lead = leadDoc.data()
+    if (!lead.email) {
+      return res.status(400).json({ success: false, error: { message: 'Lead has no email' } })
+    }
+
+    let product = null
+    if (req.body.productId) {
+      const prodDoc = await db.collection('productos').doc(req.body.productId).get()
+      if (prodDoc.exists) product = prodDoc.data()
+    }
+
+    const messageType = req.body.messageType || 'initial'
+    const { subject, html } = generateEmailTemplate(lead, product, messageType)
+
+    const result = await sendEmail(lead.email, subject, html)
+
+    if (result) {
+      await db.collection('leads').doc(req.params.leadId).update({
+        ultimo_email_enviado: messageType,
+        fecha_ultimo_email: new Date(),
+        email_message_id: result.id,
+        fecha_actualizacion: new Date(),
+      })
+
+      // Track email engagement
+      await db.collection('message_events').add({
+        lead_id: req.params.leadId,
+        campaign_id: lead.id_campania,
+        channel: 'email',
+        event_type: 'sent',
+        message_type: messageType,
+        timestamp: new Date(),
+      })
+    }
+
+    res.json({ success: true, data: { emailId: result?.id } })
+  } catch (error) {
+    console.error('Error sending email:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ SMART SEQUENCE ENGINE ============
+
+const SEQUENCE_RULES = {
+  // After initial WhatsApp: wait 2 days, if no engagement → send email reminder
+  initial_whatsapp: {
+    nextStep: 'email_reminder',
+    delayDays: 2,
+    condition: (lead) => !lead.cta_clicks && !lead.landing_views,
+  },
+  // After email reminder: wait 3 days, if still no engagement → send discount
+  email_reminder: {
+    nextStep: 'email_discount',
+    delayDays: 3,
+    condition: (lead) => !lead.cta_clicks && !lead.landing_views,
+  },
+  // After discount: wait 5 days, if no response → last chance email
+  email_discount: {
+    nextStep: 'email_last_chance',
+    delayDays: 5,
+    condition: (lead) => !lead.fecha_pago,
+  },
+  // If they clicked CTA but didn't buy → send discount after 1 day
+  cta_clicked: {
+    nextStep: 'email_discount',
+    delayDays: 1,
+    condition: (lead) => lead.cta_clicks > 0 && !lead.fecha_pago,
+  },
+}
+
+app.post('/campaigns/:campaignId/process-sequence', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const campaign = campaignDoc.data()
+
+    let product = null
+    if (campaign.producto_id) {
+      const prodDoc = await db.collection('productos').doc(campaign.producto_id).get()
+      if (prodDoc.exists) product = prodDoc.data()
+    }
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', campaignId)
+      .get()
+
+    let actions = 0
+    const results = []
+
+    for (const leadDoc of leadsSnapshot.docs) {
+      const lead = leadDoc.data()
+      const currentStep = lead.sequence_step || 'initial'
+      const rule = SEQUENCE_RULES[currentStep]
+
+      if (!rule) continue
+
+      // Check if enough time has passed
+      const lastAction = lead.fecha_ultimo_followup?.toDate?.() ||
+                         lead.fecha_envio_whatsapp?.toDate?.() ||
+                         lead.fecha_creacion?.toDate?.()
+
+      if (!lastAction) continue
+
+      const daysSince = Math.floor((Date.now() - lastAction.getTime()) / (1000 * 60 * 60 * 24))
+      if (daysSince < rule.delayDays) continue
+
+      // Check condition
+      if (!rule.condition(lead)) continue
+
+      // Execute next step
+      const nextStep = rule.nextStep
+
+      if (nextStep.startsWith('email_')) {
+        // Send email
+        if (lead.email && RESEND_API_KEY) {
+          const messageType = nextStep.replace('email_', '')
+          const { subject, html } = generateEmailTemplate(lead, product, messageType)
+          const emailResult = await sendEmail(lead.email, subject, html)
+
+          if (emailResult) {
+            await leadDoc.ref.update({
+              sequence_step: nextStep,
+              fecha_ultimo_followup: new Date(),
+              fecha_actualizacion: new Date(),
+            })
+
+            await db.collection('message_events').add({
+              lead_id: leadDoc.id,
+              campaign_id: campaignId,
+              channel: 'email',
+              event_type: 'sent',
+              message_type: messageType,
+              timestamp: new Date(),
+            })
+
+            actions++
+            results.push({ leadId: leadDoc.id, action: nextStep, channel: 'email' })
+          }
+        }
+      }
+
+      // Rate limit
+      const delay = Math.floor(Math.random() * 30000) + 15000
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+
+    res.json({ success: true, data: { actions, results } })
+  } catch (error) {
+    console.error('Error processing sequence:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ A/B TESTING ============
+
+app.post('/campaigns/:campaignId/ab-test', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId
+    const { messageA, messageB } = req.body
+
+    if (!messageA || !messageB) {
+      return res.status(400).json({ success: false, error: { message: 'Both message variants required' } })
+    }
+
+    // Get qualified leads
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', campaignId)
+      .where('qualifies_for_messaging', '==', true)
+      .get()
+
+    if (leadsSnapshot.size < 10) {
+      return res.status(400).json({ success: false, error: { message: 'Need at least 10 qualified leads for A/B test' } })
+    }
+
+    // Split leads 50/50 randomly
+    const leads = leadsSnapshot.docs
+    const shuffled = leads.sort(() => Math.random() - 0.5)
+    const half = Math.floor(shuffled.length / 2)
+    const groupA = shuffled.slice(0, half)
+    const groupB = shuffled.slice(half)
+
+    // Create A/B test record
+    const abTestRef = await db.collection('ab_tests').add({
+      campaign_id: campaignId,
+      message_a: messageA,
+      message_b: messageB,
+      group_a_count: groupA.length,
+      group_b_count: groupB.length,
+      status: 'running',
+      fecha_creacion: new Date(),
+    })
+
+    // Assign messages to leads
+    for (const leadDoc of groupA) {
+      const message = messageA
+        .replace(/{nombre_negocio}/g, leadDoc.data().nombre_negocio)
+        .replace(/{url_demo}/g, leadDoc.data().url_demo)
+        .replace(/{rubro}/g, leadDoc.data().rubro)
+
+      await leadDoc.ref.update({
+        ab_test_id: abTestRef.id,
+        ab_group: 'A',
+        mensaje_personalizado: message,
+      })
+    }
+
+    for (const leadDoc of groupB) {
+      const message = messageB
+        .replace(/{nombre_negocio}/g, leadDoc.data().nombre_negocio)
+        .replace(/{url_demo}/g, leadDoc.data().url_demo)
+        .replace(/{rubro}/g, leadDoc.data().rubro)
+
+      await leadDoc.ref.update({
+        ab_test_id: abTestRef.id,
+        ab_group: 'B',
+        mensaje_personalizado: message,
+      })
+    }
+
+    res.json({
+      success: true,
+      data: {
+        testId: abTestRef.id,
+        groupA: groupA.length,
+        groupB: groupB.length,
+      },
+    })
+  } catch (error) {
+    console.error('Error creating A/B test:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/campaigns/:campaignId/ab-results', async (req, res) => {
+  try {
+    const testsSnapshot = await db.collection('ab_tests')
+      .where('campaign_id', '==', req.params.campaignId)
+      .orderBy('fecha_creacion', 'desc')
+      .limit(5)
+      .get()
+
+    const tests = []
+    for (const testDoc of testsSnapshot.docs) {
+      const test = testDoc.data()
+
+      // Count results per group
+      const leadsSnapshot = await db.collection('leads')
+        .where('ab_test_id', '==', testDoc.id)
+        .get()
+
+      let groupAEngaged = 0, groupBEngaged = 0
+      let groupAClicks = 0, groupBClicks = 0
+
+      leadsSnapshot.docs.forEach(doc => {
+        const lead = doc.data()
+        if (lead.ab_group === 'A') {
+          if (lead.cta_clicks > 0 || lead.landing_views > 0) groupAEngaged++
+          groupAClicks += lead.cta_clicks || 0
+        } else {
+          if (lead.cta_clicks > 0 || lead.landing_views > 0) groupBEngaged++
+          groupBClicks += lead.cta_clicks || 0
+        }
+      })
+
+      const groupASize = leadsSnapshot.docs.filter(d => d.data().ab_group === 'A').length || 1
+      const groupBSize = leadsSnapshot.docs.filter(d => d.data().ab_group === 'B').length || 1
+
+      tests.push({
+        id: testDoc.id,
+        ...test,
+        groupA: {
+          ...test.message_a,
+          size: groupASize,
+          engaged: groupAEngaged,
+          engagementRate: ((groupAEngaged / groupASize) * 100).toFixed(1),
+          totalClicks: groupAClicks,
+        },
+        groupB: {
+          ...test.message_b,
+          size: groupBSize,
+          engaged: groupBEngaged,
+          engagementRate: ((groupBEngaged / groupBSize) * 100).toFixed(1),
+          totalClicks: groupBClicks,
+        },
+        winner: groupAEngaged > groupBEngaged ? 'A' : groupBEngaged > groupAEngaged ? 'B' : 'Tie',
+      })
+    }
+
+    res.json({ success: true, data: tests })
+  } catch (error) {
+    console.error('Error getting A/B results:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ MESSAGE ENGAGEMENT TRACKING ============
+
+app.post('/messages/track', async (req, res) => {
+  try {
+    const { leadId, campaignId, channel, eventType, data } = req.body
+
+    await db.collection('message_events').add({
+      lead_id: leadId,
+      campaign_id: campaignId,
+      channel,
+      event_type: eventType,
+      data: data || {},
+      timestamp: new Date(),
+    })
+
+    // Update lead engagement metrics
+    if (leadId) {
+      const leadRef = db.collection('leads').doc(leadId)
+      const leadDoc = await leadRef.get()
+      if (leadDoc.exists) {
+        const lead = leadDoc.data()
+        const updates = { fecha_actualizacion: new Date() }
+
+        if (eventType === 'delivered') {
+          updates.mensajes_entregados = (lead.mensajes_entregados || 0) + 1
+        }
+        if (eventType === 'read') {
+          updates.mensajes_leidos = (lead.mensajes_leidos || 0) + 1
+        }
+        if (eventType === 'clicked') {
+          updates.mensajes_clickeados = (lead.mensajes_clickeados || 0) + 1
+        }
+
+        // Calculate engagement score
+        const reads = lead.mensajes_leidos || 0
+        const clicks = lead.mensajes_clickeados || 0
+        const engagementScore = (reads * 2) + (clicks * 3)
+        updates.engagement_score = engagementScore
+
+        // Auto-upgrade temperature based on engagement
+        if (engagementScore >= 5) updates.temperatura = 'hot'
+        else if (engagementScore >= 2) updates.temperatura = 'warm'
+
+        await leadRef.update(updates)
+      }
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error tracking message:', error)
+    res.json({ success: true })
+  }
+})
+
 // ============ WHATSAPP SENDING ============
 
 app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
