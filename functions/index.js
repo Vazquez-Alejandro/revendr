@@ -1841,9 +1841,18 @@ app.post('/webhook/stripe', async (req, res) => {
 // ============ STRIPE CHECKOUT ============
 
 const STRIPE_PRICES = {
-  starter: { monthly: 'price_starter_monthly', annual: 'price_starter_annual' },
-  growth: { monthly: 'price_growth_monthly', annual: 'price_growth_annual' },
-  enterprise: { monthly: 'price_enterprise_monthly', annual: 'price_enterprise_annual' },
+  starter: {
+    monthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: process.env.STRIPE_PRICE_STARTER_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+  },
+  growth: {
+    monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: process.env.STRIPE_PRICE_GROWTH_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+  },
+  enterprise: {
+    monthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+  },
 }
 
 const PLAN_LIMITS = {

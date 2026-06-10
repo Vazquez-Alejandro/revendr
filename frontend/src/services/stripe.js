@@ -18,22 +18,22 @@ export const createCheckoutSession = async (priceId, leadId = null) => {
 
 export const PRICES = {
   starter: {
-    monthly: 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
-    annual: 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+    monthly: import.meta.env.VITE_STRIPE_PRICE_STARTER_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: import.meta.env.VITE_STRIPE_PRICE_STARTER_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
     name: 'Starter',
     monthlyAmount: 4900,
     annualAmount: 3900,
   },
   growth: {
-    monthly: 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
-    annual: 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+    monthly: import.meta.env.VITE_STRIPE_PRICE_GROWTH_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: import.meta.env.VITE_STRIPE_PRICE_GROWTH_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
     name: 'Growth',
     monthlyAmount: 14900,
     annualAmount: 11900,
   },
   enterprise: {
-    monthly: 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
-    annual: 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+    monthly: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
+    annual: import.meta.env.VITE_STRIPE_PRICE_ENTERPRISE_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
     name: 'Enterprise',
     monthlyAmount: 39900,
     annualAmount: 31900,
