@@ -1842,16 +1842,16 @@ app.post('/webhook/stripe', async (req, res) => {
 
 const STRIPE_PRICES = {
   starter: {
-    monthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
-    annual: process.env.STRIPE_PRICE_STARTER_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+    monthly: process.env.STRIPE_PRICE_STARTER_MONTHLY || 'price_1TgpksPRwRIumjKDJTuaMTdh',
+    annual: process.env.STRIPE_PRICE_STARTER_ANNUAL || 'price_1TgpksPRwRIumjKDMb9IUI4F',
   },
   growth: {
-    monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
-    annual: process.env.STRIPE_PRICE_GROWTH_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+    monthly: process.env.STRIPE_PRICE_GROWTH_MONTHLY || 'price_1TgpnzPRwRIumjKDByQoc0Mh',
+    annual: process.env.STRIPE_PRICE_GROWTH_ANNUAL || 'price_1TgprbPRwRIumjKD6vYYlLsK',
   },
   enterprise: {
-    monthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || 'price_1Tg4SRAqV0sHGXFzpIWt3k1K',
-    annual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || 'price_1Tg4T8AqV0sHGXFzpmWGleoM',
+    monthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY || 'price_1TgpsWPRwRIumjKDbvOgfLrP',
+    annual: process.env.STRIPE_PRICE_ENTERPRISE_ANNUAL || 'price_1Tgpt6PRwRIumjKDXs6laP5D',
   },
 }
 
