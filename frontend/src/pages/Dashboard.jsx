@@ -44,6 +44,7 @@ export default function Dashboard() {
   const [chartData, setChartData] = useState([])
   const [statusData, setStatusData] = useState([])
   const [rubroData, setRubroData] = useState([])
+  const [productStats, setProductStats] = useState({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -100,6 +101,18 @@ export default function Dashboard() {
         const productsQuery = query(collection(db, 'productos'), where('user_id', '==', userId))
         const productsSnapshot = await getDocs(productsQuery)
         totalProducts = productsSnapshot.size
+      }
+
+      // Load product stats
+      try {
+        const productStatsRes = await fetch(
+          'https://us-central1-revendr-9add8.cloudfunctions.net/api/stats/products'
+        ).then(r => r.json())
+        if (productStatsRes.success) {
+          setProductStats(productStatsRes.data)
+        }
+      } catch (err) {
+        console.error('Error loading product stats:', err)
       }
 
       const chartDataArr = Object.entries(leadsByDate)
@@ -389,6 +402,78 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Product Stats */}
+      {Object.keys(productStats).length > 0 && (
+        <div className="card">
+          <h2 className="text-lg font-semibold text-dark-100 mb-4">
+            {locale === 'es' ? 'Rendimiento por Producto' : 'Performance by Product'}
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-dark-700">
+                  <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase">
+                    {locale === 'es' ? 'Producto' : 'Product'}
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-dark-400 uppercase">
+                    {locale === 'es' ? 'Campañas' : 'Campaigns'}
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-dark-400 uppercase">
+                    {locale === 'es' ? 'Leads' : 'Leads'}
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-dark-400 uppercase">
+                    {locale === 'es' ? 'Calificados' : 'Qualified'}
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-dark-400 uppercase">
+                    {locale === 'es' ? 'Mensajes' : 'Messages'}
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-dark-400 uppercase">
+                    {locale === 'es' ? 'Clientes' : 'Clients'}
+                  </th>
+                  <th className="text-center py-3 px-4 text-xs font-medium text-dark-400 uppercase">
+                    {locale === 'es' ? 'Ingresos' : 'Revenue'}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-dark-700">
+                {Object.entries(productStats).map(([id, stats]) => (
+                  <tr key={id} className="hover:bg-dark-700/50">
+                    <td className="py-3 px-4">
+                      <div className="text-sm font-medium text-dark-100">{stats.nombre}</div>
+                      <div className="text-xs text-dark-400">{stats.nicho}</div>
+                    </td>
+                    <td className="py-3 px-4 text-center text-sm text-dark-200">{stats.totalCampaigns}</td>
+                    <td className="py-3 px-4 text-center text-sm text-dark-200">{stats.totalLeads}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-sm font-medium ${
+                        stats.qualifiedLeads > 0 ? 'text-emerald-400' : 'text-dark-400'
+                      }`}>
+                        {stats.qualifiedLeads}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center text-sm text-dark-200">{stats.messagesSent}</td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-sm font-medium ${
+                        stats.clients > 0 ? 'text-emerald-400' : 'text-dark-400'
+                      }`}>
+                        {stats.clients}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-center">
+                      <span className={`text-sm font-medium ${
+                        stats.totalRevenue > 0 ? 'text-emerald-400' : 'text-dark-400'
+                      }`}>
+                        ${stats.totalRevenue || 0}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

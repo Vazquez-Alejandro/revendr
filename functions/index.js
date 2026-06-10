@@ -228,6 +228,8 @@ async function processApifyResults(datasetId, campaignId, rubro) {
         url_origen: raw.url || raw.placeId || '',
         url_google_maps: raw.url || '',
         calificacion: raw.totalScore || raw.rating || null,
+        reviews_count: raw.reviewsCount || raw.reviews || 0,
+        total_reviews: raw.reviewsCount || raw.reviews || 0,
         datos_personalizados: {
           logo: raw.image || raw.photos?.[0] || '',
           horarios: raw.openingHours || [],
@@ -236,6 +238,13 @@ async function processApifyResults(datasetId, campaignId, rubro) {
         estado_proceso: 'scraped',
         fecha_creacion: new Date(),
       }
+
+      // Calculate initial lead score
+      const score = calculateLeadScore(leadData)
+      leadData.lead_score = score
+      leadData.temperatura = getTemperature(score)
+      leadData.score_label = getScoreLabel(score).label
+      leadData.qualifies_for_messaging = score >= 30
 
       await db.collection('leads').add(leadData)
       saved++
@@ -685,26 +694,255 @@ app.post('/landing/engagement', async (req, res) => {
   }
 })
 
-// ============ AUTO-SCORING ============
+// ============ LEAD SCORING (0-100) ============
+
+function calculateLeadScore(lead) {
+  let score = 0
+
+  // Reviews count (0-25 points) - more reviews = more established
+  const reviews = lead.reviews_count || lead.total_reviews || 0
+  if (reviews >= 100) score += 25
+  else if (reviews >= 50) score += 20
+  else if (reviews >= 20) score += 15
+  else if (reviews >= 5) score += 10
+  else if (reviews >= 1) score += 5
+
+  // Rating (0-20 points) - higher = better lead
+  const rating = lead.calificacion || lead.rating || 0
+  if (rating >= 4.8) score += 20
+  else if (rating >= 4.5) score += 16
+  else if (rating >= 4.0) score += 12
+  else if (rating >= 3.5) score += 8
+  else if (rating >= 3.0) score += 4
+
+  // Has website (0-15 points) - digital presence
+  const website = lead.datos_personalizados?.website || lead.website || ''
+  if (website && website.includes('.')) score += 15
+
+  // Has email (0-10 points)
+  if (lead.email && lead.email.includes('@')) score += 10
+
+  // Has phone (0-10 points)
+  const phone = lead.telefono_whatsapp || ''
+  if (phone && phone.replace(/\D/g, '').length >= 10) score += 10
+
+  // Has opening hours (0-10 points) - active business
+  const hours = lead.datos_personalizados?.horarios || []
+  if (hours.length > 0) score += 10
+
+  // Has logo/photos (0-5 points) - professional business
+  const logo = lead.datos_personalizados?.logo || ''
+  if (logo) score += 5
+
+  // Has address (0-5 points)
+  if (lead.direccion && lead.direccion.length > 5) score += 5
+
+  return Math.min(score, 100)
+}
+
+function getScoreLabel(score) {
+  if (score >= 80) return { label: 'Excelente', color: 'text-emerald-400', bg: 'bg-emerald-500/20' }
+  if (score >= 60) return { label: 'Bueno', color: 'text-brand-400', bg: 'bg-brand-500/20' }
+  if (score >= 40) return { label: 'Regular', color: 'text-amber-400', bg: 'bg-amber-500/20' }
+  if (score >= 20) return { label: 'Bajo', color: 'text-orange-400', bg: 'bg-orange-500/20' }
+  return { label: 'Muy Bajo', color: 'text-red-400', bg: 'bg-red-500/20' }
+}
+
+function getTemperature(score) {
+  if (score >= 60) return 'hot'
+  if (score >= 35) return 'warm'
+  return 'cold'
+}
 
 async function autoScoreLead(leadId, lead) {
-  let score = 0
-  if (lead.cta_clicks > 0) score += 3
-  if (lead.landing_views > 1) score += 2
-  if (lead.tiempo_total_landing > 60) score += 2
-  if (lead.telefono_whatsapp) score += 1
-  if (lead.email) score += 1
-  if (lead.rating >= 4) score += 1
-
-  let temperatura = 'cold'
-  if (score >= 6) temperatura = 'hot'
-  else if (score >= 3) temperatura = 'warm'
+  const score = calculateLeadScore(lead)
+  const temperatura = getTemperature(score)
 
   await db.collection('leads').doc(leadId).update({
     lead_score: score,
     temperatura,
+    score_label: getScoreLabel(score).label,
   })
 }
+
+// ============ BULK LEAD SCORING ============
+
+app.post('/leads/score-all', async (req, res) => {
+  try {
+    const { campaignId, minScore } = req.body
+    let query = db.collection('leads')
+    if (campaignId) query = query.where('id_campania', '==', campaignId)
+
+    const snapshot = await query.get()
+    let scored = 0
+    let qualified = 0
+    let disqualified = 0
+
+    for (const doc of snapshot.docs) {
+      const lead = doc.data()
+      const score = calculateLeadScore(lead)
+      const temperatura = getTemperature(score)
+      const qualifies = score >= (minScore || 30)
+
+      await doc.ref.update({
+        lead_score: score,
+        temperatura,
+        score_label: getScoreLabel(score).label,
+        qualifies_for_messaging: qualifies,
+      })
+
+      scored++
+      if (qualifies) qualified++
+      else disqualified++
+    }
+
+    res.json({
+      success: true,
+      data: { scored, qualified, disqualified, total: snapshot.size },
+    })
+  } catch (error) {
+    console.error('Error scoring leads:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ AI MESSAGE GENERATOR ============
+
+const MESSAGE_TEMPLATES = {
+  inmobiliaria: [
+    'Hola {nombre_negocio}, vi que trabajás en {ciudad} con {rating} estrellas. Creamos una demo exclusiva para que veas cómo{nombre_negocio} puede verse online: {url_demo}\n\n¿Te gustaría que hablemos?',
+    '{nombre_negocio}, noté que tu inmobiliaria tiene una presencia online que puede mejorar mucho. Te armé algo especial: {url_demo}\n\nMiralo y contame qué te parece.',
+  ],
+  estetica: [
+    'Hola {nombre_negocio}, vi tu peluquería en {ciudad} y me pareció genial. Te preparé una demo personalizada: {url_demo}\n\n¿Querés que la revisemos juntos?',
+    '{nombre_negocio}, ¿y si tu negocio pudiera captar más clientes por WhatsApp? Mirá esta demo que te preparé: {url_demo}',
+  ],
+  clinica: [
+    'Hola {nombre_negocio}, vi que tu clínica en {ciudad} tiene buena reputación. Te hice una demo para que veas cómo mejorar tu presencia digital: {url_demo}\n\n¿Te interesa?',
+  ],
+  restaurante: [
+    'Hola {nombre_negocio}, vi tu restaurante en {ciudad} y me encantó. Te preparé una demo para que veas cómo atraer más comensales: {url_demo}\n\n¿Lo revisamos?',
+  ],
+  gimnasio: [
+    'Hola {nombre_negocio}, vi que tu gimnasio en {ciudad} tiene {rating} estrellas. Te armé algo especial para que veas cómo crecer: {url_demo}\n\n¿Querés que hablemos?',
+  ],
+  otro: [
+    'Hola {nombre_negocio}, vi tu negocio en {ciudad} y me pareció interesante. Te preparé una demo personalizada: {url_demo}\n\n¿Te gustaría que la revisemos?',
+  ],
+}
+
+function generatePersonalizedMessage(lead, product) {
+  const niche = lead.rubro || 'otro'
+  const templates = MESSAGE_TEMPLATES[niche] || MESSAGE_TEMPLATES.otro
+  const template = templates[Math.floor(Math.random() * templates.length)]
+
+  const rating = lead.calificacion || lead.rating || '4.5'
+  const ciudad = lead.ciudad || 'tu zona'
+
+  let message = template
+    .replace(/{nombre_negocio}/g, lead.nombre_negocio || 'tu negocio')
+    .replace(/{ciudad}/g, ciudad)
+    .replace(/{rating}/g, rating)
+    .replace(/{rubro}/g, niche)
+    .replace(/{url_demo}/g, lead.url_demo || '')
+
+  if (product && product.mensaje_whatsapp) {
+    message = product.mensaje_whatsapp
+      .replace(/{nombre_negocio}/g, lead.nombre_negocio || 'tu negocio')
+      .replace(/{ciudad}/g, ciudad)
+      .replace(/{rating}/g, rating)
+      .replace(/{rubro}/g, niche)
+      .replace(/{url_demo}/g, lead.url_demo || '')
+  }
+
+  return message
+}
+
+app.post('/leads/:leadId/generate-message', async (req, res) => {
+  try {
+    const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
+    if (!leadDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    }
+
+    const lead = leadDoc.data()
+    let product = null
+
+    if (req.body.productId) {
+      const prodDoc = await db.collection('productos').doc(req.body.productId).get()
+      if (prodDoc.exists) product = prodDoc.data()
+    }
+
+    const message = generatePersonalizedMessage(lead, product)
+
+    await db.collection('leads').doc(req.params.leadId).update({
+      mensaje_personalizado: message,
+      fecha_generacion_mensaje: new Date(),
+    })
+
+    res.json({ success: true, data: { message } })
+  } catch (error) {
+    console.error('Error generating message:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/campaigns/:campaignId/generate-messages', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId
+    const { minScore } = req.body
+
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+    const campaign = campaignDoc.data()
+
+    let product = null
+    if (campaign.producto_id) {
+      const prodDoc = await db.collection('productos').doc(campaign.producto_id).get()
+      if (prodDoc.exists) product = prodDoc.data()
+    }
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', campaignId)
+      .where('estado_proceso', '==', 'scraped')
+      .get()
+
+    let generated = 0
+    let skipped = 0
+
+    for (const leadDoc of leadsSnapshot.docs) {
+      const lead = leadDoc.data()
+      const score = calculateLeadScore(lead)
+      const threshold = minScore || 30
+
+      if (score < threshold) {
+        skipped++
+        continue
+      }
+
+      const message = generatePersonalizedMessage(lead, product)
+      await leadDoc.ref.update({
+        mensaje_personalizado: message,
+        lead_score: score,
+        temperatura: getTemperature(score),
+        score_label: getScoreLabel(score).label,
+        qualifies_for_messaging: true,
+        fecha_generacion_mensaje: new Date(),
+      })
+      generated++
+    }
+
+    res.json({
+      success: true,
+      data: { generated, skipped, total: leadsSnapshot.size },
+    })
+  } catch (error) {
+    console.error('Error generating messages:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
 
 // ============ FOLLOW-UPS ============
 
@@ -881,7 +1119,7 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
 app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
   try {
     const campaignId = req.params.campaignId
-    const { limit: limitParam = 10 } = req.body
+    const { limit: limitParam = 10, minScore = 30 } = req.body
 
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) {
@@ -905,34 +1143,52 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
     const leadsSnapshot = await db.collection('leads')
       .where('id_campania', '==', campaignId)
       .where('estado_proceso', '==', 'demo_generada')
-      .limit(parseInt(limitParam))
       .get()
 
     let sent = 0
     let failed = 0
+    let skippedLowScore = 0
     const DELAY_BETWEEN_MESSAGES = 45000
     const MAX_PER_BATCH = 10
     const BATCH_PAUSE = 180000
 
-    for (let i = 0; i < leadsSnapshot.docs.length; i++) {
+    // Sort leads by score descending - send to best leads first
+    const leadsWithScore = leadsSnapshot.docs.map(doc => ({
+      ref: doc,
+      data: doc.data(),
+      score: calculateLeadScore(doc.data()),
+    })).sort((a, b) => b.score - a.score)
+
+    const toSend = leadsWithScore.slice(0, parseInt(limitParam))
+
+    for (let i = 0; i < toSend.length; i++) {
       if (i > 0 && i % MAX_PER_BATCH === 0) {
         await new Promise(resolve => setTimeout(resolve, BATCH_PAUSE))
       }
 
       try {
-        const leadDoc = leadsSnapshot.docs[i]
-        const lead = leadDoc.data()
+        const { ref: leadDoc, data: lead, score } = toSend[i]
 
         if (!lead.url_demo || !lead.telefono_whatsapp) {
           failed++
           continue
         }
 
-        const messageTemplate = campaign.producto_mensaje || campaign.mensaje_template || `Hola {nombre_negocio}, te propuse algo especial para tu {rubro}.\n\nMirá tu demo: {url_demo}`
-        const message = messageTemplate
-          .replace(/{nombre_negocio}/g, lead.nombre_negocio)
-          .replace(/{url_demo}/g, lead.url_demo)
-          .replace(/{rubro}/g, lead.rubro)
+        // Skip leads below minimum score
+        if (score < minScore) {
+          skippedLowScore++
+          continue
+        }
+
+        // Use personalized message if available, otherwise fall back to template
+        let message = lead.mensaje_personalizado
+        if (!message) {
+          const messageTemplate = campaign.producto_mensaje || campaign.mensaje_template || `Hola {nombre_negocio}, te propuse algo especial para tu {rubro}.\n\nMirá tu demo: {url_demo}`
+          message = messageTemplate
+            .replace(/{nombre_negocio}/g, lead.nombre_negocio)
+            .replace(/{url_demo}/g, lead.url_demo)
+            .replace(/{rubro}/g, lead.rubro)
+        }
 
         const jitter = Math.floor(Math.random() * 20000)
         await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_MESSAGES + jitter))
@@ -953,16 +1209,17 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
           }
         )
 
-        await db.collection('leads').doc(leadDoc.id).update({
+        await leadDoc.ref.update({
           estado_proceso: 'mensaje_enviado',
           whatsapp_message_id: response.data.messages?.[0]?.id,
           fecha_envio_whatsapp: new Date(),
           fecha_actualizacion: new Date(),
+          lead_score_at_send: score,
         })
 
         sent++
       } catch (err) {
-        console.error(`Error sending to lead ${leadDoc.id}:`, err.response?.data || err.message)
+        console.error(`Error sending to lead:`, err.response?.data || err.message)
         failed++
       }
     }
@@ -973,7 +1230,7 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
       })
     }
 
-    res.json({ success: true, data: { sent, failed, total: leadsSnapshot.size } })
+    res.json({ success: true, data: { sent, failed, skippedLowScore, total: leadsSnapshot.size } })
   } catch (error) {
     console.error('Error batch sending messages:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
@@ -1176,6 +1433,115 @@ app.get('/stats/dashboard', async (req, res) => {
     })
   } catch (error) {
     console.error('Error fetching dashboard stats:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ PRODUCT STATS ============
+
+app.get('/stats/products', async (req, res) => {
+  try {
+    const productsSnapshot = await db.collection('productos').get()
+    const campaignsSnapshot = await db.collection('campanias').get()
+    const leadsSnapshot = await db.collection('leads').get()
+
+    const products = []
+    productsSnapshot.docs.forEach(doc => {
+      products.push({ id: doc.id, ...doc.data() })
+    })
+
+    const statsByProduct = {}
+
+    // Initialize stats for each product
+    products.forEach(p => {
+      statsByProduct[p.id] = {
+        nombre: p.nombre,
+        nicho: p.nicho,
+        totalCampaigns: 0,
+        activeCampaigns: 0,
+        totalLeads: 0,
+        qualifiedLeads: 0,
+        demosGenerated: 0,
+        messagesSent: 0,
+        clients: 0,
+        totalRevenue: 0,
+      }
+    })
+
+    // Count campaigns per product
+    campaignsSnapshot.docs.forEach(doc => {
+      const c = doc.data()
+      if (c.producto_id && statsByProduct[c.producto_id]) {
+        statsByProduct[c.producto_id].totalCampaigns++
+        if (c.estado === 'activa') statsByProduct[c.producto_id].activeCampaigns++
+        statsByProduct[c.producto_id].messagesSent += c.mensajes_enviados || 0
+        statsByProduct[c.producto_id].totalRevenue += c.total_revenue || 0
+      }
+    })
+
+    // Count leads per product (via campaign -> product)
+    const campaignProductMap = {}
+    campaignsSnapshot.docs.forEach(doc => {
+      const c = doc.data()
+      if (c.producto_id) campaignProductMap[doc.id] = c.producto_id
+    })
+
+    leadsSnapshot.docs.forEach(doc => {
+      const lead = doc.data()
+      const productId = campaignProductMap[lead.id_campania]
+      if (productId && statsByProduct[productId]) {
+        statsByProduct[productId].totalLeads++
+        if (lead.lead_score >= 50) statsByProduct[productId].qualifiedLeads++
+        if (lead.estado_proceso === 'demo_generada') statsByProduct[productId].demosGenerated++
+        if (lead.estado_proceso === 'mensaje_enviado') statsByProduct[productId].messagesSent++
+        if (lead.estado_proceso === 'cliente_activo') statsByProduct[productId].clients++
+      }
+    })
+
+    res.json({ success: true, data: statsByProduct })
+  } catch (error) {
+    console.error('Error fetching product stats:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ LEAD SCORE STATS ============
+
+app.get('/leads/score-stats', async (req, res) => {
+  try {
+    const { campaignId } = req.query
+    let query = db.collection('leads')
+    if (campaignId) query = query.where('id_campania', '==', campaignId)
+
+    const snapshot = await query.get()
+    const stats = {
+      total: snapshot.size,
+      excellent: 0,
+      good: 0,
+      regular: 0,
+      low: 0,
+      veryLow: 0,
+      avgScore: 0,
+      qualified: 0,
+    }
+
+    let totalScore = 0
+    snapshot.docs.forEach(doc => {
+      const score = doc.data().lead_score || 0
+      totalScore += score
+      if (score >= 80) stats.excellent++
+      else if (score >= 60) stats.good++
+      else if (score >= 40) stats.regular++
+      else if (score >= 20) stats.low++
+      else stats.veryLow++
+      if (score >= 50) stats.qualified++
+    })
+
+    stats.avgScore = snapshot.size > 0 ? (totalScore / snapshot.size).toFixed(1) : 0
+
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    console.error('Error fetching score stats:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })

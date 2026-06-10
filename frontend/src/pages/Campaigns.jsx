@@ -230,8 +230,29 @@ export default function Campaigns() {
 
   const handleProcessDemos = async (campaignId) => {
     setProcessingAction(`${campaignId}-demos`)
-    toast.loading(locale === 'es' ? 'Generando demos...' : 'Generating demos...', { id: 'demos' })
+    toast.loading(locale === 'es' ? 'Calificando leads y generando demos...' : 'Qualifying leads and generating demos...', { id: 'demos' })
     try {
+      // First, score all leads
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/score-all`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ campaignId }),
+        }
+      )
+
+      // Then generate messages for qualified leads
+      const msgResult = await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/generate-messages`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ minScore: 30 }),
+        }
+      ).then(r => r.json())
+
+      // Then generate demos
       const result = await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/process-demos`,
         {
@@ -243,14 +264,14 @@ export default function Campaigns() {
 
       toast.success(
         locale === 'es' 
-          ? `${result.data?.processed || 0} demos generadas` 
-          : `${result.data?.processed || 0} demos generated`,
-        { id: 'demos' }
+          ? `${msgResult.data?.generated || 0} mensajes personalizados, ${result.data?.processed || 0} demos generadas` 
+          : `${msgResult.data?.generated || 0} personalized messages, ${result.data?.processed || 0} demos generated`,
+        { id: 'demos', duration: 5000 }
       )
       loadCampaigns()
     } catch (error) {
       console.error('Error processing demos:', error)
-      toast.error(locale === 'es' ? 'Error al generar demos' : 'Error generating demos', { id: 'demos' })
+      toast.error(locale === 'es' ? 'Error al procesar' : 'Error processing', { id: 'demos' })
     } finally {
       setProcessingAction(null)
     }
@@ -258,22 +279,22 @@ export default function Campaigns() {
 
   const handleSendMessages = async (campaignId) => {
     setProcessingAction(`${campaignId}-messages`)
-    toast.loading(locale === 'es' ? 'Enviando mensajes...' : 'Sending messages...', { id: 'messages' })
+    toast.loading(locale === 'es' ? 'Enviando mensajes a leads calificados...' : 'Sending messages to qualified leads...', { id: 'messages' })
     try {
       const result = await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/send-messages`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ limit: 10 }),
+          body: JSON.stringify({ limit: 10, minScore: 30 }),
         }
       ).then(r => r.json())
 
       toast.success(
         locale === 'es' 
-          ? `${result.data?.sent || 0} mensajes enviados, ${result.data?.failed || 0} fallidos` 
-          : `${result.data?.sent || 0} messages sent, ${result.data?.failed || 0} failed`,
-        { id: 'messages' }
+          ? `${result.data?.sent || 0} mensajes enviados, ${result.data?.failed || 0} fallidos, ${result.data?.skippedLowScore || 0} descartados (score bajo)` 
+          : `${result.data?.sent || 0} messages sent, ${result.data?.failed || 0} failed, ${result.data?.skippedLowScore || 0} skipped (low score)`,
+        { id: 'messages', duration: 5000 }
       )
       loadCampaigns()
     } catch (error) {
@@ -731,7 +752,7 @@ export default function Campaigns() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 text-center mb-4">
+              <div className="grid grid-cols-4 gap-2 text-center mb-4">
                 <div className="bg-dark-900 rounded-lg py-2">
                   <div className="text-lg font-semibold text-dark-100">
                     {campaign.leads_count || 0}
@@ -749,6 +770,12 @@ export default function Campaigns() {
                     {campaign.mensajes_enviados || 0}
                   </div>
                   <div className="text-xs text-dark-400">{t('sentEs')}</div>
+                </div>
+                <div className="bg-dark-900 rounded-lg py-2">
+                  <div className="text-lg font-semibold text-amber-400">
+                    {campaign.total_revenue ? `$${campaign.total_revenue}` : '$0'}
+                  </div>
+                  <div className="text-xs text-dark-400">{locale === 'es' ? 'Ingresos' : 'Revenue'}</div>
                 </div>
               </div>
 

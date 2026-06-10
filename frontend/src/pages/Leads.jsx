@@ -80,6 +80,7 @@ export default function Leads() {
   const [filterRubro, setFilterRubro] = useState('todos')
   const [filterEstado, setFilterEstado] = useState('todos')
   const [filterCampania, setFilterCampania] = useState('todas')
+  const [filterScore, setFilterScore] = useState('todos')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLead, setSelectedLead] = useState(null)
   const [importing, setImporting] = useState(false)
@@ -161,12 +162,23 @@ export default function Leads() {
   const filteredLeads = leads.filter(lead => {
     if (searchTerm) {
       const search = searchTerm.toLowerCase()
-      return (
+      const matchesSearch = (
         lead.nombre_negocio?.toLowerCase().includes(search) ||
         lead.telefono_whatsapp?.includes(search) ||
         lead.email?.toLowerCase().includes(search)
       )
+      if (!matchesSearch) return false
     }
+
+    if (filterScore !== 'todos') {
+      const score = lead.lead_score || 0
+      if (filterScore === 'excellent' && score < 80) return false
+      if (filterScore === 'good' && (score < 60 || score >= 80)) return false
+      if (filterScore === 'regular' && (score < 40 || score >= 60)) return false
+      if (filterScore === 'low' && (score < 20 || score >= 40)) return false
+      if (filterScore === 'veryLow' && score >= 20) return false
+    }
+
     return true
   })
 
@@ -387,6 +399,18 @@ export default function Leads() {
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
           </select>
+          <select
+            value={filterScore}
+            onChange={(e) => setFilterScore(e.target.value)}
+            className="select-field w-full md:w-48"
+          >
+            <option value="todos">{locale === 'es' ? 'Todos los scores' : 'All scores'}</option>
+            <option value="excellent">{locale === 'es' ? 'Excelente (80+)' : 'Excellent (80+)'}</option>
+            <option value="good">{locale === 'es' ? 'Bueno (60-79)' : 'Good (60-79)'}</option>
+            <option value="regular">{locale === 'es' ? 'Regular (40-59)' : 'Regular (40-59)'}</option>
+            <option value="low">{locale === 'es' ? 'Bajo (20-39)' : 'Low (20-39)'}</option>
+            <option value="veryLow">{locale === 'es' ? 'Muy Bajo (<20)' : 'Very Low (<20)'}</option>
+          </select>
           <div className="flex border border-dark-700 rounded-lg overflow-hidden">
             <button
               onClick={() => setViewMode('table')}
@@ -504,10 +528,12 @@ export default function Leads() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        <span className={`text-xs font-medium ${
-                          (lead.lead_score || 0) >= 6 ? 'text-red-400' :
-                          (lead.lead_score || 0) >= 3 ? 'text-amber-400' :
-                          'text-dark-500'
+                        <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                          (lead.lead_score || 0) >= 80 ? 'bg-emerald-500/20 text-emerald-400' :
+                          (lead.lead_score || 0) >= 60 ? 'bg-brand-500/20 text-brand-400' :
+                          (lead.lead_score || 0) >= 40 ? 'bg-amber-500/20 text-amber-400' :
+                          (lead.lead_score || 0) >= 20 ? 'bg-orange-500/20 text-orange-400' :
+                          'bg-red-500/20 text-red-400'
                         }`}>
                           {lead.lead_score || 0}
                         </span>
@@ -667,38 +693,51 @@ export default function Leads() {
               </div>
 
               {/* Engagement Stats */}
-              {(selectedLead.cta_clicks > 0 || selectedLead.landing_views > 0 || selectedLead.tiempo_total_landing > 0) && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    {locale === 'es' ? 'Actividad en Landing' : 'Landing Activity'}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-dark-900 rounded-lg p-2 text-center">
-                      <div className="text-lg font-bold text-brand-400">{selectedLead.landing_views || 0}</div>
-                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Visitas' : 'Views'}</div>
-                    </div>
-                    <div className="bg-dark-900 rounded-lg p-2 text-center">
-                      <div className="text-lg font-bold text-emerald-400">{selectedLead.cta_clicks || 0}</div>
-                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks CTA' : 'CTA Clicks'}</div>
-                    </div>
-                    <div className="bg-dark-900 rounded-lg p-2 text-center">
-                      <div className="text-lg font-bold text-amber-400">{selectedLead.tiempo_total_landing || 0}s</div>
-                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Tiempo' : 'Time'}</div>
-                    </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Calificación del Lead' : 'Lead Score'}
+                </label>
+                <div className="bg-dark-900 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className={`text-3xl font-bold ${(selectedLead.lead_score || 0) >= 60 ? 'text-emerald-400' : (selectedLead.lead_score || 0) >= 40 ? 'text-amber-400' : 'text-red-400'}`}>
+                      {selectedLead.lead_score || 0}
+                    </span>
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      selectedLead.temperatura === 'hot' ? 'bg-red-500/20 text-red-400' :
+                      selectedLead.temperatura === 'warm' ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-blue-500/20 text-blue-400'
+                    }`}>
+                      {selectedLead.temperatura === 'hot' ? '🔥 Hot' : selectedLead.temperatura === 'warm' ? '🟡 Warm' : '❄️ Cold'}
+                    </span>
                   </div>
-                  {selectedLead.lead_score > 0 && (
-                    <div className="mt-2 text-center">
-                      <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                        selectedLead.lead_score >= 6 ? 'bg-red-500/20 text-red-400' :
-                        selectedLead.lead_score >= 3 ? 'bg-amber-500/20 text-amber-400' :
-                        'bg-blue-500/20 text-blue-400'
-                      }`}>
-                        Score: {selectedLead.lead_score}
-                      </span>
+                  <div className="space-y-1 text-xs text-dark-400">
+                    {selectedLead.calificacion && <div>⭐ Rating: {selectedLead.calificacion}</div>}
+                    {selectedLead.reviews_count > 0 && <div>📋 Reviews: {selectedLead.reviews_count}</div>}
+                    {selectedLead.datos_personalizados?.website && <div>🌐 Tiene website</div>}
+                    {selectedLead.email && <div>📧 Tiene email</div>}
+                    {selectedLead.direccion && <div>📍 Tiene dirección</div>}
+                  </div>
+                  {(selectedLead.cta_clicks > 0 || selectedLead.landing_views > 0 || selectedLead.tiempo_total_landing > 0) && (
+                    <div className="mt-3 pt-3 border-t border-dark-700">
+                      <div className="text-xs font-medium text-dark-400 mb-2">{locale === 'es' ? 'Actividad en Landing' : 'Landing Activity'}</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-brand-400">{selectedLead.landing_views || 0}</div>
+                          <div className="text-xs text-dark-500">{locale === 'es' ? 'Visitas' : 'Views'}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-emerald-400">{selectedLead.cta_clicks || 0}</div>
+                          <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks' : 'Clicks'}</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-bold text-amber-400">{selectedLead.tiempo_total_landing || 0}s</div>
+                          <div className="text-xs text-dark-500">{locale === 'es' ? 'Tiempo' : 'Time'}</div>
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
 
               {/* Demo Link */}
               {selectedLead.url_demo && (
@@ -715,6 +754,25 @@ export default function Leads() {
                     <ExternalLink className="w-4 h-4" />
                     {locale === 'es' ? 'Ver Landing' : 'View Landing'}
                   </a>
+                </div>
+              )}
+
+              {/* AI Generated Message */}
+              {selectedLead.mensaje_personalizado && (
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    {locale === 'es' ? 'Mensaje Personalizado (IA)' : 'Personalized Message (AI)'}
+                  </label>
+                  <div className="bg-dark-900 rounded-lg p-4 border border-emerald-500/20">
+                    <p className="text-sm text-dark-200 whitespace-pre-line leading-relaxed">
+                      {selectedLead.mensaje_personalizado}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <span className="text-xs text-dark-500">
+                        {locale === 'es' ? 'Generado:' : 'Generated:'} {selectedLead.fecha_generacion_mensaje?.toDate?.()?.toLocaleDateString('es-AR')}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               )}
 
