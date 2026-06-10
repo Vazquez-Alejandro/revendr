@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Check, Zap, Building2, Sparkles, ArrowRight, Loader2 } from 'lucide-react'
-import { createCheckoutSession, PRICES } from '../../services/stripe'
+import { useNavigate } from 'react-router-dom'
+import { Check, Zap, Building2, Sparkles, ArrowRight } from 'lucide-react'
 
 const plans = [
   {
@@ -55,19 +55,10 @@ const plans = [
 
 export default function Pricing() {
   const [annual, setAnnual] = useState(false)
-  const [loadingPlan, setLoadingPlan] = useState(null)
+  const navigate = useNavigate()
 
-  const handleCheckout = async (planKey) => {
-    setLoadingPlan(planKey)
-    try {
-      const priceId = annual ? PRICES[planKey].annual : PRICES[planKey].monthly
-      await createCheckoutSession(priceId)
-    } catch (error) {
-      console.error('Checkout error:', error)
-      alert('Error al procesar el pago. Intentá de nuevo.')
-    } finally {
-      setLoadingPlan(null)
-    }
+  const handleCheckout = (planKey) => {
+    navigate(`/register?plan=${planKey}`)
   }
 
   return (
@@ -135,21 +126,14 @@ export default function Pricing() {
 
               <button
                 onClick={() => handleCheckout(plan.key)}
-                disabled={loadingPlan !== null}
                 className={`w-full py-3 rounded-lg font-medium transition-all duration-200 flex items-center justify-center gap-2 ${
                   plan.popular
                     ? 'bg-brand-600 hover:bg-brand-700 text-white'
                     : 'bg-dark-700 hover:bg-dark-600 text-dark-100 border border-dark-600'
-                } disabled:opacity-50`}
+                }`}
               >
-                {loadingPlan === plan.key ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    Empezar Ahora
-                    <ArrowRight className="w-4 h-4" />
-                  </>
-                )}
+                Empezar Ahora
+                <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           ))}

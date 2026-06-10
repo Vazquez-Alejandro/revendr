@@ -15,7 +15,7 @@ import Pricing from './pages/public/Pricing'
 import PrivacyPolicy from './pages/public/PrivacyPolicy'
 import TermsOfService from './pages/public/TermsOfService'
 import Help from './pages/public/Help'
-import Onboarding from './pages/public/Onboarding'
+import Onboarding from './pages/Onboarding'
 import DemoBooking from './pages/public/DemoBooking'
 import DemoProperties from './pages/public/DemoProperties'
 import DemoClinic from './pages/public/DemoClinic'
@@ -35,7 +35,7 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/help" element={<Help />} />
-        <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
         
         {/* Demo routes (public, no auth) */}
         <Route path="/demo/estetica/:demoId" element={<DemoBooking />} />

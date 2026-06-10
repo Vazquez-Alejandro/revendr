@@ -2,22 +2,28 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { Loader2, AlertCircle } from 'lucide-react'
+import { Loader2, AlertCircle, Mail, Check } from 'lucide-react'
+import { sendEmailVerification } from 'firebase/auth'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const { signIn, isAuthenticated } = useAuth()
+  const [showResend, setShowResend] = useState(false)
+  const { signIn, user, isAuthenticated, loading: authLoading } = useAuth()
   const { t, locale } = useI18n()
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && user) {
+      if (!user.emailVerified) {
+        setShowResend(true)
+        return
+      }
       navigate('/dashboard', { replace: true })
     }
-  }, [isAuthenticated, navigate])
+  }, [isAuthenticated, user, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -28,9 +34,15 @@ export default function Login() {
 
     setLoading(true)
     setError('')
+    setShowResend(false)
 
     try {
-      await signIn(email, password)
+      const result = await signIn(email, password)
+      if (result && !result.emailVerified) {
+        setShowResend(true)
+        setLoading(false)
+        return
+      }
       navigate('/dashboard')
     } catch (err) {
       setError(err.message)
@@ -39,15 +51,87 @@ export default function Login() {
     }
   }
 
+  const handleResendVerification = async () => {
+    if (!user) return
+    setLoading(true)
+    try {
+      await sendEmailVerification(user)
+      alert(locale === 'es' ? 'Email de verificación reenviado' : 'Verification email resent')
+    } catch (err) {
+      setError(locale === 'es' ? 'Error al reenviar' : 'Error resending')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError(locale === 'es' ? 'Ingresá tu email primero' : 'Enter your email first')
+      return
+    }
+    try {
+      const { sendPasswordResetEmail } = await import('firebase/auth')
+      const { auth } = await import('../config/firebase')
+      await sendPasswordResetEmail(auth, email)
+      alert(locale === 'es' ? 'Te enviamos un link para restablecer tu contraseña' : 'We sent you a password reset link')
+    } catch (err) {
+      setError(locale === 'es' ? 'Error al enviar email' : 'Error sending email')
+    }
+  }
+
+  if (showResend && user && !user.emailVerified) {
+    return (
+      <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
+        <div className="w-full max-w-md text-center">
+          <div className="card">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+              <Mail className="w-8 h-8 text-amber-400" />
+            </div>
+            <h1 className="text-2xl font-bold text-dark-50 mb-2">
+              {locale === 'es' ? 'Verificá tu email' : 'Verify your email'}
+            </h1>
+            <p className="text-dark-400 mb-6">
+              {locale === 'es'
+                ? 'Necesitás verificar tu email antes de acceder al panel.'
+                : 'You need to verify your email before accessing the panel.'}
+            </p>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => window.location.reload()}
+                disabled={loading}
+                className="btn-primary w-full flex items-center justify-center gap-2"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                {locale === 'es' ? 'Ya verifiqué mi email' : 'I already verified my email'}
+              </button>
+
+              <button onClick={handleResendVerification} disabled={loading} className="btn-secondary w-full">
+                {locale === 'es' ? 'Reenviar email de verificación' : 'Resend verification email'}
+              </button>
+
+              <button onClick={() => setShowResend(false)} className="text-sm text-dark-400 hover:text-dark-200 mt-2">
+                {locale === 'es' ? 'Volver al login' : 'Back to login'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-            <span className="text-3xl">⚡</span>
-          </div>
-          <h1 className="text-2xl font-bold text-dark-50">Revendr</h1>
-          <p className="text-dark-400 mt-2">{locale === 'es' ? 'SaaS Engine - Panel de Control' : 'SaaS Engine - Control Panel'}</p>
+          <Link to="/" className="inline-flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <span className="text-2xl">⚡</span>
+            </div>
+            <span className="text-2xl font-bold text-dark-50">Revendr</span>
+          </Link>
+          <h1 className="text-2xl font-bold text-dark-50">{t('login')}</h1>
+          <p className="text-dark-400 mt-2">{locale === 'es' ? 'Ingresá a tu panel de control' : 'Access your control panel'}</p>
         </div>
 
         <div className="card">
@@ -60,23 +144,19 @@ export default function Login() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                {t('email')}
-              </label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">{t('email')}</label>
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="input-field"
-                placeholder="admin@revendr.app"
+                placeholder="tu@email.com"
                 disabled={loading}
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-dark-300 mb-2">
-                {t('password')}
-              </label>
+              <label className="block text-sm font-medium text-dark-300 mb-2">{t('password')}</label>
               <input
                 type="password"
                 value={password}
@@ -87,15 +167,17 @@ export default function Login() {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full flex items-center justify-center gap-2"
-            >
+            <div className="flex justify-end">
+              <button type="button" onClick={handleResetPassword} className="text-xs text-brand-400 hover:text-brand-300">
+                {locale === 'es' ? '¿Olvidaste tu contraseña?' : 'Forgot your password?'}
+              </button>
+            </div>
+
+            <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  {locale === 'es' ? 'Iniciando sesión...' : 'Signing in...'}
+                  {locale === 'es' ? 'Ingresando...' : 'Signing in...'}
                 </>
               ) : (
                 t('login')
@@ -107,7 +189,7 @@ export default function Login() {
             <p className="text-dark-400 text-sm">
               {locale === 'es' ? '¿No tenés cuenta?' : "Don't have an account?"}{' '}
               <Link to="/register" className="text-brand-400 hover:text-brand-300 font-medium">
-                {t('register')}
+                {locale === 'es' ? 'Registrate gratis' : 'Sign up free'}
               </Link>
             </p>
           </div>

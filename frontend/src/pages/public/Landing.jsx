@@ -117,11 +117,14 @@ export default function Landing() {
             <span className="text-xl font-bold text-dark-50">Revendr</span>
           </div>
           <div className="flex items-center gap-4">
+            <Link to="/pricing" className="text-dark-400 hover:text-dark-200 transition-colors">
+              {locale === 'es' ? 'Precios' : 'Pricing'}
+            </Link>
             <Link to="/login" className="text-dark-400 hover:text-dark-200 transition-colors">
               {t('login')}
             </Link>
             <Link to="/register" className="btn-primary">
-              {t('landing.getStarted')}
+              {locale === 'es' ? '14 Días Gratis' : '14 Days Free'}
             </Link>
           </div>
         </div>
@@ -144,7 +147,7 @@ export default function Landing() {
             </p>
             <div className="flex items-center justify-center gap-4">
               <Link to="/register" className="btn-primary text-lg px-8 py-3 flex items-center gap-2">
-                {t('landing.getStarted')}
+                {locale === 'es' ? '14 Días Gratis' : '14 Days Free'}
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <a href="#features" className="btn-secondary text-lg px-8 py-3">
@@ -227,7 +230,7 @@ export default function Landing() {
             {t('landing.ctaDesc')}
           </p>
           <Link to="/register" className="btn-primary text-lg px-10 py-4 inline-flex items-center gap-2">
-            {t('landing.getStarted')}
+            {locale === 'es' ? 'Empezar Gratis' : 'Start Free'}
             <ArrowRight className="w-5 h-5" />
           </Link>
         </div>
@@ -255,7 +258,7 @@ export default function Landing() {
               </Link>
             </div>
             <p className="text-dark-500 text-sm">
-              © 2024 Revendr. {locale === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}
+              © 2026 Revendr. {locale === 'es' ? 'Todos los derechos reservados.' : 'All rights reserved.'}
             </p>
           </div>
         </div>

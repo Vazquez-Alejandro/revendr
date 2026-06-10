@@ -31,15 +31,23 @@ export function AuthProvider({ children }) {
       if (firebaseUser) {
         setUser(firebaseUser)
         try {
+          // Check admin collection first
           const adminRef = doc(db, 'usuarios_admin', firebaseUser.uid)
           const adminSnap = await getDoc(adminRef)
           if (adminSnap.exists()) {
             setAdminData({ id: adminSnap.id, ...adminSnap.data() })
           } else {
-            setAdminData(null)
+            // Check client collection
+            const clientRef = doc(db, 'usuarios', firebaseUser.uid)
+            const clientSnap = await getDoc(clientRef)
+            if (clientSnap.exists()) {
+              setAdminData({ id: clientSnap.id, ...clientSnap.data() })
+            } else {
+              setAdminData(null)
+            }
           }
         } catch (err) {
-          console.error('Error loading admin data:', err)
+          console.error('Error loading user data:', err)
           setAdminData(null)
         }
       } else {
