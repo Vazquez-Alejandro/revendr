@@ -12,7 +12,10 @@ import {
   Loader2, 
   AlertCircle,
   ExternalLink,
-  Copy
+  Copy,
+  Globe,
+  Palette,
+  Smartphone
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -63,6 +66,8 @@ export default function Settings() {
     { id: 'billing', label: t('billingTab'), icon: CreditCard },
     { id: 'notifications', label: t('notificationsTab'), icon: Bell },
     { id: 'security', label: t('securityTab'), icon: Shield },
+    { id: 'whitelabel', label: locale === 'es' ? 'White-Label' : 'White-Label', icon: Palette },
+    { id: 'integrations', label: locale === 'es' ? 'Integraciones' : 'Integrations', icon: Globe },
   ]
 
   return (
@@ -336,6 +341,214 @@ export default function Settings() {
                   <h3 className="font-medium text-dark-100 mb-1">{t('role')}</h3>
                   <p className="text-sm text-dark-400 capitalize">{adminData?.role || 'admin'}</p>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'whitelabel' && (
+            <div className="card space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-dark-100">{locale === 'es' ? 'White-Label' : 'White-Label'}</h2>
+                <p className="text-sm text-dark-400 mt-1">
+                  {locale === 'es'
+                    ? 'Personalizá Revendr con tu marca. Disponible en plan Enterprise.'
+                    : 'Customize Revendr with your brand. Available on Enterprise plan.'}
+                </p>
+              </div>
+
+              <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                <div className="flex items-center gap-2 text-amber-400 text-sm font-medium mb-1">
+                  <AlertCircle className="w-4 h-4" />
+                  {locale === 'es' ? 'Próximamente' : 'Coming Soon'}
+                </div>
+                <p className="text-xs text-dark-400">
+                  {locale === 'es'
+                    ? 'White-label estará disponible cuando Revendr salga al mercado. Configurá tu marca ahora y la activamos cuando esté listo.'
+                    : 'White-label will be available when Revendr launches. Set up your brand now and we\'ll activate it when ready.'}
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-dark-300">
+                    {locale === 'es' ? 'Nombre de tu app' : 'Your app name'}
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="MiSaaS"
+                    disabled
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-dark-300">
+                    {locale === 'es' ? 'Logo URL' : 'Logo URL'}
+                  </label>
+                  <input
+                    type="url"
+                    className="input-field"
+                    placeholder="https://tudominio.com/logo.png"
+                    disabled
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-dark-300">
+                    {locale === 'es' ? 'Color primario' : 'Primary color'}
+                  </label>
+                  <div className="flex gap-2">
+                    <input type="color" className="w-10 h-10 rounded-lg cursor-not-allowed" disabled />
+                    <input type="text" className="input-field flex-1" placeholder="#0ea5e9" disabled />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-dark-300">
+                    {locale === 'es' ? 'Dominio personalizado' : 'Custom domain'}
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="app.tudominio.com"
+                    disabled
+                  />
+                  <p className="text-xs text-dark-500">
+                    {locale === 'es'
+                      ? 'Apuntá CNAME a revendr-9add8.web.app'
+                      : 'Point CNAME to revendr-9add8.web.app'}
+                  </p>
+                </div>
+
+                <button className="btn-primary flex items-center gap-2 opacity-50 cursor-not-allowed" disabled>
+                  <Save className="w-4 h-4" />
+                  {locale === 'es' ? 'Guardar (próximamente)' : 'Save (coming soon)'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'integrations' && (
+            <div className="card space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-dark-100">
+                  {locale === 'es' ? 'Integraciones' : 'Integrations'}
+                </h2>
+                <p className="text-sm text-dark-400 mt-1">
+                  {locale === 'es'
+                    ? 'Conectá servicios externos para potenciar Revendr.'
+                    : 'Connect external services to power up Revendr.'}
+                </p>
+              </div>
+
+              {/* Mercado Pago */}
+              <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                      <span className="text-xl">💰</span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-dark-100">Mercado Pago</h3>
+                      <p className="text-xs text-dark-400">
+                        {locale === 'es' ? 'Cobrar en Argentina con pesos' : 'Accept payments in Argentina'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-400">
+                    {locale === 'es' ? 'Próximamente' : 'Coming Soon'}
+                  </span>
+                </div>
+                <input
+                  type="password"
+                  className="input-field mb-2"
+                  placeholder="APP_USR-xxxxx"
+                  disabled
+                />
+                <p className="text-xs text-dark-500">
+                  {locale === 'es'
+                    ? 'Plan Starter $29 USD/mes, Growth $79 USD/mes. Se activa cuando Revendr salga al mercado.'
+                    : 'Starter plan $29/mo, Growth $79/mo. Activates when Revendr launches.'}
+                </p>
+              </div>
+
+              {/* API Pública */}
+              <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                      <span className="text-xl">🔌</span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-dark-100">
+                        {locale === 'es' ? 'API Pública' : 'Public API'}
+                      </h3>
+                      <p className="text-xs text-dark-400">
+                        {locale === 'es' ? 'Integrá Revendr con tu sistema' : 'Integrate Revendr with your system'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">Active</span>
+                </div>
+                <div className="bg-dark-800 rounded-lg p-3 font-mono text-xs text-dark-300 mb-2">
+                  GET /api/leads?limit=50
+                </div>
+                <a
+                  href="/api-docs"
+                  className="text-xs text-brand-400 hover:text-brand-300 flex items-center gap-1"
+                >
+                  {locale === 'es' ? 'Ver documentación completa' : 'View full documentation'} <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+
+              {/* Horarios Inteligentes */}
+              <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-violet-500/10 flex items-center justify-center">
+                      <span className="text-xl">🕐</span>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-dark-100">
+                        {locale === 'es' ? 'Horarios Inteligentes' : 'Smart Scheduling'}
+                      </h3>
+                      <p className="text-xs text-dark-400">
+                        {locale === 'es' ? 'Envía mensajes cuando el negocio está abierto' : 'Send messages when the business is open'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">Active</span>
+                </div>
+                <p className="text-xs text-dark-400">
+                  {locale === 'es'
+                    ? 'Detecta la zona horaria del lead y envía en horario laboral (9-18hs). Mejores horarios: 9-11am y 2-5pm.'
+                    : 'Detects lead timezone and sends during business hours (9-6pm). Best times: 9-11am and 2-5pm.'}
+                </p>
+              </div>
+
+              {/* Multi-idioma */}
+              <div className="p-4 bg-dark-900 rounded-xl border border-dark-700">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-cyan-500/10 flex items-center justify-center">
+                      <Smartphone className="w-5 h-5 text-cyan-400" />
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-dark-100">
+                        {locale === 'es' ? 'Multi-idioma' : 'Multi-language'}
+                      </h3>
+                      <p className="text-xs text-dark-400">
+                        {locale === 'es' ? 'Detecta idioma automáticamente' : 'Auto-detect language'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-xs px-2 py-1 rounded-full bg-emerald-500/20 text-emerald-400">Active</span>
+                </div>
+                <p className="text-xs text-dark-400">
+                  {locale === 'es'
+                    ? 'Detecta el país/ciudad del lead y adapta el mensaje: español (AR/MX/CO), portugués (BR), inglés (US/UK).'
+                    : 'Detects lead country/city and adapts message: Spanish (AR/MX/CO), Portuguese (BR), English (US/UK).'}
+                </p>
               </div>
             </div>
           )}

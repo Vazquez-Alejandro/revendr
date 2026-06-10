@@ -14,6 +14,7 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
 const RESEND_API_KEY = process.env.RESEND_API_KEY
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN // Mercado Pago (futuro)
 
 const APIFY_ACTORS = {
   google_maps: 'compass~crawler-google-places',
@@ -2015,5 +2016,563 @@ app.get('/leads/score-stats', async (req, res) => {
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
+
+// ============ WHATSAPP BUSINESS API (PREPARADO - NO ACTIVO) ============
+
+app.get('/whatsapp/config', async (req, res) => {
+  const configured = !!(WHATSAPP_TOKEN && PHONE_NUMBER_ID)
+  res.json({
+    success: true,
+    data: {
+      configured,
+      provider: configured ? 'Meta Cloud API' : 'none',
+      phone_number_id: configured ? PHONE_NUMBER_ID : null,
+      status: configured ? 'active' : 'not_configured',
+      note: configured
+        ? 'WhatsApp Business API activo. Los mensajes se envían directamente.'
+        : 'Para activar: configurá WHATSAPP_TOKEN y WHATSAPP_PHONE_ID en las variables de entorno de Firebase.',
+    },
+  })
+})
+
+app.post('/whatsapp/send-template', async (req, res) => {
+  if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) {
+    return res.status(503).json({
+      success: false,
+      error: {
+        message: 'WhatsApp Business API no configurada. Configurá WHATSAPP_TOKEN y WHATSAPP_PHONE_ID.',
+        code: 'WHATSAPP_NOT_CONFIGURED',
+      },
+    })
+  }
+
+  try {
+    const { to, templateName, languageCode, params } = req.body
+    if (!to || !templateName) {
+      return res.status(400).json({ success: false, error: { message: 'to and templateName required' } })
+    }
+
+    const components = []
+    if (params && params.length > 0) {
+      components.push({
+        type: 'body',
+        parameters: params.map(p => ({ type: 'text', text: p })),
+      })
+    }
+
+    const response = await axios.post(
+      `https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`,
+      {
+        messaging_product: 'whatsapp',
+        to: to.replace(/\D/g, ''),
+        type: 'template',
+        template: {
+          name: templateName,
+          language: { code: languageCode || 'es' },
+          ...(components.length > 0 && { components }),
+        },
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${WHATSAPP_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    res.json({ success: true, data: { messageId: response.data.messages?.[0]?.id } })
+  } catch (error) {
+    console.error('WhatsApp template error:', error.response?.data || error.message)
+    res.status(500).json({ success: false, error: { message: error.response?.data?.error?.message || error.message } })
+  }
+})
+
+// ============ MULTI-IDIOMA AUTOMÁTICO ============
+
+const IDIOMA_POR_PAIS = {
+  AR: 'es', MX: 'es', CO: 'es', CL: 'es', PE: 'es', VE: 'es', EC: 'es', BO: 'es', PY: 'es', UY: 'es',
+  US: 'en', GB: 'en', CA: 'en', AU: 'en',
+  BR: 'pt', PT: 'pt',
+  FR: 'fr', BE: 'fr', CH: 'fr',
+  DE: 'de', AT: 'de',
+  IT: 'it',
+  JP: 'ja', CN: 'zh', KR: 'ko',
+}
+
+function detectarIdioma(lead) {
+  if (lead.idioma) return lead.idioma
+  const city = (lead.ciudad || '').toLowerCase()
+
+  // Argentine cities
+  if (city.includes('buenos aires') || city.includes('córdoba') || city.includes('rosario') ||
+      city.includes('mendoza') || city.includes('la plata') || city.includes('bariloche')) return 'es'
+
+  // Brazilian cities
+  if (city.includes('são paulo') || city.includes('rio de janeiro') || city.includes('brasilia') ||
+      city.includes('belo horizonte') || city.includes('curitiba')) return 'pt'
+
+  // US/UK cities
+  if (city.includes('new york') || city.includes('los angeles') || city.includes('miami') ||
+      city.includes('london') || city.includes('chicago')) return 'en'
+
+  return 'es'
+}
+
+const TRADUCCIONES = {
+  es: {
+    saludo: 'Hola',
+    cierre: '¿Te gustaría que hablemos?',
+    verDemo: 'Ver mi Demo',
+    descuento: '20% OFF exclusivo para vos',
+  },
+  en: {
+    saludo: 'Hello',
+    cierre: 'Would you like to chat?',
+    verDemo: 'View my Demo',
+    descuento: '20% OFF exclusive for you',
+  },
+  pt: {
+    saludo: 'Olá',
+    cierre: 'Você gostaria de conversar?',
+    verDemo: 'Ver minha Demo',
+    descuento: '20% OFF exclusivo para você',
+  },
+}
+
+function traducirMensaje(mensaje, idioma) {
+  const t = TRADUCCIONES[idioma] || TRADUCCIONES.es
+  return mensaje
+    .replace(/{saludo}/g, t.saludo)
+    .replace(/{cierre}/g, t.cierre)
+    .replace(/{verDemo}/g, t.verDemo)
+}
+
+app.post('/leads/:leadId/detect-language', async (req, res) => {
+  try {
+    const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
+    if (!leadDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    }
+    const lead = leadDoc.data()
+    const idioma = detectarIdioma(lead)
+
+    await db.collection('leads').doc(req.params.leadId).update({
+      idioma_detectado: idioma,
+      fecha_actualizacion: new Date(),
+    })
+
+    res.json({ success: true, data: { idioma } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ HORARIOS INTELIGENTES ============
+
+const ZONA_HORARIA_POR_CIUDAD = {
+  'Buenos Aires': 'America/Argentina/Buenos_Aires',
+  'Córdoba': 'America/Argentina/Cordoba',
+  'Rosario': 'America/Argentina/Cordoba',
+  'Mendoza': 'America/Argentina/Mendoza',
+  'São Paulo': 'America/Sao_Paulo',
+  'New York': 'America/New_York',
+  'Los Angeles': 'America/Los_Angeles',
+  'Madrid': 'Europe/Madrid',
+  'Londres': 'Europe/London',
+}
+
+function getZonaHoraria(ciudad) {
+  return ZONA_HORARIA_POR_CIUDAD[ciudad] || 'America/Argentina/Buenos_Aires'
+}
+
+function getHoraLocal(ciudad) {
+  const tz = getZonaHoraria(ciudad)
+  return new Date().toLocaleString('en-US', { timeZone: tz, hour: 'numeric', hour12: false })
+}
+
+function getDiaLocal(ciudad) {
+  const tz = getZonaHoraria(ciudad)
+  return new Date().toLocaleString('en-US', { timeZone: tz, weekday: 'short' })
+}
+
+function esHorarioOptimal(ciudad) {
+  const hora = parseInt(getHoraLocal(ciudad))
+  const dia = getDiaLocal(ciudad)
+
+  if (dia === 'Sat' || dia === 'Sun') return false
+
+  // Best times: 9-11am and 2-5pm
+  if (hora >= 9 && hora <= 11) return { optimal: true, reason: 'morning' }
+  if (hora >= 14 && hora <= 17) return { optimal: true, reason: 'afternoon' }
+  if (hora >= 8 && hora < 9) return { optimal: false, reason: 'early' }
+  if (hora > 17 && hora < 20) return { optimal: true, reason: 'evening' }
+  return { optimal: false, reason: 'off_hours' }
+}
+
+function getOptimalSendTime(ciudad) {
+  const now = new Date()
+  const tz = getZonaHoraria(ciudad)
+  const horaActual = parseInt(getHoraLocal(ciudad))
+  const dia = getDiaLocal(ciudad)
+
+  if (dia === 'Sat' || dia === 'Sun') {
+    // Schedule for Monday 10am
+    const monday = new Date(now)
+    monday.setDate(monday.getDate() + ((1 + 7 - monday.getDay()) % 7 || 7))
+    monday.setHours(10, 0, 0, 0)
+    return monday
+  }
+
+  if (horaActual < 9) {
+    now.setHours(9, 30, 0, 0)
+    return now
+  }
+  if (horaActual >= 11 && horaActual < 14) {
+    now.setHours(14, 0, 0, 0)
+    return now
+  }
+  if (horaActual >= 17) {
+    // Tomorrow 10am
+    now.setDate(now.getDate() + 1)
+    now.setHours(10, 0, 0, 0)
+    return now
+  }
+  return now
+}
+
+app.get('/leads/:leadId/smart-time', async (req, res) => {
+  try {
+    const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
+    if (!leadDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    }
+    const lead = leadDoc.data()
+    const ciudad = lead.ciudad || 'Buenos Aires'
+    const horario = esHorarioOptimal(ciudad)
+    const optimalTime = getOptimalSendTime(ciudad)
+
+    res.json({
+      success: true,
+      data: {
+        ciudad,
+        zona_horaria: getZonaHoraria(ciudad),
+        hora_local: getHoraLocal(ciudad),
+        es_horario_optimal: horario.optimal,
+        razon: horario.reason,
+        mejor_momento_para_enviar: optimalTime.toISOString(),
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ WHITE-LABEL ============
+
+app.get('/whitelabel/config', async (req, res) => {
+  try {
+    const userId = req.query.userId
+    if (!userId) {
+      return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    }
+
+    const userDoc = await db.collection('usuarios_admin').doc(userId).get()
+    if (!userDoc.exists) {
+      return res.json({
+        success: true,
+        data: {
+          whitelabel: false,
+          note: 'Configurá white-label en Settings para personalizar Revendr con tu marca.',
+        },
+      })
+    }
+
+    const user = userDoc.data()
+    res.json({
+      success: true,
+      data: {
+        whitelabel: user.whitelabel_enabled || false,
+        custom_logo: user.custom_logo || null,
+        custom_colors: user.custom_colors || null,
+        custom_domain: user.custom_domain || null,
+        custom_name: user.custom_app_name || 'Revendr',
+        features: {
+          remove_branding: user.whitelabel_enabled || false,
+          custom_domain: user.whitelabel_enabled || false,
+          custom_logo: user.whitelabel_enabled || false,
+        },
+      },
+    })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whitelabel/config', async (req, res) => {
+  try {
+    const { userId, custom_logo, custom_colors, custom_domain, custom_app_name } = req.body
+    if (!userId) {
+      return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    }
+
+    await db.collection('usuarios_admin').doc(userId).update({
+      whitelabel_enabled: true,
+      custom_logo: custom_logo || null,
+      custom_colors: custom_colors || null,
+      custom_domain: custom_domain || null,
+      custom_app_name: custom_app_name || 'Revendr',
+      fecha_actualizacion: new Date(),
+    })
+
+    res.json({ success: true, data: { message: 'White-label config updated' } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ MERCADO PAGO (PREPARADO - NO ACTIVO) ============
+
+app.get('/mercadopago/config', async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      configured: !!MP_ACCESS_TOKEN,
+      status: MP_ACCESS_TOKEN ? 'active' : 'not_configured',
+      note: MP_ACCESS_TOKEN
+        ? 'Mercado Pago configurado. Los pagos están activos.'
+        : 'Para activar: configurá MP_ACCESS_TOKEN en las variables de entorno de Firebase. Planes: Starter $29 USD, Growth $79 USD.',
+      plans: {
+        starter: {
+          name: 'Starter',
+          price_usd: 29,
+          price_ars: 32000,
+          features: ['100 leads/mes', '50 demos', '1000 mensajes WhatsApp', 'Scraping básico'],
+        },
+        growth: {
+          name: 'Growth',
+          price_usd: 79,
+          price_ars: 87000,
+          features: ['500 leads/mes', '250 demos', '10000 mensajes WhatsApp', 'A/B Testing', 'Secuencia inteligente', 'Multi-canal'],
+        },
+        enterprise: {
+          name: 'Enterprise',
+          price_usd: 199,
+          price_ars: 220000,
+          features: ['Ilimitado', 'White-label', 'API pública', 'Soporte prioritario', 'Personalización completa'],
+        },
+      },
+    },
+  })
+})
+
+app.post('/mercadopago/create-preference', async (req, res) => {
+  if (!MP_ACCESS_TOKEN) {
+    return res.status(503).json({
+      success: false,
+      error: {
+        message: 'Mercado Pago no configurado. Configurá MP_ACCESS_TOKEN en Firebase.',
+        code: 'MP_NOT_CONFIGURED',
+      },
+    })
+  }
+
+  try {
+    const { plan, email, userId } = req.body
+    const plans = {
+      starter: { title: 'Revendr Starter', price: 29 },
+      growth: { title: 'Revendr Growth', price: 79 },
+      enterprise: { title: 'Revendr Enterprise', price: 199 },
+    }
+
+    const selectedPlan = plans[plan]
+    if (!selectedPlan) {
+      return res.status(400).json({ success: false, error: { message: 'Invalid plan' } })
+    }
+
+    const response = await axios.post(
+      'https://api.mercadopago.com/checkout/preferences',
+      {
+        items: [{
+          title: selectedPlan.title,
+          unit_price: selectedPlan.price,
+          quantity: 1,
+          currency_id: 'USD',
+        }],
+        payer: { email },
+        metadata: { plan, userId },
+        back_urls: {
+          success: 'https://revendr-9add8.web.app/dashboard?payment=success',
+          failure: 'https://revendr-9add8.web.app/pricing?payment=failure',
+          pending: 'https://revendr-9add8.web.app/dashboard?payment=pending',
+        },
+        auto_return: 'approved',
+      },
+      {
+        headers: {
+          'Authorization': `Bearer ${MP_ACCESS_TOKEN}`,
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    res.json({ success: true, data: { init_point: response.data.init_point, id: response.data.id } })
+  } catch (error) {
+    console.error('MP preference error:', error.response?.data || error.message)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/mercadopago/webhook', async (req, res) => {
+  if (!MP_ACCESS_TOKEN) return res.json({ received: true })
+
+  try {
+    const { type, data } = req.body
+    if (type === 'payment') {
+      const paymentId = data?.id
+      if (paymentId) {
+        const response = await axios.get(
+          `https://api.mercadopago.com/v1/payments/${paymentId}`,
+          { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` } }
+        )
+
+        const payment = response.data
+        if (payment.status === 'approved' && payment.metadata?.userId) {
+          const plan = payment.metadata.plan || 'starter'
+          await db.collection('usuarios_admin').doc(payment.metadata.userId).update({
+            plan,
+            activo: true,
+            mp_payment_id: paymentId,
+            fecha_pago: new Date(),
+          }, { merge: true })
+        }
+      }
+    }
+    res.json({ received: true })
+  } catch (error) {
+    console.error('MP webhook error:', error.message)
+    res.json({ received: true })
+  }
+})
+
+// ============ API PÚBLICA ============
+
+app.get('/api-docs', (req, res) => {
+  res.json({
+    name: 'Revendr API',
+    version: '1.0.0',
+    description: 'API pública para integrar Revendr con tu sistema',
+    baseUrl: 'https://us-central1-revendr-9add8.cloudfunctions.net/api',
+    authentication: {
+      type: 'API Key',
+      header: 'x-api-key',
+      note: 'Obtené tu API key en Settings > API',
+    },
+    endpoints: {
+      leads: {
+        'GET /leads': 'Listar leads (query: rubro, estado, limit)',
+        'GET /leads/stats': 'Estadísticas generales de leads',
+        'GET /leads/score-stats': 'Distribución de scores',
+        'POST /leads/score-all': 'Recalcular scores de todos los leads',
+        'POST /leads/:id/generate-message': 'Generar mensaje personalizado',
+        'POST /leads/:id/send-email': 'Enviar email al lead',
+        'POST /leads/:id/send-whatsapp': 'Enviar WhatsApp al lead',
+      },
+      campaigns: {
+        'GET /campaigns': 'Listar campañas',
+        'POST /campaigns': 'Crear campaña',
+        'POST /campaigns/:id/scrape': 'Iniciar scraping',
+        'POST /campaigns/:id/process-demos': 'Generar demos',
+        'POST /campaigns/:id/send-messages': 'Enviar mensajes WhatsApp',
+        'POST /campaigns/:id/generate-messages': 'Generar mensajes personalizados',
+        'POST /campaigns/:id/process-sequence': 'Procesar secuencia inteligente',
+        'POST /campaigns/:id/process-followups': 'Procesar follow-ups',
+        'POST /campaigns/:id/ab-test': 'Crear A/B test',
+        'GET /campaigns/:id/ab-results': 'Resultados de A/B tests',
+        'GET /campaigns/:id/roi': 'Métricas ROI',
+        'POST /campaigns/:id/revenue': 'Registrar ingreso',
+      },
+      products: {
+        'GET /productos': 'Listar productos del usuario',
+      },
+      stats: {
+        'GET /stats/dashboard': 'Estadísticas del dashboard',
+        'GET /stats/products': 'Estadísticas por producto',
+      },
+      integrations: {
+        'GET /whatsapp/config': 'Estado de WhatsApp',
+        'GET /mercadopago/config': 'Estado de Mercado Pago',
+        'GET /whitelabel/config': 'Configuración white-label',
+      },
+    },
+    rateLimits: {
+      default: '100 requests/min',
+      scraping: '5 requests/min',
+    },
+  })
+})
+
+// API Key validation middleware
+const API_KEYS_COLLECTION = 'api_keys'
+
+async function validateApiKey(req, res, next) {
+  const apiKey = req.headers['x-api-key']
+  if (!apiKey) {
+    return res.status(401).json({ success: false, error: { message: 'API key required' } })
+  }
+
+  try {
+    const keyDoc = await db.collection(API_KEYS_COLLECTION).doc(apiKey).get()
+    if (!keyDoc.exists) {
+      return res.status(401).json({ success: false, error: { message: 'Invalid API key' } })
+    }
+
+    const keyData = keyDoc.data()
+    if (!keyData.active) {
+      return res.status(403).json({ success: false, error: { message: 'API key deactivated' } })
+    }
+
+    // Update last used
+    await keyDoc.ref.update({ last_used: new Date(), uses: (keyData.uses || 0) + 1 })
+
+    req.apiKeyUser = keyData.user_id
+    next()
+  } catch (error) {
+    next()
+  }
+}
+
+app.post('/api-keys/generate', async (req, res) => {
+  try {
+    const { userId, name } = req.body
+    if (!userId) {
+      return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    }
+
+    const keyId = `rk_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
+    await db.collection(API_KEYS_COLLECTION).doc(keyId).set({
+      user_id: userId,
+      name: name || 'Default Key',
+      active: true,
+      created_at: new Date(),
+      uses: 0,
+    })
+
+    res.json({ success: true, data: { api_key: keyId } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/api-keys/revoke', async (req, res) => {
+  try {
+    const { keyId } = req.body
+    await db.collection(API_KEYS_COLLECTION).doc(keyId).update({ active: false })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ EXPORTS ============
 
 exports.api = functions.https.onRequest(app)

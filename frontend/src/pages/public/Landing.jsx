@@ -16,7 +16,7 @@ const featuresEs = [
   {
     icon: Bot,
     title: 'Scraping Automatizado',
-    description: 'Conectá con Google Maps e Instagram para obtener cientos de leads calificados por rubro y ciudad.',
+    description: 'Conectá con Google Maps para obtener cientos de leads calificados por rubro y ciudad. Calificación automática 0-100.',
   },
   {
     icon: Sparkles,
@@ -25,23 +25,23 @@ const featuresEs = [
   },
   {
     icon: MessageCircle,
-    title: 'WhatsApp Masivo',
-    description: 'Enviá mensajes personalizados con la demo incluida. Respetamos delays para evitar baneos.',
+    title: 'Multi-canal (WhatsApp + Email)',
+    description: 'Enviá mensajes personalizados por WhatsApp y email. Secuencia inteligente que decide cuándo y por dónde contactar.',
   },
   {
     icon: CreditCard,
-    title: 'Cobros con Stripe',
-    description: 'El cliente paga directo desde la demo. Setup automático de su cuenta al confirmar pago.',
+    title: 'Cobros con Stripe/Mercado Pago',
+    description: 'El cliente paga directo desde la demo. Integración con Stripe y Mercado Pago para Argentina.',
   },
   {
     icon: BarChart3,
     title: 'Dashboard en Tiempo Real',
-    description: 'Visualizá todo el pipeline: leads → demos → envíos → conversiones. Todo en un solo lugar.',
+    description: 'Visualizá todo el pipeline: leads → demos → envíos → conversiones. Métricas por producto separadas.',
   },
   {
     icon: Shield,
-    title: 'Multi-Rubro',
-    description: 'Inmobiliarias, peluquerías, clínicas, restaurantes. Un solo sistema para revender múltiples apps.',
+    title: 'A/B Testing + IA',
+    description: 'Probá qué mensajes convierten más. IA que genera mensajes únicos por lead. Score de calificación automático.',
   },
 ]
 
@@ -49,7 +49,7 @@ const featuresEn = [
   {
     icon: Bot,
     title: 'Automated Scraping',
-    description: 'Connect with Google Maps and Instagram to get hundreds of qualified leads per niche and city.',
+    description: 'Connect with Google Maps to get hundreds of qualified leads per niche and city. Auto-scoring 0-100.',
   },
   {
     icon: Sparkles,
@@ -58,23 +58,23 @@ const featuresEn = [
   },
   {
     icon: MessageCircle,
-    title: 'WhatsApp at Scale',
-    description: 'Send personalized messages with the demo included. Delays to avoid bans.',
+    title: 'Multi-channel (WhatsApp + Email)',
+    description: 'Send personalized messages via WhatsApp and email. Smart sequence decides when and how to reach out.',
   },
   {
     icon: CreditCard,
-    title: 'Stripe Payments',
-    description: 'Clients pay directly from the demo. Automatic account setup on payment confirmation.',
+    title: 'Stripe/Mercado Pago',
+    description: 'Clients pay directly from the demo. Integration with Stripe and Mercado Pago for Argentina.',
   },
   {
     icon: BarChart3,
     title: 'Real-Time Dashboard',
-    description: 'Visualize the full pipeline: leads → demos → sends → conversions. All in one place.',
+    description: 'Visualize the full pipeline: leads → demos → sends → conversions. Metrics per product separately.',
   },
   {
     icon: Shield,
-    title: 'Multi-Niche',
-    description: 'Real estate, salons, clinics, restaurants. One system to resell multiple apps.',
+    title: 'A/B Testing + AI',
+    description: 'Test which messages convert better. AI generates unique messages per lead. Automatic lead scoring.',
   },
 ]
 
