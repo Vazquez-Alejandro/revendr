@@ -109,21 +109,21 @@ export default function Landing() {
     <div className="min-h-screen bg-dark-950">
       {/* Navbar */}
       <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <span className="text-xl font-bold text-dark-50">Revendr</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link to="/pricing" className="text-dark-400 hover:text-dark-200 transition-colors">
+            <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
+          </Link>
+          <div className="flex items-center gap-2 md:gap-4">
+            <Link to="/pricing" className="hidden sm:inline text-dark-400 hover:text-dark-200 transition-colors text-sm md:text-base">
               {locale === 'es' ? 'Precios' : 'Pricing'}
             </Link>
-            <Link to="/login" className="text-dark-400 hover:text-dark-200 transition-colors">
+            <Link to="/login" className="text-dark-400 hover:text-dark-200 transition-colors text-sm md:text-base">
               {t('login')}
             </Link>
-            <Link to="/register" className="btn-primary">
+            <Link to="/register" className="btn-primary text-xs sm:text-sm px-3 sm:px-4 py-2">
               {locale === 'es' ? '14 Días Gratis' : '14 Days Free'}
             </Link>
           </div>

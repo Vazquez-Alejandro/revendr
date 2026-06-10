@@ -100,7 +100,7 @@ export default function Help() {
         </div>
 
         {/* Contact Cards */}
-        <div className="grid md:grid-cols-3 gap-4 mb-12">
+        <div className="grid md:grid-cols-2 gap-4 mb-12">
           <a
             href="mailto:hola@revendr.app"
             className="card-hover flex items-center gap-4"
@@ -132,23 +132,6 @@ export default function Help() {
               <p className="text-sm text-dark-400">{locale === 'es' ? 'Soporte directo' : 'Direct support'}</p>
             </div>
           </a>
-
-          <a
-            href="https://docs.revendr.app"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="card-hover flex items-center gap-4"
-          >
-            <div className="w-12 h-12 rounded-xl bg-violet-500/10 flex items-center justify-center flex-shrink-0">
-              <BookOpen className="w-6 h-6 text-violet-400" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-dark-100">
-                {locale === 'es' ? 'Documentación' : 'Documentation'}
-              </h3>
-              <p className="text-sm text-dark-400">docs.revendr.app</p>
-            </div>
-          </a>
         </div>
 
         {/* Quick Links */}
@@ -158,10 +141,10 @@ export default function Help() {
           </h2>
           <div className="grid md:grid-cols-2 gap-3">
             {[
-              { label: locale === 'es' ? 'Guía de inicio rápido' : 'Quick start guide', href: '/docs/quickstart' },
+              { label: locale === 'es' ? 'API Documentation' : 'API Documentation', href: 'https://us-central1-revendr-9add8.cloudfunctions.net/api/api-docs' },
               { label: locale === 'es' ? 'Configurar API keys' : 'Set up API keys', href: '/dashboard/settings' },
-              { label: locale === 'es' ? 'Templates de WhatsApp' : 'WhatsApp templates', href: '/docs/whatsapp' },
-              { label: locale === 'es' ? 'Integración con Stripe' : 'Stripe integration', href: '/docs/stripe' },
+              { label: locale === 'es' ? 'Verificar estado del servicio' : 'Check service status', href: '/status' },
+              { label: locale === 'es' ? 'Ver planes y precios' : 'View plans and pricing', href: '/pricing' },
             ].map((link) => (
               <a
                 key={link.href}
