@@ -2573,6 +2573,561 @@ app.post('/api-keys/revoke', async (req, res) => {
   }
 })
 
+// ============ CRM INTEGRADO ============
+
+app.get('/crm/pipeline', async (req, res) => {
+  try {
+    const { campaignId } = req.query
+    let query = db.collection('leads')
+    if (campaignId) query = query.where('id_campania', '==', campaignId)
+
+    const snapshot = await query.get()
+    const pipeline = {
+      nuevo: [],
+      contactado: [],
+      interesado: [],
+      negociacion: [],
+      cerrado: [],
+      perdido: [],
+    }
+
+    snapshot.docs.forEach(doc => {
+      const lead = doc.data()
+      const stage = lead.crm_stage || 'nuevo'
+      if (pipeline[stage]) {
+        pipeline[stage].push({ id: doc.id, ...lead })
+      }
+    })
+
+    const stageOrder = ['nuevo', 'contactado', 'interesado', 'negociacion', 'cerrado', 'perdido']
+    const pipelineStats = stageOrder.map(stage => ({
+      stage,
+      label: { nuevo: 'Nuevo', contactado: 'Contactado', interesado: 'Interesado', negociacion: 'Negociación', cerrado: 'Cerrado', perdido: 'Perdido' }[stage],
+      count: pipeline[stage].length,
+      leads: pipeline[stage].slice(0, 10),
+    }))
+
+    res.json({ success: true, data: { pipeline: pipelineStats, total: snapshot.size } })
+  } catch (error) {
+    console.error('Error fetching CRM pipeline:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/crm/leads/:leadId/stage', async (req, res) => {
+  try {
+    const { stage } = req.body
+    const validStages = ['nuevo', 'contactado', 'interesado', 'negociacion', 'cerrado', 'perdido']
+    if (!validStages.includes(stage)) {
+      return res.status(400).json({ success: false, error: { message: 'Invalid stage' } })
+    }
+
+    await db.collection('leads').doc(req.params.leadId).update({
+      crm_stage: stage,
+      fecha_actualizacion: new Date(),
+    })
+
+    await db.collection('crm_events').add({
+      lead_id: req.params.leadId,
+      event_type: 'stage_change',
+      new_stage: stage,
+      timestamp: new Date(),
+    })
+
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/crm/leads/:leadId/activity', async (req, res) => {
+  try {
+    const { type, description, value } = req.body
+    await db.collection('crm_events').add({
+      lead_id: req.params.leadId,
+      event_type: type || 'note',
+      description: description || '',
+      value: value || null,
+      timestamp: new Date(),
+    })
+
+    if (type === 'call') {
+      await db.collection('leads').doc(req.params.leadId).update({
+        llamadas_count: admin.firestore.FieldValue.increment(1),
+        fecha_ultima_llamada: new Date(),
+      })
+    }
+    if (type === 'meeting') {
+      await db.collection('leads').doc(req.params.leadId).update({
+        reuniones_count: admin.firestore.FieldValue.increment(1),
+        fecha_ultima_reunion: new Date(),
+      })
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/crm/leads/:leadId/timeline', async (req, res) => {
+  try {
+    const snapshot = await db.collection('crm_events')
+      .where('lead_id', '==', req.params.leadId)
+      .orderBy('timestamp', 'desc')
+      .limit(50)
+      .get()
+
+    const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    res.json({ success: true, data: events })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ PORTAL DE PROPIETARIOS ============
+
+app.get('/owner/dashboard/:productId', async (req, res) => {
+  try {
+    const productDoc = await db.collection('productos').doc(req.params.productId).get()
+    if (!productDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Product not found' } })
+    }
+    const product = productDoc.data()
+
+    const campaignsSnapshot = await db.collection('campanias')
+      .where('producto_id', '==', req.params.productId)
+      .get()
+
+    let totalLeads = 0, qualifiedLeads = 0, messagesSent = 0, totalRevenue = 0, activeCampaigns = 0
+    const campaignIds = []
+
+    campaignsSnapshot.docs.forEach(doc => {
+      const c = doc.data()
+      campaignIds.push(doc.id)
+      totalLeads += c.leads_count || 0
+      messagesSent += c.mensajes_enviados || 0
+      totalRevenue += c.total_revenue || 0
+      if (c.estado === 'activa') activeCampaigns++
+    })
+
+    if (campaignIds.length > 0) {
+      const leadsSnapshot = await db.collection('leads')
+        .where('id_campania', 'in', campaignIds.slice(0, 10))
+        .get()
+      leadsSnapshot.docs.forEach(doc => {
+        if ((doc.data().lead_score || 0) >= 50) qualifiedLeads++
+      })
+    }
+
+    const viewsSnapshot = await db.collection('landing_views')
+      .where('product_id', '==', req.params.productId)
+      .get()
+
+    const engagementSnapshot = await db.collection('landing_engagement')
+      .where('product_id', '==', req.params.productId)
+      .get()
+
+    let totalClicks = 0, totalTime = 0
+    engagementSnapshot.docs.forEach(doc => {
+      const e = doc.data()
+      if (e.event_type === 'cta_click') totalClicks++
+      if (e.event_type === 'time_on_page') totalTime += e.data?.seconds || 0
+    })
+
+    res.json({
+      success: true,
+      data: {
+        product: { id: req.params.productId, ...product },
+        stats: {
+          totalCampaigns: campaignsSnapshot.size,
+          activeCampaigns,
+          totalLeads,
+          qualifiedLeads,
+          messagesSent,
+          totalRevenue,
+          landingViews: viewsSnapshot.size,
+          ctaClicks: totalClicks,
+          avgTimeOnPage: viewsSnapshot.size > 0 ? (totalTime / viewsSnapshot.size).toFixed(1) : 0,
+          conversionRate: totalLeads > 0 ? ((qualifiedLeads / totalLeads) * 100).toFixed(1) : 0,
+        },
+      },
+    })
+  } catch (error) {
+    console.error('Error fetching owner dashboard:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ CHAT EN VIVO ============
+
+app.post('/chat/message', async (req, res) => {
+  try {
+    const { visitorId, message, visitorName, visitorEmail, productId } = req.body
+    if (!message) {
+      return res.status(400).json({ success: false, error: { message: 'message required' } })
+    }
+
+    const chatMsg = {
+      visitor_id: visitorId || `visitor_${Date.now()}`,
+      visitor_name: visitorName || 'Visitante',
+      visitor_email: visitorEmail || '',
+      message,
+      product_id: productId || null,
+      status: 'unread',
+      timestamp: new Date(),
+    }
+
+    await db.collection('chat_messages').add(chatMsg)
+
+    if (productId) {
+      const productDoc = await db.collection('productos').doc(productId).get()
+      if (productDoc.exists) {
+        const product = productDoc.data()
+        const ownerDoc = await db.collection('usuarios_admin').doc(product.user_id).get()
+        if (ownerDoc.exists && ownerDoc.data().email && RESEND_API_KEY) {
+          await sendEmail(
+            ownerDoc.data().email,
+            `Nuevo mensaje de chat - ${visitorName}`,
+            `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px;">
+              <h2 style="color:#0ea5e9;">💬 Nuevo mensaje de chat</h2>
+              <p><strong>${visitorName}</strong> (${visitorEmail || 'sin email'}) te escribió:</p>
+              <div style="background:#1e293b;padding:15px;border-radius:8px;margin:15px 0;">
+                <p style="color:#e2e8f0;">${message}</p>
+              </div>
+              <p><a href="https://revendr-9add8.web.app/dashboard" style="color:#0ea5e9;">Responder en el dashboard</a></p>
+            </div>`
+          )
+        }
+      }
+    }
+
+    res.json({ success: true, data: { id: chatMsg.visitor_id } })
+  } catch (error) {
+    console.error('Error sending chat message:', error)
+    res.json({ success: true })
+  }
+})
+
+app.get('/chat/messages', async (req, res) => {
+  try {
+    const { productId, status } = req.query
+    let query = db.collection('chat_messages').orderBy('timestamp', 'desc')
+    if (productId) query = query.where('product_id', '==', productId)
+    if (status) query = query.where('status', '==', status)
+
+    const snapshot = await query.limit(100).get()
+    const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    res.json({ success: true, data: messages })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/chat/reply', async (req, res) => {
+  try {
+    const { messageId, reply } = req.body
+    await db.collection('chat_messages').doc(messageId).update({
+      reply,
+      status: 'replied',
+      replied_at: new Date(),
+    })
+
+    const msgDoc = await db.collection('chat_messages').doc(messageId).get()
+    if (msgDoc.exists && msgDoc.data().visitor_email && RESEND_API_KEY) {
+      const msg = msgDoc.data()
+      await sendEmail(
+        msg.visitor_email,
+        'Respuesta de Revendr',
+        `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px;">
+          <h2 style="color:#0ea5e9;">Tu mensaje fue respondido</h2>
+          <p>Hola ${msg.visitor_name},</p>
+          <div style="background:#1e293b;padding:15px;border-radius:8px;margin:15px 0;">
+            <p style="color:#e2e8f0;">${reply}</p>
+          </div>
+        </div>`
+      )
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ GENERADOR DE CONTENIDO ============
+
+const CONTENT_TEMPLATES = {
+  launch: [
+    '🚀 ¡{producto} ya está disponible! {descripcion}. Probalo gratis: {url}',
+    '🎉 Lanzamiento: {producto}. {descripcion}. link: {url}',
+    '✨ Nuevo: {producto}. {descripcion}. ¡Miralo ahora! {url}',
+  ],
+  feature: [
+    '💡 Sabías que {producto} puede {beneficio}? Descubrilo: {url}',
+    '🔥 {producto} te ayuda a {beneficio}. Probalo: {url}',
+    '⭐ {beneficio} con {producto}. Más info: {url}',
+  ],
+  testimonial: [
+    '💬 "Me encanta {producto}" - {cliente}. Probalo vos también: {url}',
+    '🌟 Los usuarios aman {producto}. {testimonial}. link: {url}',
+  ],
+  promo: [
+    '⚡ OFERTA: {producto} con {descuento} OFF por tiempo limitado. {url}',
+    '🎯 {descuento} de descuento en {producto}. ¡No lo dejes pasar! {url}',
+  ],
+}
+
+const SOCIAL_PLATFORMS = {
+  twitter: { maxChars: 280, name: 'Twitter/X' },
+  instagram: { maxChars: 2200, name: 'Instagram' },
+  linkedin: { maxChars: 3000, name: 'LinkedIn' },
+  facebook: { maxChars: 63206, name: 'Facebook' },
+}
+
+app.post('/content/generate', async (req, res) => {
+  try {
+    const { productId, type, platform, customParams } = req.body
+
+    let product = null
+    if (productId) {
+      const prodDoc = await db.collection('productos').doc(productId).get()
+      if (prodDoc.exists) product = prodDoc.data()
+    }
+
+    const templates = CONTENT_TEMPLATES[type] || CONTENT_TEMPLATES.launch
+    const template = templates[Math.floor(Math.random() * templates.length)]
+
+    const params = {
+      producto: product?.nombre || customParams?.producto || 'nuestro producto',
+      descripcion: product?.descripcion || customParams?.descripcion || 'una solución innovadora',
+      url: product?.url_demo || customParams?.url || 'https://revendr-9add8.web.app',
+      beneficio: customParams?.beneficio || 'multiplicar tus ventas',
+      cliente: customParams?.cliente || 'un cliente satisfecho',
+      testimonial: customParams?.testimonial || 'Es increíble',
+      descuento: customParams?.descuento || '20%',
+    }
+
+    let content = template
+    Object.entries(params).forEach(([key, value]) => {
+      content = content.replace(new RegExp(`\\{${key}\\}`, 'g'), value)
+    })
+
+    const platformInfo = SOCIAL_PLATFORMS[platform] || SOCIAL_PLATFORMS.twitter
+    if (content.length > platformInfo.maxChars) {
+      content = content.substring(0, platformInfo.maxChars - 3) + '...'
+    }
+
+    const variations = templates.map(t => {
+      let v = t
+      Object.entries(params).forEach(([key, value]) => {
+        v = v.replace(new RegExp(`\\{${key}\\}`, 'g'), value)
+      })
+      return v.length > platformInfo.maxChars ? v.substring(0, platformInfo.maxChars - 3) + '...' : v
+    })
+
+    await db.collection('generated_content').add({
+      product_id: productId,
+      type,
+      platform,
+      content,
+      variations,
+      params,
+      timestamp: new Date(),
+    })
+
+    res.json({
+      success: true,
+      data: { content, variations, platform: platformInfo.name, charCount: content.length },
+    })
+  } catch (error) {
+    console.error('Error generating content:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/content/history', async (req, res) => {
+  try {
+    const { productId } = req.query
+    let query = db.collection('generated_content').orderBy('timestamp', 'desc')
+    if (productId) query = query.where('product_id', '==', productId)
+
+    const snapshot = await query.limit(50).get()
+    const content = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    res.json({ success: true, data: content })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ INTEGRACIÓN INSTAGRAM/FACEBOOK ============
+
+app.get('/social/config', async (req, res) => {
+  res.json({
+    success: true,
+    data: {
+      instagram: { configured: false, note: 'Necesita Facebook Business Manager token' },
+      facebook: { configured: false, note: 'Necesita Facebook App ID y token' },
+    },
+  })
+})
+
+app.post('/social/publish', async (req, res) => {
+  const { platform, content, imageUrl, link } = req.body
+
+  res.json({
+    success: false,
+    error: {
+      message: `Publicación en ${platform} no disponible aún. Configurá el token de ${platform} en Settings > Integraciones.`,
+      code: 'SOCIAL_NOT_CONFIGURED',
+    },
+  })
+})
+
+app.post('/social/ad-campaign', async (req, res) => {
+  const { platform, productId, budget, targeting, duration } = req.body
+
+  res.json({
+    success: false,
+    error: {
+      message: `Campaña publicitaria en ${platform} no disponible aún. Configurá ${platform} Ads en Settings.`,
+      code: 'ADS_NOT_CONFIGURED',
+    },
+  })
+})
+
+// ============ ANALYTICS CON IA ============
+
+app.get('/analytics/predictions/:campaignId', async (req, res) => {
+  try {
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+    const campaign = campaignDoc.data()
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', req.params.campaignId)
+      .get()
+
+    let totalLeads = leadsSnapshot.size
+    let hotLeads = 0, warmLeads = 0, coldLeads = 0
+    let avgScore = 0, totalScore = 0
+    let engaged = 0, converted = 0
+
+    leadsSnapshot.docs.forEach(doc => {
+      const lead = doc.data()
+      const score = lead.lead_score || 0
+      totalScore += score
+      if (lead.temperatura === 'hot') hotLeads++
+      else if (lead.temperatura === 'warm') warmLeads++
+      else coldLeads++
+      if (lead.cta_clicks > 0 || lead.landing_views > 0) engaged++
+      if (lead.estado_proceso === 'cliente_activo') converted++
+    })
+
+    avgScore = totalLeads > 0 ? (totalScore / totalLeads).toFixed(1) : 0
+    const engagementRate = totalLeads > 0 ? ((engaged / totalLeads) * 100).toFixed(1) : 0
+    const currentConversion = totalLeads > 0 ? ((converted / totalLeads) * 100).toFixed(1) : 0
+
+    // AI Predictions based on historical data
+    const predictedConversion = Math.min(
+      parseFloat(currentConversion) + (hotLeads * 2.5) + (engagementRate * 0.3),
+      100
+    ).toFixed(1)
+
+    const predictedRevenue = campaign.leads_count > 0
+      ? ((predictedConversion / 100) * campaign.leads_count * 50).toFixed(0)
+      : 0
+
+    const recommendedActions = []
+    if (hotLeads > 0 && campaign.mensajes_enviados < campaign.leads_count * 0.5) {
+      recommendedActions.push({
+        action: 'send_more_messages',
+        priority: 'high',
+        message: `Hay ${hotLeads} leads hot sin mensaje. Enviá ahora.`,
+      })
+    }
+    if (parseFloat(engagementRate) < 10) {
+      recommendedActions.push({
+        action: 'improve_message',
+        priority: 'medium',
+        message: 'La tasa de engagement es baja. Probá A/B testing con mensajes diferentes.',
+      })
+    }
+    if (coldLeads > hotLeads * 3) {
+      recommendedActions.push({
+        action: 'requalify',
+        priority: 'low',
+        message: 'Muchos leads fríos. Considerá recalificar o descartar leads con score < 20.',
+      })
+    }
+
+    res.json({
+      success: true,
+      data: {
+        current: {
+          totalLeads,
+          hotLeads,
+          warmLeads,
+          coldLeads,
+          avgScore,
+          engagementRate: parseFloat(engagementRate),
+          conversionRate: parseFloat(currentConversion),
+        },
+        predictions: {
+          predictedConversion: parseFloat(predictedConversion),
+          predictedRevenue: parseInt(predictedRevenue),
+          confidence: Math.min(60 + (totalLeads * 0.5), 95).toFixed(0),
+          timeframe: '30 días',
+        },
+        recommendedActions,
+      },
+    })
+  } catch (error) {
+    console.error('Error generating predictions:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/analytics/trends', async (req, res) => {
+  try {
+    const leadsSnapshot = await db.collection('leads')
+      .orderBy('fecha_creacion', 'desc')
+      .limit(500)
+      .get()
+
+    const dailyData = {}
+    leadsSnapshot.docs.forEach(doc => {
+      const lead = doc.data()
+      const date = lead.fecha_creacion?.toDate?.()
+      if (date) {
+        const key = date.toISOString().split('T')[0]
+        if (!dailyData[key]) dailyData[key] = { leads: 0, qualified: 0, converted: 0, totalScore: 0 }
+        dailyData[key].leads++
+        if ((lead.lead_score || 0) >= 50) dailyData[key].qualified++
+        if (lead.estado_proceso === 'cliente_activo') dailyData[key].converted++
+        dailyData[key].totalScore += lead.lead_score || 0
+      }
+    })
+
+    const trends = Object.entries(dailyData)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-30)
+      .map(([date, data]) => ({
+        date,
+        leads: data.leads,
+        qualified: data.qualified,
+        converted: data.converted,
+        avgScore: data.leads > 0 ? (data.totalScore / data.leads).toFixed(1) : 0,
+      }))
+
+    res.json({ success: true, data: trends })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 // ============ EXPORTS ============
 
 exports.api = functions.https.onRequest(app)

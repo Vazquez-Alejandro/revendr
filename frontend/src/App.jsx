@@ -21,6 +21,9 @@ import DemoProperties from './pages/public/DemoProperties'
 import DemoClinic from './pages/public/DemoClinic'
 import DemoWhatsApp from './pages/public/DemoWhatsApp'
 import DemoProductLanding from './pages/public/DemoProductLanding'
+import CRM from './pages/CRM'
+import OwnerPortal from './pages/OwnerPortal'
+import ContentGenerator from './pages/ContentGenerator'
 
 function App() {
   return (
@@ -58,6 +61,9 @@ function App() {
           <Route path="productos" element={<Products />} />
           <Route path="campanias" element={<Campaigns />} />
           <Route path="leads" element={<Leads />} />
+          <Route path="crm" element={<CRM />} />
+          <Route path="portal" element={<OwnerPortal />} />
+          <Route path="contenido" element={<ContentGenerator />} />
           <Route path="settings" element={<Settings />} />
         </Route>
 

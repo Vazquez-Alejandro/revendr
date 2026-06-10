@@ -8,7 +8,10 @@ import {
   Settings,
   LogOut,
   Zap,
-  Package
+  Package,
+  GitBranch,
+  Building2,
+  Sparkles,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -22,6 +25,9 @@ export function Sidebar() {
     { name: t('myProducts'), href: '/dashboard/productos', icon: Package },
     { name: t('campaigns'), href: '/dashboard/campanias', icon: Megaphone },
     { name: t('leads'), href: '/dashboard/leads', icon: Users },
+    { name: 'CRM', href: '/dashboard/crm', icon: GitBranch },
+    { name: 'Portal', href: '/dashboard/portal', icon: Building2 },
+    { name: 'Contenido', href: '/dashboard/contenido', icon: Sparkles },
     { name: t('settings'), href: '/dashboard/settings', icon: Settings },
   ]
 
