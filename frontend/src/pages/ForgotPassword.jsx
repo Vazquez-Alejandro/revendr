@@ -67,23 +67,28 @@ export default function ForgotPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
+    <div className="min-h-screen bg-dark-950">
+      <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-dark-50">Revendr</span>
+            <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
           </Link>
-          <div>
-            <Link to="/" className="text-dark-400 hover:text-dark-200 text-sm inline-flex items-center gap-1 mb-4">
-              ← {locale === 'es' ? 'Volver al inicio' : 'Back to home'}
-            </Link>
-          </div>
-          <h1 className="text-2xl font-bold text-dark-50">
-            {locale === 'es' ? 'Recuperar contraseña' : 'Reset password'}
-          </h1>
+          <Link to="/" className="text-dark-400 hover:text-dark-200 flex items-center gap-2 text-sm">
+            <ArrowLeft className="w-4 h-4" />
+            {locale === 'es' ? 'Inicio' : 'Home'}
+          </Link>
+        </div>
+      </nav>
+
+      <div className="flex items-center justify-center p-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-dark-50">
+              {locale === 'es' ? 'Recuperar contraseña' : 'Reset password'}
+            </h1>
           <p className="text-dark-400 mt-2">
             {locale === 'es' ? 'Ingresá tu email y te enviamos un link para restablecerla' : 'Enter your email and we\'ll send you a reset link'}
           </p>

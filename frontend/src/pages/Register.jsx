@@ -4,7 +4,7 @@ import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } 
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
-import { Loader2, AlertCircle, Check, Mail } from 'lucide-react'
+import { Loader2, AlertCircle, Check, Mail, Zap, ArrowLeft } from 'lucide-react'
 
 const PLANS = {
   starter: { name: 'Starter', price: 49, leads: 100, rubros: 1, demos: 50, msgs: 1000 },
@@ -185,23 +185,28 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <span className="text-2xl">⚡</span>
+    <div className="min-h-screen bg-dark-950">
+      <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+          <Link to="/" className="flex items-center gap-2 md:gap-3">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+              <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-dark-50">Revendr</span>
+            <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
           </Link>
-          <div>
-            <Link to="/" className="text-dark-400 hover:text-dark-200 text-sm inline-flex items-center gap-1 mb-4">
-              ← {locale === 'es' ? 'Volver al inicio' : 'Back to home'}
-            </Link>
-          </div>
-          <h1 className="text-2xl font-bold text-dark-50">
-            {locale === 'es' ? 'Creá tu cuenta' : 'Create your account'}
-          </h1>
+          <Link to="/" className="text-dark-400 hover:text-dark-200 flex items-center gap-2 text-sm">
+            <ArrowLeft className="w-4 h-4" />
+            {locale === 'es' ? 'Inicio' : 'Home'}
+          </Link>
+        </div>
+      </nav>
+
+      <div className="flex items-center justify-center p-4 py-12">
+        <div className="w-full max-w-md">
+          <div className="text-center mb-8">
+            <h1 className="text-2xl font-bold text-dark-50">
+              {locale === 'es' ? 'Creá tu cuenta' : 'Create your account'}
+            </h1>
           <p className="text-dark-400 mt-2">
             {locale === 'es' ? '14 días gratis. Sin tarjeta de crédito.' : '14 days free. No credit card required.'}
           </p>
