@@ -57,15 +57,16 @@ export default function Register() {
       try {
         const res = await fetch(`https://us-central1-revendr-9add8.cloudfunctions.net/api/check-email?email=${encodeURIComponent(email)}`)
         const data = await res.json()
+        setLoading(false)
         if (data.exists) {
           setError(locale === 'es' ? 'Este correo ya está registrado' : 'This email is already registered')
-          setLoading(false)
           return
         }
       } catch (err) {
-        // Si falla la query, dejamos avanzar
+        setLoading(false)
+        setError(locale === 'es' ? 'Error al verificar el email. Intentá de nuevo.' : 'Error checking email. Try again.')
+        return
       }
-      setLoading(false)
 
       setStep(2)
       return
