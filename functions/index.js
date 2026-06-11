@@ -59,6 +59,20 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
+app.get('/check-email', async (req, res) => {
+  try {
+    const { email } = req.query
+    if (!email) return res.status(400).json({ error: 'Email required' })
+    const q = await db.collection('usuarios').where('email', '==', email).limit(1).get()
+    if (!q.empty) return res.json({ exists: true })
+    const qa = await db.collection('usuarios_admin').where('email', '==', email).limit(1).get()
+    if (!qa.empty) return res.json({ exists: true })
+    res.json({ exists: false })
+  } catch (error) {
+    res.json({ exists: false })
+  }
+})
+
 // ============ CAMPAIGNS ============
 
 app.get('/campaigns', async (req, res) => {
