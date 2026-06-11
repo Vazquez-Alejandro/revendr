@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { Loader2, AlertCircle, Check, Mail, Zap, ArrowLeft } from 'lucide-react'
@@ -52,6 +52,28 @@ export default function Register() {
         setError(locale === 'es' ? 'Debés aceptar los Términos y Condiciones' : 'You must accept the Terms and Conditions')
         return
       }
+
+      setLoading(true)
+      try {
+        const emailQ = query(collection(db, 'usuarios'), where('email', '==', email))
+        const emailSnap = await getDocs(emailQ)
+        if (!emailSnap.empty) {
+          setError(locale === 'es' ? 'Este correo ya está registrado' : 'This email is already registered')
+          setLoading(false)
+          return
+        }
+        const adminQ = query(collection(db, 'usuarios_admin'), where('email', '==', email))
+        const adminSnap = await getDocs(adminQ)
+        if (!adminSnap.empty) {
+          setError(locale === 'es' ? 'Este correo ya está registrado' : 'This email is already registered')
+          setLoading(false)
+          return
+        }
+      } catch (err) {
+        // Si falla la query, dejamos avanzar
+      }
+      setLoading(false)
+
       setStep(2)
       return
     }
