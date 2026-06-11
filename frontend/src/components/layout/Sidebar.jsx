@@ -20,7 +20,7 @@ import clsx from 'clsx'
 
 export function Sidebar() {
   const { signOut } = useAuth()
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const navigate = useNavigate()
 
   const navigation = [
