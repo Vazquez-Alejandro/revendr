@@ -66,38 +66,56 @@ export default function Login() {
 
   if (showResend && user && !user.emailVerified) {
     return (
-      <div className="min-h-screen bg-dark-950 flex items-center justify-center p-4">
-        <div className="w-full max-w-md text-center">
-          <div className="card">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-              <Mail className="w-8 h-8 text-amber-400" />
-            </div>
-            <h1 className="text-2xl font-bold text-dark-50 mb-2">
-              {locale === 'es' ? 'Verificá tu email' : 'Verify your email'}
-            </h1>
-            <p className="text-dark-400 mb-6">
-              {locale === 'es'
-                ? 'Necesitás verificar tu email antes de acceder al panel.'
-                : 'You need to verify your email before accessing the panel.'}
-            </p>
+      <div className="min-h-screen bg-dark-950">
+        <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 relative">
+            <Link to="/" className="inline-flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
+                <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
+              </div>
+              <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
+            </Link>
+            <Link to="/" className="absolute right-4 top-1/2 -translate-y-1/2 text-dark-400 hover:text-dark-200 flex items-center gap-2 text-sm">
+              <ArrowLeft className="w-4 h-4" />
+              {locale === 'es' ? 'Inicio' : 'Home'}
+            </Link>
+          </div>
+        </nav>
 
-            <div className="space-y-3">
-              <button
-                onClick={() => window.location.reload()}
-                disabled={loading}
-                className="btn-primary w-full flex items-center justify-center gap-2"
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                {locale === 'es' ? 'Ya verifiqué mi email' : 'I already verified my email'}
-              </button>
+        <div className="flex items-center justify-center p-4 py-12">
+          <div className="w-full max-w-md text-center">
+            <div className="card">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                <Mail className="w-8 h-8 text-amber-400" />
+              </div>
+              <h1 className="text-2xl font-bold text-dark-50 mb-2">
+                {locale === 'es' ? 'Verificá tu email' : 'Verify your email'}
+              </h1>
+              <p className="text-dark-400 mb-6">
+                {locale === 'es'
+                  ? 'Necesitás verificar tu email antes de acceder al panel.'
+                  : 'You need to verify your email before accessing the panel.'}
+              </p>
 
-              <button onClick={handleResendVerification} disabled={loading} className="btn-secondary w-full">
-                {locale === 'es' ? 'Reenviar email de verificación' : 'Resend verification email'}
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => window.location.reload()}
+                  disabled={loading}
+                  className="btn-primary w-full flex items-center justify-center gap-2"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {locale === 'es' ? 'Ya verifiqué mi email' : 'I already verified my email'}
+                </button>
 
-              <button onClick={() => setShowResend(false)} className="text-sm text-dark-400 hover:text-dark-200 mt-2">
-                {locale === 'es' ? 'Volver al login' : 'Back to login'}
-              </button>
+                <button onClick={handleResendVerification} disabled={loading} className="btn-secondary w-full">
+                  {locale === 'es' ? 'Reenviar email de verificación' : 'Resend verification email'}
+                </button>
+
+                <Link to="/login" className="text-sm text-dark-400 hover:text-dark-200 flex items-center justify-center gap-1 mt-2">
+                  <ArrowLeft className="w-3 h-3" />
+                  {locale === 'es' ? 'Volver al login' : 'Back to login'}
+                </Link>
+              </div>
             </div>
           </div>
         </div>
