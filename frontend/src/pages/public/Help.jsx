@@ -141,7 +141,9 @@ export default function Help() {
           </h2>
           <div className="grid md:grid-cols-2 gap-3">
             {[
-              { label: locale === 'es' ? 'API Documentation' : 'API Documentation', href: 'https://us-central1-revendr-9add8.cloudfunctions.net/api/api-docs' },
+              { label: locale === 'es' ? 'Guía de usuario paso a paso' : 'Step-by-step user guide', href: '/guide' },
+              { label: locale === 'es' ? 'Soporte y contacto' : 'Support & contact', href: '/support' },
+              { label: locale === 'es' ? 'Documentación API' : 'API Documentation', href: 'https://us-central1-revendr-9add8.cloudfunctions.net/api/api-docs' },
               { label: locale === 'es' ? 'Configurar API keys' : 'Set up API keys', href: '/dashboard/settings' },
               { label: locale === 'es' ? 'Verificar estado del servicio' : 'Check service status', href: '/status' },
               { label: locale === 'es' ? 'Ver planes y precios' : 'View plans and pricing', href: '/pricing' },

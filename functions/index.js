@@ -73,6 +73,57 @@ app.get('/check-email', async (req, res) => {
   }
 })
 
+app.post('/support', async (req, res) => {
+  try {
+    const { category, subject, message, email } = req.body
+    if (!category || !subject || !message || !email) {
+      return res.status(400).json({ success: false, error: { message: 'All fields required' } })
+    }
+
+    await db.collection('support_tickets').add({
+      category,
+      subject,
+      message,
+      email,
+      status: 'open',
+      created_at: new Date(),
+    })
+
+    // Send notification email to admin
+    if (RESEND_API_KEY) {
+      try {
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Revendr Support <support@revendr-9add8.web.app>',
+            to: 'vazquezale82@gmail.com',
+            subject: `[Revendr Soporte] ${subject}`,
+            html: `
+              <h2>Nuevo ticket de soporte</h2>
+              <p><strong>Categoría:</strong> ${category}</p>
+              <p><strong>Email:</strong> ${email}</p>
+              <p><strong>Asunto:</strong> ${subject}</p>
+              <p><strong>Mensaje:</strong></p>
+              <p>${message}</p>
+            `,
+          }),
+        })
+      } catch (e) {
+        console.error('Error sending support email:', e)
+      }
+    }
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error creating support ticket:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 // ============ CAMPAIGNS ============
 
 app.get('/campaigns', async (req, res) => {

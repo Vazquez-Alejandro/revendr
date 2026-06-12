@@ -95,5 +95,12 @@ service cloud.firestore {
     match /_health/{docId} {
       allow read, write: if true;
     }
+
+    // Support tickets
+    match /support_tickets/{ticketId} {
+      allow read: if request.auth != null;
+      allow create: if true;
+      allow update: if request.auth != null;
+    }
   }
 }

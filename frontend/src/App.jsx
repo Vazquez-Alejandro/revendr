@@ -17,6 +17,8 @@ import Pricing from './pages/public/Pricing'
 import PrivacyPolicy from './pages/public/PrivacyPolicy'
 import TermsOfService from './pages/public/TermsOfService'
 import Help from './pages/public/Help'
+import UserGuide from './pages/public/UserGuide'
+import Support from './pages/public/Support'
 import StatusPage from './pages/public/StatusPage'
 import Onboarding from './pages/Onboarding'
 import DemoBooking from './pages/public/DemoBooking'
@@ -42,6 +44,8 @@ function App() {
         <Route path="/privacy" element={<PrivacyPolicy />} />
         <Route path="/terms" element={<TermsOfService />} />
         <Route path="/help" element={<Help />} />
+        <Route path="/guide" element={<UserGuide />} />
+        <Route path="/support" element={<Support />} />
         <Route path="/status" element={<StatusPage />} />
         <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
 
