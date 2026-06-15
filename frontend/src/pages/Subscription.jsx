@@ -170,9 +170,9 @@ export default function Subscription() {
             return (
               <div
                 key={plan.id}
-                className={`card relative ${isCurrent ? 'border-brand-500 bg-brand-500/5' : ''}`}
+                className={`card relative ${isCurrent && !sub.cancelAtPeriodEnd ? 'border-brand-500 bg-brand-500/5' : ''} ${isCurrent && sub.cancelAtPeriodEnd ? 'opacity-60' : ''}`}
               >
-                {plan.popular && (
+                {plan.popular && !isCurrent && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
                     <span className="bg-brand-600 text-white text-xs font-bold px-3 py-0.5 rounded-full">
                       POPULAR
@@ -180,7 +180,7 @@ export default function Subscription() {
                   </div>
                 )}
                 <div className="text-center mb-4">
-                  <Icon className={`w-8 h-8 mx-auto mb-2 ${isCurrent ? 'text-brand-400' : 'text-dark-400'}`} />
+                  <Icon className={`w-8 h-8 mx-auto mb-2 ${isCurrent && !sub.cancelAtPeriodEnd ? 'text-brand-400' : 'text-dark-400'}`} />
                   <h3 className="text-lg font-bold text-dark-100">{plan.name}</h3>
                   <div className="text-2xl font-bold text-dark-50 mt-2">
                     ${plan.price}<span className="text-sm text-dark-400">/mes</span>
@@ -198,12 +198,18 @@ export default function Subscription() {
                   onClick={() => changePlan(plan.id)}
                   disabled={isCurrent || changing}
                   className={`w-full py-2 rounded-lg text-sm font-medium transition-all ${
-                    isCurrent
+                    isCurrent && !sub.cancelAtPeriodEnd
                       ? 'bg-brand-500/10 text-brand-400 cursor-default'
-                      : 'bg-dark-700 hover:bg-dark-600 text-dark-100 border border-dark-600'
+                      : isCurrent && sub.cancelAtPeriodEnd
+                        ? 'bg-dark-700 text-dark-500 cursor-default opacity-50'
+                        : 'bg-dark-700 hover:bg-dark-600 text-dark-100 border border-dark-600'
                   } disabled:opacity-50`}
                 >
-                  {isCurrent ? (locale === 'es' ? 'Plan Actual' : 'Current Plan') : (locale === 'es' ? 'Cambiar' : 'Change')}
+                  {isCurrent && !sub.cancelAtPeriodEnd
+                    ? (locale === 'es' ? 'Plan Actual' : 'Current Plan')
+                    : isCurrent && sub.cancelAtPeriodEnd
+                      ? (locale === 'es' ? 'Cancelado' : 'Cancelled')
+                      : (locale === 'es' ? 'Cambiar' : 'Change')}
                 </button>
               </div>
             )
