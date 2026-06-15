@@ -2302,19 +2302,21 @@ app.post('/team/invite', async (req, res) => {
 
     if (RESEND_API_KEY) {
       try {
-        await fetch('https://api.resend.com/emails', {
+        const emailRes = await fetch('https://api.resend.com/emails', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${RESEND_API_KEY}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            from: 'Revendr <noreply@revendr-9add8.web.app>',
+            from: 'Revendr <onboarding@resend.dev>',
             to: email,
             subject: 'Invitación a un equipo en Revendr',
             html: `<p>Has sido invitado a un equipo en Revendr.</p><p>Haz click aquí para aceptar: <a href="https://revendr-9add8.web.app/team/accept?invite=${inviteId}">Aceptar invitación</a></p>`,
           }),
         })
+        const emailBody = await emailRes.text()
+        if (!emailRes.ok) console.error('Resend error response:', emailBody)
       } catch (e) {
         console.error('Error sending invite email:', e.message)
       }
@@ -2369,6 +2371,37 @@ app.delete('/team/members/:memberId', async (req, res) => {
   try {
     await db.collection('team_members').doc(req.params.memberId).delete()
     res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/team/invite/accept-link', async (req, res) => {
+  try {
+    const { inviteId } = req.body
+    if (!inviteId) {
+      return res.status(400).json({ success: false, error: { message: 'inviteId required' } })
+    }
+    const inviteDoc = await db.collection('team_invites').doc(inviteId).get()
+    if (!inviteDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Invitación no encontrada' } })
+    }
+    const invite = inviteDoc.data()
+    if (invite.status !== 'pending') {
+      return res.status(400).json({ success: false, error: { message: 'Esta invitación ya fue procesada' } })
+    }
+    if (invite.expires_at?.toDate?.() < new Date()) {
+      return res.status(400).json({ success: false, error: { message: 'Esta invitación expiró' } })
+    }
+    await db.collection('team_members').add({
+      owner_user_id: invite.owner_user_id,
+      email: invite.email,
+      role: invite.role || 'member',
+      status: 'active',
+      created_at: new Date(),
+    })
+    await db.collection('team_invites').doc(inviteId).update({ status: 'accepted' })
+    res.json({ success: true, data: { email: invite.email } })
   } catch (error) {
     res.status(500).json({ success: false, error: { message: error.message } })
   }

@@ -33,6 +33,7 @@ import AdminPanel from './pages/AdminPanel'
 import Subscription from './pages/Subscription'
 import ClientDashboard from './pages/ClientDashboard'
 import TeamManagement from './pages/TeamManagement'
+import AcceptInvite from './pages/public/AcceptInvite'
 
 function App() {
   return (
@@ -61,6 +62,7 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/team/accept" element={<AcceptInvite />} />
 
         {/* Protected admin routes */}
         <Route
