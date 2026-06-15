@@ -31,7 +31,7 @@ const PLATFORMS = [
 export default function ContentGenerator() {
   const { locale } = useI18n()
   const [contentType, setContentType] = useState('launch')
-  const [productName, setProductName] = useState('Revendr')
+  const [productName, setProductName] = useState('')
 
   const [description, setDescription] = useState('')
   const [platform, setPlatform] = useState('twitter')
