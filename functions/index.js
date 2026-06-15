@@ -3608,7 +3608,7 @@ app.post('/content/generate', async (req, res) => {
     })
 
     await db.collection('generated_content').add({
-      product_id: productId,
+      product_id: productId || null,
       type,
       platform,
       content,
@@ -3812,3 +3812,4 @@ app.get('/analytics/trends', async (req, res) => {
 // ============ EXPORTS ============
 
 exports.api = functions.https.onRequest(app)
+
