@@ -52,9 +52,11 @@ export default function ContentGenerator() {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contentType,
-            productName,
-            description: description || `${productName} — plataforma SaaS`,
+            type: contentType,
+            customParams: {
+              producto: productName,
+              descripcion: description || `${productName} — plataforma SaaS`,
+            },
             platform,
           }),
         }
