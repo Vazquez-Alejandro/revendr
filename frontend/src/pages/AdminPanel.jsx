@@ -78,7 +78,8 @@ export default function AdminPanel() {
   }
 
   const filtered = clients.filter(c => {
-    const matchSearch = !search || c.email?.includes(search) || c.nombre?.includes(search) || c.empresa?.includes(search)
+    const q = search.toLowerCase()
+    const matchSearch = !search || c.email?.toLowerCase().includes(q) || c.nombre?.toLowerCase().includes(q) || c.empresa?.toLowerCase().includes(q)
     const matchPlan = filterPlan === 'all' || c.plan === filterPlan
     return matchSearch && matchPlan
   })
