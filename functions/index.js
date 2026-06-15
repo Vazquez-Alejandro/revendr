@@ -3604,7 +3604,10 @@ app.post('/content/generate', async (req, res) => {
       Object.entries(params).forEach(([key, value]) => {
         v = v.replace(new RegExp(`\\{${key}\\}`, 'g'), value)
       })
-      return v.length > platformInfo.maxChars ? v.substring(0, platformInfo.maxChars - 3) + '...' : v
+      if (v.length > platformInfo.maxChars) {
+        v = v.substring(0, platformInfo.maxChars - 3) + '...'
+      }
+      return { text: v, charCount: v.length }
     })
 
     await db.collection('generated_content').add({
