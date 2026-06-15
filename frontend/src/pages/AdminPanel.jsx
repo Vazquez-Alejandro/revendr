@@ -122,23 +122,28 @@ export default function AdminPanel() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+      <div className="flex gap-3 flex-wrap">
+        <div className="relative flex-1 min-w-0">
+          <Search
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-dark-400 cursor-pointer"
+            onClick={() => document.getElementById('admin-search')?.focus()}
+          />
           <input
+            id="admin-search"
             type="text"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input-field pl-10 w-full"
             placeholder={locale === 'es' ? 'Buscar por email, nombre o empresa...' : 'Search by email, name or company...'}
+            autoFocus
           />
         </div>
         <select
           value={filterPlan}
           onChange={e => setFilterPlan(e.target.value)}
-          className="input-field"
+          className="input-field min-w-[140px] w-auto"
         >
-          <option value="all">{locale === 'es' ? 'Todos los planes' : 'All plans'}</option>
+          <option value="all">{locale === 'es' ? 'Filtrar por plan' : 'Filter by plan'}</option>
           {PLANS.map(p => <option key={p} value={p} className="capitalize">{p}</option>)}
         </select>
       </div>
