@@ -2214,7 +2214,7 @@ app.delete('/admin/clients/:id', async (req, res) => {
 
 app.post('/admin/migrate-ownership', async (req, res) => {
   try {
-    const uid = req.user.uid
+    const uid = req.user?.uid || req.body?.userId
     let migrated = { campaigns: 0, leads: 0, products: 0, crm_events: 0, revenue: 0 }
 
     // Migrate campaigns — add user_id where missing
