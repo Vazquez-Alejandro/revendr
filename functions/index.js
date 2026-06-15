@@ -3540,22 +3540,27 @@ app.post('/chat/reply', async (req, res) => {
 
 const CONTENT_TEMPLATES = {
   launch: [
-    '🚀 ¡{producto} ya está disponible! {descripcion}. Probalo gratis: {url}',
-    '🎉 Lanzamiento: {producto}. {descripcion}. link: {url}',
-    '✨ Nuevo: {producto}. {descripcion}. ¡Miralo ahora! {url}',
+    'Vengo curioseando {producto} hace unos días y la verdad me está gustando mucho. {descripcion}. Si te sirve, probalo acá → {url}',
+    'Hace un par de semanas arranqué con {producto} y ya no puedo vivir sin eso. {descripcion}. Te dejo el link por si querés verlo → {url}',
+    'Nadie me pidió opinión igual voy a dejar esto acá: {producto} está buenísimo. {descripcion}. Link: {url}',
+    'Me recomendaron {producto} y al principio no le tenía fe. Ahora no lo suelto. {descripcion}. Probalo vos también → {url}',
+    'Mirá lo que encontré. {producto}. {descripcion}. Link acá → {url}',
   ],
   feature: [
-    '💡 Sabías que {producto} puede {beneficio}? Descubrilo: {url}',
-    '🔥 {producto} te ayuda a {beneficio}. Probalo: {url}',
-    '⭐ {beneficio} con {producto}. Más info: {url}',
+    'Sabías que con {producto} podés {beneficio}? No es magia, es tecnología. Te cuento más acá → {url}',
+    'Si hay algo que me cambió la forma de trabajar fue {producto}. Principalmente porque me permite {beneficio}. {url}',
+    '{producto} te saca un montón de laburo de encima. Literalmente {beneficio}. Te dejo el link → {url}',
+    'Probando {producto} descubrí que podés {beneficio} sin tener que hacer nada raro. Te dejo el link por si te sirve → {url}',
   ],
   testimonial: [
-    '💬 "Me encanta {producto}" - {cliente}. Probalo vos también: {url}',
-    '🌟 Los usuarios aman {producto}. {testimonial}. link: {url}',
+    'Hablando con {cliente} me contó que usa {producto} y no cambia más. Me dijo: "{testimonial}". Si querés verlo → {url}',
+    '{cliente} arrancó con {producto} hace unos meses y hoy no concibe trabajar sin eso. {testimonial}. Link: {url}',
+    'Me escribió {cliente} para contarme su experiencia con {producto}: "{testimonial}". Más info → {url}',
   ],
   promo: [
-    '⚡ OFERTA: {producto} con {descuento} OFF por tiempo limitado. {url}',
-    '🎯 {descuento} de descuento en {producto}. ¡No lo dejes pasar! {url}',
+    'Por tiempo limitado, {producto} tiene {descuento} de descuento. No soy botón de "comprá ya", pero está muy bueno. {url}',
+    '{producto} está de oferta con un {descuento} off. Si alguien lo estaba mirando, ahora es el momento. {url}',
+    'Aprovecha que {producto} tiene {descuento} de descuento por estos días. Te dejo el link → {url}',
   ],
 }
 
