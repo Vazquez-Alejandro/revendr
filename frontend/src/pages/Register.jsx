@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth'
-import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
+import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { Loader2, AlertCircle, Check, Mail, Zap, ArrowLeft } from 'lucide-react'
@@ -122,10 +122,11 @@ export default function Register() {
   }
 
   const handleResendVerification = async () => {
-    if (!createdUser) return
+    const currentUser = auth.currentUser
+    if (!currentUser) return
     setLoading(true)
     try {
-      await sendEmailVerification(createdUser)
+      await sendEmailVerification(currentUser)
       setError('')
       alert(locale === 'es' ? 'Email de verificación reenviado' : 'Verification email resent')
     } catch (err) {
@@ -136,14 +137,13 @@ export default function Register() {
   }
 
   const handleCheckVerification = async () => {
-    if (!createdUser) return
+    const currentUser = auth.currentUser
+    if (!currentUser) return
     setLoading(true)
     try {
-      await createdUser.reload()
-      if (createdUser.emailVerified) {
-        await import('firebase/firestore').then(({ updateDoc, doc: d }) =>
-          updateDoc(d(db, 'usuarios', createdUser.uid), { emailVerified: true })
-        )
+      await currentUser.reload()
+      if (currentUser.emailVerified) {
+        await updateDoc(doc(db, 'usuarios', currentUser.uid), { emailVerified: true })
         navigate('/onboarding')
       } else {
         setError(locale === 'es' ? 'Tu email aún no fue verificado. Revisá tu bandeja de entrada.' : 'Your email is not verified yet. Check your inbox.')

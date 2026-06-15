@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { Loader2, AlertCircle, Mail, Check, Zap, ArrowLeft } from 'lucide-react'
 import { sendEmailVerification } from 'firebase/auth'
+import { auth } from '../config/firebase'
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -16,14 +17,16 @@ export default function Login() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (!authLoading && isAuthenticated && user) {
       if (!user.emailVerified) {
         setShowResend(true)
         return
       }
-      navigate('/dashboard', { replace: true })
+      if (user.emailVerified) {
+        navigate('/dashboard', { replace: true })
+      }
     }
-  }, [isAuthenticated, user, navigate])
+  }, [isAuthenticated, user, authLoading, navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -52,7 +55,8 @@ export default function Login() {
   }
 
   const handleResendVerification = async () => {
-    if (!user) return
+    const currentUser = auth.currentUser
+    if (!currentUser) return
     setLoading(true)
     try {
       await sendEmailVerification(user)
@@ -99,7 +103,10 @@ export default function Login() {
 
               <div className="space-y-3">
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={async () => {
+                    const cu = auth.currentUser
+                    if (cu) { await cu.reload(); if (cu.emailVerified) navigate('/dashboard'); else setShowResend(true) }
+                  }}
                   disabled={loading}
                   className="btn-primary w-full flex items-center justify-center gap-2"
                 >

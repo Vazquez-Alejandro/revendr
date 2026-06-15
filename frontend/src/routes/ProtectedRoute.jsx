@@ -1,11 +1,13 @@
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Loader2, Mail } from 'lucide-react'
 import { sendEmailVerification } from 'firebase/auth'
+import { auth } from '../config/firebase'
 
 export function ProtectedRoute({ children, requiredPermission = null }) {
   const { isAuthenticated, loading, adminData, user } = useAuth()
   const location = useLocation()
+  const navigate = useNavigate()
 
   if (loading) {
     return (
@@ -46,7 +48,10 @@ export function ProtectedRoute({ children, requiredPermission = null }) {
               Reenviar email de verificación
             </button>
             <button
-              onClick={() => window.location.reload()}
+              onClick={async () => {
+                const cu = auth.currentUser
+                if (cu) { await cu.reload(); if (cu.emailVerified) navigate('/dashboard'); else window.location.reload() }
+              }}
               className="btn-secondary w-full"
             >
               Ya verifiqué mi email
