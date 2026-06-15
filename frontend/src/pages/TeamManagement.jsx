@@ -55,7 +55,11 @@ export default function TeamManagement() {
         }
       ).then(r => r.json())
       if (result.success) {
-        toast.success(locale === 'es' ? 'Invitación enviada' : 'Invite sent')
+        if (result.emailSent) {
+          toast.success(locale === 'es' ? 'Invitación enviada' : 'Invite sent')
+        } else {
+          toast.success(locale === 'es' ? 'Invitación creada (el email no pudo enviarse, verificá tu dominio en Resend)' : 'Invite created (email could not be sent, verify your domain on Resend)')
+        }
         setInviteEmail('')
         loadMembers()
       }
@@ -179,12 +183,6 @@ export default function TeamManagement() {
                       </div>
                     </div>
                     <div className="flex gap-2">
-                      <button
-                        onClick={() => acceptInvite(invite)}
-                        className="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1"
-                      >
-                        {locale === 'es' ? 'Aceptar' : 'Accept'}
-                      </button>
                       <button
                         onClick={() => cancelInvite(invite.id)}
                         className="text-dark-400 hover:text-red-400 transition-colors"

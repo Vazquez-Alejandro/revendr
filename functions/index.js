@@ -2300,6 +2300,7 @@ app.post('/team/invite', async (req, res) => {
       expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     })
 
+    let emailSent = false
     if (RESEND_API_KEY) {
       try {
         const emailRes = await fetch('https://api.resend.com/emails', {
@@ -2316,13 +2317,17 @@ app.post('/team/invite', async (req, res) => {
           }),
         })
         const emailBody = await emailRes.text()
-        if (!emailRes.ok) console.error('Resend error response:', emailBody)
+        if (emailRes.ok) {
+          emailSent = true
+        } else {
+          console.error('Resend error response:', emailBody)
+        }
       } catch (e) {
         console.error('Error sending invite email:', e.message)
       }
     }
 
-    res.json({ success: true, data: { inviteId } })
+    res.json({ success: true, data: { inviteId }, emailSent })
   } catch (error) {
     res.status(500).json({ success: false, error: { message: error.message } })
   }
