@@ -38,6 +38,8 @@ export default function ContentGenerator() {
   const [generated, setGenerated] = useState(null)
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(null)
+  const [editingIndex, setEditingIndex] = useState(null)
+  const [editText, setEditText] = useState('')
   const generate = async () => {
     if (!productName.trim()) {
       toast.error(locale === 'es' ? 'Ingresá el nombre del producto' : 'Enter product name')
@@ -205,11 +207,57 @@ export default function ContentGenerator() {
                       >
                         {copied === index ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                       </button>
+                      {editingIndex !== index && (
+                        <button
+                          onClick={() => { setEditingIndex(index); setEditText(variation.text) }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity text-dark-500 hover:text-dark-300 text-xs"
+                        >
+                          ✎
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          const newVariations = generated.variations.filter((_, i) => i !== index)
+                          setGenerated({ ...generated, variations: newVariations })
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity text-dark-500 hover:text-red-400 text-xs"
+                      >
+                        ✕
+                      </button>
                     </div>
                   </div>
-                  <p className="text-sm text-dark-100 whitespace-pre-wrap leading-relaxed">
-                    {variation.text}
-                  </p>
+                  {editingIndex === index ? (
+                    <div className="space-y-2">
+                      <textarea
+                        value={editText}
+                        onChange={(e) => setEditText(e.target.value)}
+                        className="input-field w-full text-sm h-20"
+                      />
+                      <div className="flex gap-2 justify-end">
+                        <button
+                          onClick={() => setEditingIndex(null)}
+                          className="text-xs text-dark-400 hover:text-dark-200 px-2 py-1"
+                        >
+                          {locale === 'es' ? 'Cancelar' : 'Cancel'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const newVariations = [...generated.variations]
+                            newVariations[index] = { text: editText, charCount: editText.length }
+                            setGenerated({ ...generated, variations: newVariations })
+                            setEditingIndex(null)
+                          }}
+                          className="text-xs text-brand-400 hover:text-brand-300 px-2 py-1"
+                        >
+                          {locale === 'es' ? 'Guardar' : 'Save'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-dark-100 whitespace-pre-wrap leading-relaxed">
+                      {variation.text}
+                    </p>
+                  )}
                 </div>
               ))}
             </div>
