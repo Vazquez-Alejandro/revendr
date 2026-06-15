@@ -2328,11 +2328,38 @@ app.post('/team/invite', async (req, res) => {
 
 app.get('/team/members/:ownerUserId', async (req, res) => {
   try {
-    const snapshot = await db.collection('team_members')
-      .where('owner_user_id', '==', req.params.ownerUserId)
-      .get()
-    const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-    res.json({ success: true, data: members })
+    const [membersSnap, invitesSnap] = await Promise.all([
+      db.collection('team_members')
+        .where('owner_user_id', '==', req.params.ownerUserId)
+        .get(),
+      db.collection('team_invites')
+        .where('owner_user_id', '==', req.params.ownerUserId)
+        .where('status', '==', 'pending')
+        .get(),
+    ])
+    const members = membersSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const pendingInvites = invitesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    res.json({ success: true, data: { members, pendingInvites } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/team/invite/accept', async (req, res) => {
+  try {
+    const { inviteId, ownerUserId, email, role } = req.body
+    if (!inviteId || !ownerUserId || !email) {
+      return res.status(400).json({ success: false, error: { message: 'inviteId, ownerUserId, and email required' } })
+    }
+    await db.collection('team_members').add({
+      owner_user_id: ownerUserId,
+      email,
+      role: role || 'member',
+      status: 'active',
+      created_at: new Date(),
+    })
+    await db.collection('team_invites').doc(inviteId).update({ status: 'accepted' })
+    res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: { message: error.message } })
   }
@@ -2341,6 +2368,15 @@ app.get('/team/members/:ownerUserId', async (req, res) => {
 app.delete('/team/members/:memberId', async (req, res) => {
   try {
     await db.collection('team_members').doc(req.params.memberId).delete()
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.delete('/team/invites/:inviteId', async (req, res) => {
+  try {
+    await db.collection('team_invites').doc(req.params.inviteId).delete()
     res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: { message: error.message } })

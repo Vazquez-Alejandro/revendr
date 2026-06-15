@@ -15,6 +15,7 @@ export default function TeamManagement() {
   const { user } = useAuth()
   const { locale } = useI18n()
   const [members, setMembers] = useState([])
+  const [pendingInvites, setPendingInvites] = useState([])
   const [loading, setLoading] = useState(true)
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState('member')
@@ -29,7 +30,10 @@ export default function TeamManagement() {
       const result = await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/team/members/${user.uid}`
       ).then(r => r.json())
-      if (result.success) setMembers(result.data)
+      if (result.success) {
+        setMembers(result.data.members || [])
+        setPendingInvites(result.data.pendingInvites || [])
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -62,6 +66,30 @@ export default function TeamManagement() {
     }
   }
 
+  const acceptInvite = async (invite) => {
+    try {
+      const result = await fetch(
+        'https://us-central1-revendr-9add8.cloudfunctions.net/api/team/invite/accept',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            inviteId: invite.id,
+            ownerUserId: user.uid,
+            email: invite.email,
+            role: invite.role,
+          }),
+        }
+      ).then(r => r.json())
+      if (result.success) {
+        toast.success(locale === 'es' ? 'Invitación aceptada' : 'Invite accepted')
+        loadMembers()
+      }
+    } catch (e) {
+      toast.error('Error')
+    }
+  }
+
   const removeMember = async (memberId) => {
     if (!confirm(locale === 'es' ? '¿Eliminar miembro?' : 'Remove member?')) return
     try {
@@ -70,6 +98,20 @@ export default function TeamManagement() {
         { method: 'DELETE' }
       )
       toast.success(locale === 'es' ? 'Miembro eliminado' : 'Member removed')
+      loadMembers()
+    } catch (e) {
+      toast.error('Error')
+    }
+  }
+
+  const cancelInvite = async (inviteId) => {
+    if (!confirm(locale === 'es' ? '¿Cancelar invitación?' : 'Cancel invite?')) return
+    try {
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/team/invites/${inviteId}`,
+        { method: 'DELETE' }
+      )
+      toast.success(locale === 'es' ? 'Invitación cancelada' : 'Invite cancelled')
       loadMembers()
     } catch (e) {
       toast.error('Error')
@@ -108,47 +150,98 @@ export default function TeamManagement() {
         </form>
       </div>
 
-      {/* Members List */}
-      <div className="card">
-        <h2 className="text-sm font-medium text-dark-300 mb-4">
-          {locale === 'es' ? 'Miembros del Equipo' : 'Team Members'}
-        </h2>
-        {loading ? (
-          <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-brand-500 animate-spin" /></div>
-        ) : members.length === 0 ? (
-          <p className="text-center py-8 text-dark-400 text-sm">
-            {locale === 'es' ? 'Aún no invitaste a nadie' : 'No members invited yet'}
-          </p>
-        ) : (
-          <div className="space-y-3">
-            {members.map(member => (
-              <div key={member.id} className="flex items-center justify-between p-3 bg-dark-900 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 text-sm">
-                    {member.email?.[0]?.toUpperCase()}
-                  </div>
-                  <div>
-                    <div className="text-sm text-dark-100">{member.email}</div>
-                    <div className="text-xs text-dark-400 flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      {member.role}
-                      {member.status === 'pending' && (
-                        <span className="ml-1 text-amber-400">(pendiente)</span>
-                      )}
+      {loading ? (
+        <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 text-brand-500 animate-spin" /></div>
+      ) : (
+        <div className="space-y-6">
+          {/* Pending Invites */}
+          {pendingInvites.length > 0 && (
+            <div className="card">
+              <h2 className="text-sm font-medium text-dark-300 mb-4 flex items-center gap-2">
+                <Mail className="w-4 h-4 text-amber-400" />
+                {locale === 'es' ? 'Pendientes de Aceptación' : 'Pending Acceptance'}
+                <span className="text-xs text-dark-500">({pendingInvites.length})</span>
+              </h2>
+              <div className="space-y-3">
+                {pendingInvites.map(invite => (
+                  <div key={invite.id} className="flex items-center justify-between p-3 bg-dark-900/50 rounded-lg border border-amber-500/10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-400 text-sm">
+                        {invite.email?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm text-dark-100">{invite.email}</div>
+                        <div className="text-xs text-dark-400 flex items-center gap-1">
+                          <Shield className="w-3 h-3" />
+                          {invite.role}
+                          <span className="ml-1 text-amber-400">({locale === 'es' ? 'pendiente' : 'pending'})</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => acceptInvite(invite)}
+                        className="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1"
+                      >
+                        {locale === 'es' ? 'Aceptar' : 'Accept'}
+                      </button>
+                      <button
+                        onClick={() => cancelInvite(invite.id)}
+                        className="text-dark-400 hover:text-red-400 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
                   </div>
-                </div>
-                <button
-                  onClick={() => removeMember(member.id)}
-                  className="text-dark-400 hover:text-red-400 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                ))}
               </div>
-            ))}
+            </div>
+          )}
+
+          {/* Active Members */}
+          <div className="card">
+            <h2 className="text-sm font-medium text-dark-300 mb-4 flex items-center gap-2">
+              <Users className="w-4 h-4 text-brand-400" />
+              {locale === 'es' ? 'Miembros del Equipo' : 'Team Members'}
+              <span className="text-xs text-dark-500">({members.length})</span>
+            </h2>
+            {members.length === 0 && pendingInvites.length === 0 ? (
+              <p className="text-center py-8 text-dark-400 text-sm">
+                {locale === 'es' ? 'Aún no invitaste a nadie' : 'No members invited yet'}
+              </p>
+            ) : members.length === 0 ? (
+              <p className="text-center py-8 text-dark-400 text-sm">
+                {locale === 'es' ? 'Aún no hay miembros activos' : 'No active members yet'}
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {members.map(member => (
+                  <div key={member.id} className="flex items-center justify-between p-3 bg-dark-900 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-brand-500/20 flex items-center justify-center text-brand-400 text-sm">
+                        {member.email?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <div className="text-sm text-dark-100">{member.email}</div>
+                        <div className="text-xs text-dark-400 flex items-center gap-1">
+                          <Shield className="w-3 h-3" />
+                          {member.role}
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeMember(member.id)}
+                      className="text-dark-400 hover:text-red-400 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
