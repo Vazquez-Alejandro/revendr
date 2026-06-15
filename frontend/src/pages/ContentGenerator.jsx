@@ -31,13 +31,13 @@ const PLATFORMS = [
 export default function ContentGenerator() {
   const { locale } = useI18n()
   const [contentType, setContentType] = useState('launch')
-  const [productName, setProductName] = useState('Inmoxil')
+  const [productName, setProductName] = useState('Revendr')
+
   const [description, setDescription] = useState('')
   const [platform, setPlatform] = useState('twitter')
   const [generated, setGenerated] = useState(null)
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(null)
-
   const generate = async () => {
     if (!productName.trim()) {
       toast.error(locale === 'es' ? 'Ingresá el nombre del producto' : 'Enter product name')
@@ -128,7 +128,7 @@ export default function ContentGenerator() {
                 value={productName}
                 onChange={(e) => setProductName(e.target.value)}
                 className="input-field w-full text-sm"
-                placeholder="Ej: Inmoxil"
+                placeholder="Ej: Revendr"
               />
             </div>
 

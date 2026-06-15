@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Mail,
   Plus,
+  ChevronDown,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -32,6 +33,13 @@ export default function CRM() {
   const [timeline, setTimeline] = useState([])
   const [newNote, setNewNote] = useState('')
   const [draggedLead, setDraggedLead] = useState(null)
+  const [collapsed, setCollapsed] = useState({ actions: false, timeline: false })
+  const [showMeetingModal, setShowMeetingModal] = useState(false)
+  const [meetingDate, setMeetingDate] = useState('')
+  const [meetingTime, setMeetingTime] = useState('')
+  const [meetingTitle, setMeetingTitle] = useState('')
+  const [editingEventId, setEditingEventId] = useState(null)
+  const [editText, setEditText] = useState('')
 
   useEffect(() => {
     loadPipeline()
@@ -124,9 +132,71 @@ export default function CRM() {
     }
   }
 
-  const openLeadDetail = (lead) => {
+  const updateEvent = async (eventId, newDescription) => {
+    try {
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/events/${eventId}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ description: newDescription }),
+        }
+      )
+      setEditingEventId(null)
+      setEditText('')
+      await loadTimeline(selectedLead.id)
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error al actualizar' : 'Error updating')
+    }
+  }
+
+  const deleteEvent = async (eventId) => {
+    if (!confirm(locale === 'es' ? '¿Eliminar este evento?' : 'Delete this event?')) return
+    try {
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/events/${eventId}`,
+        { method: 'DELETE' }
+      )
+      await loadTimeline(selectedLead.id)
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error al eliminar' : 'Error deleting')
+    }
+  }
+
+  const scheduleMeeting = async () => {
+    if (!meetingDate || !meetingTime) {
+      toast.error(locale === 'es' ? 'Completá fecha y hora' : 'Fill in date and time')
+      return
+    }
+    const dt = new Date(`${meetingDate}T${meetingTime}`)
+    const desc = meetingTitle || (locale === 'es' ? 'Reunión' : 'Meeting')
+    const startIso = dt.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+    const endIso = new Date(dt.getTime() + 3600000).toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '')
+    const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(desc)}&dates=${startIso}/${endIso}`
+    try {
+      await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/leads/${selectedLead.id}/activity`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'meeting', description: desc, value: gCalUrl }),
+        }
+      )
+      window.open(gCalUrl, '_blank')
+      toast.success(locale === 'es' ? 'Reunión agendada' : 'Meeting scheduled')
+      setShowMeetingModal(false)
+      setMeetingTitle('')
+      setMeetingDate('')
+      setMeetingTime('')
+      await loadTimeline(selectedLead.id)
+    } catch (error) {
+      toast.error(locale === 'es' ? 'Error' : 'Error')
+    }
+  }
+
+  const openLeadDetail = async (lead) => {
     setSelectedLead(lead)
-    loadTimeline(lead.id)
+    await loadTimeline(lead.id)
   }
 
   if (loading) {
@@ -155,7 +225,7 @@ export default function CRM() {
           return (
             <div
               key={stage.stage}
-              className="flex-shrink-0 w-72"
+              className="flex-1 min-w-[200px]"
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, stage.stage)}
             >
@@ -259,13 +329,24 @@ export default function CRM() {
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2 mb-4">
-              <button onClick={() => addActivity('call')} className="flex-1 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-medium hover:bg-emerald-500/20">
-                <Phone className="w-3 h-3 inline mr-1" /> {locale === 'es' ? 'Llamar' : 'Call'}
+            <div className="mb-4">
+              <button
+                onClick={() => setCollapsed(prev => ({ ...prev, actions: !prev.actions }))}
+                className="flex items-center gap-2 text-sm font-medium text-dark-300 mb-2 w-full text-left"
+              >
+                <ChevronDown className={`w-4 h-4 transition-transform ${collapsed.actions ? '-rotate-90' : ''}`} />
+                {locale === 'es' ? 'Acciones' : 'Actions'}
               </button>
-              <button onClick={() => addActivity('meeting')} className="flex-1 py-2 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-lg text-xs font-medium hover:bg-violet-500/20">
-                <Calendar className="w-3 h-3 inline mr-1" /> {locale === 'es' ? 'Reunión' : 'Meeting'}
-              </button>
+              {!collapsed.actions && (
+                <div className="flex gap-2">
+                  <button onClick={() => { addActivity('call'); window.open(`tel:${selectedLead.telefono_whatsapp || ''}`, '_blank'); }} className="flex-1 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-xs font-medium hover:bg-emerald-500/20">
+                    <Phone className="w-3 h-3 inline mr-1" /> {locale === 'es' ? 'Llamar' : 'Call'}
+                  </button>
+                  <button onClick={() => setShowMeetingModal(true)} className="flex-1 py-2 bg-violet-500/10 text-violet-400 border border-violet-500/20 rounded-lg text-xs font-medium hover:bg-violet-500/20">
+                    <Calendar className="w-3 h-3 inline mr-1" /> {locale === 'es' ? 'Reunión' : 'Meeting'}
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Add Note */}
@@ -287,9 +368,14 @@ export default function CRM() {
 
             {/* Timeline */}
             <div>
-              <h3 className="text-sm font-medium text-dark-300 mb-3">
+              <button
+                onClick={() => setCollapsed(prev => ({ ...prev, timeline: !prev.timeline }))}
+                className="flex items-center gap-2 text-sm font-medium text-dark-300 mb-2 w-full text-left"
+              >
+                <ChevronDown className={`w-4 h-4 transition-transform ${collapsed.timeline ? '-rotate-90' : ''}`} />
                 {locale === 'es' ? 'Actividad Reciente' : 'Recent Activity'}
-              </h3>
+              </button>
+              {!collapsed.timeline && (
               <div className="space-y-3">
                 {timeline.length === 0 ? (
                   <p className="text-xs text-dark-500 text-center py-4">
@@ -297,7 +383,7 @@ export default function CRM() {
                   </p>
                 ) : (
                   timeline.map((event) => (
-                    <div key={event.id} className="flex items-start gap-3">
+                    <div key={event.id} className="flex items-start gap-3 group">
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         event.event_type === 'call' ? 'bg-emerald-500/20' :
                         event.event_type === 'meeting' ? 'bg-violet-500/20' :
@@ -310,16 +396,92 @@ export default function CRM() {
                          <FileText className="w-4 h-4 text-brand-400" />}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-dark-200">{event.description}</p>
+                        {editingEventId === event.id ? (
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={editText}
+                              onChange={(e) => setEditText(e.target.value)}
+                              className="input-field flex-1 text-sm"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') updateEvent(event.id, editText)
+                                if (e.key === 'Escape') setEditingEventId(null)
+                              }}
+                            />
+                            <button onClick={() => updateEvent(event.id, editText)} className="text-xs text-brand-400 hover:text-brand-300">
+                              {locale === 'es' ? 'Guardar' : 'Save'}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="text-sm text-dark-200">{event.description}</p>
+                            {event.event_type === 'note' && (
+                              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+                                <button
+                                  onClick={() => { setEditingEventId(event.id); setEditText(event.description) }}
+                                  className="text-xs text-dark-500 hover:text-dark-300"
+                                >
+                                  ✎
+                                </button>
+                                <button
+                                  onClick={() => deleteEvent(event.id)}
+                                  className="text-xs text-dark-500 hover:text-red-400"
+                                >
+                                  ✕
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
                         <p className="text-xs text-dark-500 flex items-center gap-1 mt-0.5">
                           <Clock className="w-3 h-3" />
-                          {event.timestamp?.toDate?.()?.toLocaleString('es-AR')}
+                          {event.timestamp ? (typeof event.timestamp === 'string' ? new Date(event.timestamp).toLocaleString(locale === 'es' ? 'es-AR' : 'en-US') : event.timestamp?.toDate?.()?.toLocaleString(locale === 'es' ? 'es-AR' : 'en-US')) : ''}
                         </p>
                       </div>
                     </div>
                   ))
                 )}
               </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Meeting Modal */}
+      {showMeetingModal && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4" onClick={() => setShowMeetingModal(false)}>
+          <div className="card w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-dark-100">
+                {locale === 'es' ? 'Agendar Reunión' : 'Schedule Meeting'}
+              </h3>
+              <button onClick={() => setShowMeetingModal(false)} className="text-dark-400 hover:text-dark-200">✕</button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1">
+                  {locale === 'es' ? 'Título (opcional)' : 'Title (optional)'}
+                </label>
+                <input type="text" value={meetingTitle} onChange={e => setMeetingTitle(e.target.value)} className="input-field w-full text-sm" placeholder={locale === 'es' ? 'Ej: Seguimiento lead' : 'e.g. Lead follow-up'} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1">{locale === 'es' ? 'Fecha' : 'Date'}</label>
+                <input type="date" value={meetingDate} onChange={e => setMeetingDate(e.target.value)} className="input-field w-full text-sm" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-1">{locale === 'es' ? 'Hora' : 'Time'}</label>
+                <input type="time" value={meetingTime} onChange={e => setMeetingTime(e.target.value)} className="input-field w-full text-sm" />
+              </div>
+              <div className="text-xs text-dark-500 leading-relaxed">
+                {locale === 'es'
+                  ? 'Se guardará en el timeline y se abrirá Google Calendar para completar el evento.'
+                  : 'It will be saved to the timeline and Google Calendar will open to complete the event.'}
+              </div>
+              <button onClick={scheduleMeeting} className="btn-primary w-full">
+                {locale === 'es' ? 'Agendar y abrir Calendar' : 'Schedule & open Calendar'}
+              </button>
             </div>
           </div>
         </div>

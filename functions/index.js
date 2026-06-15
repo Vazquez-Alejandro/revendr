@@ -3278,6 +3278,7 @@ app.post('/crm/leads/:leadId/stage', async (req, res) => {
       lead_id: req.params.leadId,
       event_type: 'stage_change',
       new_stage: stage,
+      description: `Cambio a ${{ nueo: 'Nuevo', contactado: 'Contactado', interesado: 'Interesado', negociacion: 'Negociación', cerrado: 'Cerrado', perdido: 'Perdido' }[stage] || stage}`,
       timestamp: new Date(),
     })
 
@@ -3325,8 +3326,41 @@ app.get('/crm/leads/:leadId/timeline', async (req, res) => {
       .limit(50)
       .get()
 
-    const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    const events = snapshot.docs.map(doc => {
+      const data = doc.data()
+      return {
+        id: doc.id,
+        ...data,
+        timestamp: data.timestamp?.toDate?.()?.toISOString() || data.timestamp,
+        edited_at: data.edited_at?.toDate?.()?.toISOString() || null,
+      }
+    })
     res.json({ success: true, data: events })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.put('/crm/events/:eventId', async (req, res) => {
+  try {
+    const { description } = req.body
+    if (!description) {
+      return res.status(400).json({ success: false, error: { message: 'Description is required' } })
+    }
+    await db.collection('crm_events').doc(req.params.eventId).update({
+      description,
+      edited_at: new Date(),
+    })
+    res.json({ success: true })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.delete('/crm/events/:eventId', async (req, res) => {
+  try {
+    await db.collection('crm_events').doc(req.params.eventId).delete()
+    res.json({ success: true })
   } catch (error) {
     res.status(500).json({ success: false, error: { message: error.message } })
   }

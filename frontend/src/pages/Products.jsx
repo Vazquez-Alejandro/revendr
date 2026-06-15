@@ -319,7 +319,7 @@ export default function Products() {
                   value={formData.nombre}
                   onChange={(e) => setFormData({ ...formData, nombre: e.target.value })}
                   className="input-field"
-                  placeholder="Ej: Inmoxil, TurnosOnline..."
+                  placeholder="Ej: Revendr Pro, Revendr Plus..."
                   required
                 />
               </div>

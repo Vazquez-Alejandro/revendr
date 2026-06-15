@@ -929,7 +929,7 @@ export default function Campaigns() {
                   </div>
                   <p className="text-xs text-dark-300 whitespace-pre-line leading-relaxed">
                     {(campaign.producto_mensaje || campaign.mensaje_template || '')
-                      .replace(/{nombre_negocio}/g, 'Ej: Inmoxil Propiedades')
+                      .replace(/{nombre_negocio}/g, 'Ej: Revendr')
                       .replace(/{url_demo}/g, 'https://revendr-9add8.web.app/...')
                       .replace(/{rubro}/g, 'inmobiliaria')
                       .substring(0, 200)}

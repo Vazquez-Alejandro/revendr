@@ -96,6 +96,7 @@ export default function Leads() {
     cliente_activo: 0,
   })
   const [viewMode, setViewMode] = useState('table')
+  const [emailInput, setEmailInput] = useState('')
 
   useEffect(() => {
     loadLeads(true)
@@ -710,6 +711,61 @@ export default function Leads() {
                       {selectedLead.temperatura === 'hot' ? '🔥 Hot' : selectedLead.temperatura === 'warm' ? '🟡 Warm' : '❄️ Cold'}
                     </span>
                   </div>
+
+                  {/* Score Breakdown */}
+                  <div className="space-y-2 mb-3 pb-3 border-b border-dark-700">
+                    <div className="text-xs font-medium text-dark-400 mb-2">{locale === 'es' ? 'Desglose del Score' : 'Score Breakdown'}</div>
+                    {(() => {
+                      const reviews = selectedLead.reviews_count || selectedLead.total_reviews || 0
+                      const rating = selectedLead.calificacion || selectedLead.rating || 0
+                      const website = selectedLead.datos_personalizados?.website || selectedLead.website || ''
+                      const hours = selectedLead.datos_personalizados?.horarios || []
+                      const logo = selectedLead.datos_personalizados?.logo || ''
+                      const phone = selectedLead.telefono_whatsapp || ''
+
+                      const calcReviews = reviews >= 100 ? 25 : reviews >= 50 ? 20 : reviews >= 20 ? 15 : reviews >= 5 ? 10 : reviews >= 1 ? 5 : 0
+                      const calcRating = rating >= 4.8 ? 20 : rating >= 4.5 ? 16 : rating >= 4.0 ? 12 : rating >= 3.5 ? 8 : rating >= 3.0 ? 4 : 0
+                      const calcWebsite = website && website.includes('.') ? 15 : 0
+                      const calcEmail = selectedLead.email && selectedLead.email.includes('@') ? 10 : 0
+                      const calcPhone = phone && phone.replace(/\D/g, '').length >= 10 ? 10 : 0
+                      const calcHours = hours.length > 0 ? 10 : 0
+                      const calcLogo = logo ? 5 : 0
+                      const calcAddress = selectedLead.direccion && selectedLead.direccion.length > 5 ? 5 : 0
+
+                      return [
+                        { label: locale === 'es' ? 'Reviews (0-25)' : 'Reviews (0-25)', max: 25, value: calcReviews, icon: '⭐' },
+                        { label: locale === 'es' ? 'Calificación (0-20)' : 'Rating (0-20)', max: 20, value: calcRating, icon: '📊' },
+                        { label: locale === 'es' ? 'Website (0-15)' : 'Website (0-15)', max: 15, value: calcWebsite, icon: '🌐' },
+                        { label: locale === 'es' ? 'Email (0-10)' : 'Email (0-10)', max: 10, value: calcEmail, icon: '📧' },
+                        { label: locale === 'es' ? 'Teléfono (0-10)' : 'Phone (0-10)', max: 10, value: calcPhone, icon: '📞' },
+                        { label: locale === 'es' ? 'Horarios (0-10)' : 'Hours (0-10)', max: 10, value: calcHours, icon: '🕐' },
+                        { label: locale === 'es' ? 'Logo/Fotos (0-5)' : 'Photos (0-5)', max: 5, value: calcLogo, icon: '🖼️' },
+                        { label: locale === 'es' ? 'Dirección (0-5)' : 'Address (0-5)', max: 5, value: calcAddress, icon: '📍' },
+                      ].map(item => {
+                        const pct = (item.value / item.max) * 100
+                        return (
+                          <div key={item.label} className="flex items-center gap-2">
+                            <span className="text-xs">{item.icon}</span>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between text-xs mb-0.5">
+                                <span className="text-dark-400">{item.label}</span>
+                                <span className={item.value >= item.max ? 'text-emerald-400' : 'text-dark-500'}>
+                                  {item.value}/{item.max}
+                                </span>
+                              </div>
+                              <div className="w-full bg-dark-800 rounded-full h-1.5">
+                                <div
+                                  className={`h-1.5 rounded-full ${item.value >= item.max ? 'bg-emerald-500' : 'bg-dark-600'}`}
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    })()}
+                  </div>
+
                   <div className="space-y-1 text-xs text-dark-400">
                     {selectedLead.calificacion && <div>⭐ Rating: {selectedLead.calificacion}</div>}
                     {selectedLead.reviews_count > 0 && <div>📋 Reviews: {selectedLead.reviews_count}</div>}
@@ -717,25 +773,23 @@ export default function Leads() {
                     {selectedLead.email && <div>📧 Tiene email</div>}
                     {selectedLead.direccion && <div>📍 Tiene dirección</div>}
                   </div>
-                  {(selectedLead.cta_clicks > 0 || selectedLead.landing_views > 0 || selectedLead.tiempo_total_landing > 0) && (
-                    <div className="mt-3 pt-3 border-t border-dark-700">
-                      <div className="text-xs font-medium text-dark-400 mb-2">{locale === 'es' ? 'Actividad en Landing' : 'Landing Activity'}</div>
-                      <div className="grid grid-cols-3 gap-2">
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-brand-400">{selectedLead.landing_views || 0}</div>
-                          <div className="text-xs text-dark-500">{locale === 'es' ? 'Visitas' : 'Views'}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-emerald-400">{selectedLead.cta_clicks || 0}</div>
-                          <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks' : 'Clicks'}</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="text-lg font-bold text-amber-400">{selectedLead.tiempo_total_landing || 0}s</div>
-                          <div className="text-xs text-dark-500">{locale === 'es' ? 'Tiempo' : 'Time'}</div>
-                        </div>
+                  <div className="mt-3 pt-3 border-t border-dark-700">
+                    <div className="text-xs font-medium text-dark-400 mb-2">{locale === 'es' ? 'Actividad en Landing' : 'Landing Activity'}</div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-brand-400">{selectedLead.landing_views || 0}</div>
+                        <div className="text-xs text-dark-500">{locale === 'es' ? 'Visitas' : 'Views'}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-emerald-400">{selectedLead.cta_clicks || 0}</div>
+                        <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks' : 'Clicks'}</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-amber-400">{selectedLead.tiempo_total_landing || 0}s</div>
+                        <div className="text-xs text-dark-500">{locale === 'es' ? 'Tiempo' : 'Time'}</div>
                       </div>
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
 
@@ -797,21 +851,35 @@ export default function Leads() {
               )}
 
               {/* Email - Quick Send */}
-              {selectedLead.email && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    Email
-                  </label>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  Email
+                </label>
+                <div className="flex flex-col gap-2">
+                  {!selectedLead.email && (
+                    <input
+                      type="email"
+                      value={emailInput}
+                      onChange={e => setEmailInput(e.target.value)}
+                      placeholder={locale === 'es' ? 'Ingresá un email...' : 'Enter an email...'}
+                      className="w-full px-3 py-2 bg-dark-800 border border-dark-700 rounded-lg text-sm text-dark-200 placeholder-dark-500 focus:outline-none focus:border-brand-500/40"
+                    />
+                  )}
                   <div className="flex gap-2">
                     <button
                       onClick={async () => {
+                        const targetEmail = selectedLead.email || emailInput
+                        if (!targetEmail || !targetEmail.includes('@')) {
+                          toast.error(locale === 'es' ? 'Email inválido' : 'Invalid email')
+                          return
+                        }
                         try {
                           await fetch(
                             `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/${selectedLead.id}/send-email`,
                             {
                               method: 'POST',
                               headers: { 'Content-Type': 'application/json' },
-                              body: JSON.stringify({ messageType: 'initial' }),
+                              body: JSON.stringify({ messageType: 'initial', email: targetEmail }),
                             }
                           )
                           toast.success(locale === 'es' ? 'Email enviado' : 'Email sent')
@@ -825,50 +893,48 @@ export default function Leads() {
                       {locale === 'es' ? 'Enviar Email' : 'Send Email'}
                     </button>
                   </div>
-                  {selectedLead.ultimo_email_enviado && (
-                    <p className="text-xs text-dark-500 mt-1">
-                      {locale === 'es' ? 'Último email:' : 'Last email:'} {selectedLead.ultimo_email_enviado}
-                      {selectedLead.fecha_ultimo_email?.toDate?.()?.toLocaleDateString('es-AR') && 
-                        ` (${selectedLead.fecha_ultimo_email.toDate().toLocaleDateString('es-AR')})`
-                      }
-                    </p>
-                  )}
                 </div>
-              )}
+                {selectedLead.ultimo_email_enviado && (
+                  <p className="text-xs text-dark-500 mt-1">
+                    {locale === 'es' ? 'Último email:' : 'Last email:'} {selectedLead.ultimo_email_enviado}
+                    {selectedLead.fecha_ultimo_email?.toDate?.()?.toLocaleDateString('es-AR') && 
+                      ` (${selectedLead.fecha_ultimo_email.toDate().toLocaleDateString('es-AR')})`
+                    }
+                  </p>
+                )}
+              </div>
 
               {/* Message Engagement */}
-              {(selectedLead.mensajes_entregados > 0 || selectedLead.mensajes_leidos > 0 || selectedLead.mensajes_clickeados > 0) && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    {locale === 'es' ? 'Engagement de Mensajes' : 'Message Engagement'}
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="bg-dark-900 rounded-lg p-2 text-center">
-                      <div className="text-lg font-bold text-emerald-400">{selectedLead.mensajes_entregados || 0}</div>
-                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Entregados' : 'Delivered'}</div>
-                    </div>
-                    <div className="bg-dark-900 rounded-lg p-2 text-center">
-                      <div className="text-lg font-bold text-brand-400">{selectedLead.mensajes_leidos || 0}</div>
-                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Leídos' : 'Read'}</div>
-                    </div>
-                    <div className="bg-dark-900 rounded-lg p-2 text-center">
-                      <div className="text-lg font-bold text-amber-400">{selectedLead.mensajes_clickeados || 0}</div>
-                      <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks' : 'Clicks'}</div>
-                    </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Engagement de Mensajes' : 'Message Engagement'}
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="bg-dark-900 rounded-lg p-2 text-center">
+                    <div className="text-lg font-bold text-emerald-400">{selectedLead.mensajes_entregados || 0}</div>
+                    <div className="text-xs text-dark-500">{locale === 'es' ? 'Entregados' : 'Delivered'}</div>
                   </div>
-                  {selectedLead.engagement_score > 0 && (
-                    <div className="mt-2 text-center">
-                      <span className={`text-sm font-medium px-3 py-1 rounded-full ${
-                        selectedLead.engagement_score >= 5 ? 'bg-emerald-500/20 text-emerald-400' :
-                        selectedLead.engagement_score >= 2 ? 'bg-amber-500/20 text-amber-400' :
-                        'bg-dark-800 text-dark-500'
-                      }`}>
-                        Engagement: {selectedLead.engagement_score}
-                      </span>
-                    </div>
-                  )}
+                  <div className="bg-dark-900 rounded-lg p-2 text-center">
+                    <div className="text-lg font-bold text-brand-400">{selectedLead.mensajes_leidos || 0}</div>
+                    <div className="text-xs text-dark-500">{locale === 'es' ? 'Leídos' : 'Read'}</div>
+                  </div>
+                  <div className="bg-dark-900 rounded-lg p-2 text-center">
+                    <div className="text-lg font-bold text-amber-400">{selectedLead.mensajes_clickeados || 0}</div>
+                    <div className="text-xs text-dark-500">{locale === 'es' ? 'Clicks' : 'Clicks'}</div>
+                  </div>
                 </div>
-              )}
+                {selectedLead.engagement_score > 0 && (
+                  <div className="mt-2 text-center">
+                    <span className={`text-sm font-medium px-3 py-1 rounded-full ${
+                      selectedLead.engagement_score >= 5 ? 'bg-emerald-500/20 text-emerald-400' :
+                      selectedLead.engagement_score >= 2 ? 'bg-amber-500/20 text-amber-400' :
+                      'bg-dark-800 text-dark-500'
+                    }`}>
+                      Engagement: {selectedLead.engagement_score}
+                    </span>
+                  </div>
+                )}
+              </div>
 
               {/* Notes - Editable */}
               <div>
