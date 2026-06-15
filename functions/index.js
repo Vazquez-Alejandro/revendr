@@ -2302,12 +2302,18 @@ app.post('/team/invite', async (req, res) => {
 
     if (RESEND_API_KEY) {
       try {
-        const resend = require('resend')(RESEND_API_KEY)
-        await resend.emails.send({
-          from: 'Revendr <noreply@revendr.app>',
-          to: email,
-          subject: 'Invitación a un equipo en Revendr',
-          html: `<p>Has sido invitado a un equipo en Revendr.</p><p>Haz click aquí para aceptar: <a href="https://revendr-9add8.web.app/team/accept?invite=${inviteId}">Aceptar invitación</a></p>`,
+        await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: 'Revendr <noreply@revendr-9add8.web.app>',
+            to: email,
+            subject: 'Invitación a un equipo en Revendr',
+            html: `<p>Has sido invitado a un equipo en Revendr.</p><p>Haz click aquí para aceptar: <a href="https://revendr-9add8.web.app/team/accept?invite=${inviteId}">Aceptar invitación</a></p>`,
+          }),
         })
       } catch (e) {
         console.error('Error sending invite email:', e.message)
