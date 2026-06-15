@@ -2083,6 +2083,37 @@ app.post('/subscription/cancel', async (req, res) => {
   }
 })
 
+app.post('/subscription/reactivate', async (req, res) => {
+  try {
+    const { userId } = req.body
+    if (!userId) {
+      return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    }
+
+    const userDoc = await db.collection('usuarios').doc(userId).get()
+    if (!userDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'User not found' } })
+    }
+    const userData = userDoc.data()
+
+    if (STRIPE_SECRET_KEY && userData.stripe_subscription_id) {
+      const stripe = require('stripe')(STRIPE_SECRET_KEY)
+      await stripe.subscriptions.update(userData.stripe_subscription_id, {
+        cancel_at_period_end: false,
+      })
+    }
+
+    await db.collection('usuarios').doc(userId).update({
+      cancel_at_period_end: false,
+      fecha_actualizacion: new Date(),
+    })
+
+    res.json({ success: true, data: { message: 'Subscription reactivated' } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 // ============ ADMIN PANEL ============
 
 app.get('/admin/clients', async (req, res) => {

@@ -71,6 +71,26 @@ export default function Subscription() {
     }
   }
 
+  const reactivateSubscription = async () => {
+    setChanging(true)
+    try {
+      await fetch(
+        'https://us-central1-revendr-9add8.cloudfunctions.net/api/subscription/reactivate',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid }),
+        }
+      )
+      toast.success(locale === 'es' ? 'Suscripción reactivada' : 'Subscription reactivated')
+      loadSubscription()
+    } catch (e) {
+      toast.error('Error')
+    } finally {
+      setChanging(false)
+    }
+  }
+
   const cancelSubscription = async () => {
     if (!(await confirm(locale === 'es' ? '¿Cancelar suscripción? Seguirás usando Revendr hasta fin del período.' : 'Cancel subscription? You can use Revendr until the period ends.', 'Cancelar suscripción'))) return
     setChanging(true)
@@ -118,7 +138,8 @@ export default function Subscription() {
             </p>
           </div>
           {sub.cancelAtPeriodEnd && (
-            <button onClick={() => {}} className="btn-primary text-sm">
+            <button onClick={reactivateSubscription} disabled={changing} className="btn-primary text-sm">
+              {changing ? <Loader2 className="w-4 h-4 animate-spin inline" /> : null}
               {locale === 'es' ? 'Reactivar' : 'Reactivate'}
             </button>
           )}
