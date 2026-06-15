@@ -15,11 +15,13 @@ import {
   Edit2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useConfirm } from '../hooks/useConfirm'
 
 const PLANS = ['starter', 'growth', 'enterprise']
 
 export default function AdminPanel() {
   const { locale } = useI18n()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [clients, setClients] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -62,7 +64,7 @@ export default function AdminPanel() {
   }
 
   const deactivateClient = async (id) => {
-    if (!confirm(locale === 'es' ? '¿Desactivar esta cuenta?' : 'Deactivate this account?')) return
+    if (!(await confirm(locale === 'es' ? '¿Desactivar esta cuenta?' : 'Deactivate this account?', 'Desactivar'))) return
     try {
       await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/admin/clients/${id}`,
@@ -230,6 +232,7 @@ export default function AdminPanel() {
           </div>
         )}
       </div>
+      {ConfirmDialog}
     </div>
   )
 }

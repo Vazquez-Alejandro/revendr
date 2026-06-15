@@ -15,6 +15,7 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useConfirm } from '../hooks/useConfirm'
 
 const STAGES = [
   { id: 'nuevo', label: 'Nuevo', color: 'bg-blue-500', lightColor: 'bg-blue-500/10 text-blue-400' },
@@ -27,6 +28,7 @@ const STAGES = [
 
 export default function CRM() {
   const { locale } = useI18n()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [pipeline, setPipeline] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedLead, setSelectedLead] = useState(null)
@@ -151,7 +153,7 @@ export default function CRM() {
   }
 
   const deleteEvent = async (eventId) => {
-    if (!confirm(locale === 'es' ? '¿Eliminar este evento?' : 'Delete this event?')) return
+    if (!(await confirm(locale === 'es' ? '¿Eliminar este evento?' : 'Delete this event?', 'Eliminar'))) return
     try {
       await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/events/${eventId}`,
@@ -486,6 +488,7 @@ export default function CRM() {
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   )
 }

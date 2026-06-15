@@ -12,6 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useConfirm } from '../hooks/useConfirm'
 
 const PLANS = [
   { id: 'starter', name: 'Starter', price: 49, icon: Zap, limits: { leads: 100, rubros: 1, demos: 50, messages: 1000 } },
@@ -25,6 +26,7 @@ export default function Subscription() {
   const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(true)
   const [changing, setChanging] = useState(false)
+  const { confirm, ConfirmDialog } = useConfirm()
 
   useEffect(() => { loadSubscription() }, [])
 
@@ -45,7 +47,7 @@ export default function Subscription() {
 
   const changePlan = async (newPlan) => {
     if (!user || subscription?.plan === newPlan) return
-    if (!confirm(locale === 'es' ? `¿Cambiar al plan ${newPlan}?` : `Change to ${newPlan} plan?`)) return
+    if (!(await confirm(locale === 'es' ? `¿Cambiar al plan ${newPlan}?` : `Change to ${newPlan} plan?`, 'Cambiar'))) return
     setChanging(true)
     try {
       const result = await fetch(
@@ -70,7 +72,7 @@ export default function Subscription() {
   }
 
   const cancelSubscription = async () => {
-    if (!confirm(locale === 'es' ? '¿Cancelar suscripción? Seguirás usando Revendr hasta fin del período.' : 'Cancel subscription? You can use Revendr until the period ends.')) return
+    if (!(await confirm(locale === 'es' ? '¿Cancelar suscripción? Seguirás usando Revendr hasta fin del período.' : 'Cancel subscription? You can use Revendr until the period ends.', 'Cancelar suscripción'))) return
     setChanging(true)
     try {
       await fetch(
@@ -208,6 +210,7 @@ export default function Subscription() {
           })}
         </div>
       </div>
+      {ConfirmDialog}
     </div>
   )
 }

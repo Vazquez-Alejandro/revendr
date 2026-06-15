@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { useConfirm } from '../hooks/useConfirm'
 import {
   Users,
   UserPlus,
@@ -14,6 +15,7 @@ import toast from 'react-hot-toast'
 export default function TeamManagement() {
   const { user } = useAuth()
   const { locale } = useI18n()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [members, setMembers] = useState([])
   const [pendingInvites, setPendingInvites] = useState([])
   const [loading, setLoading] = useState(true)
@@ -95,7 +97,7 @@ export default function TeamManagement() {
   }
 
   const removeMember = async (memberId) => {
-    if (!confirm(locale === 'es' ? '¿Eliminar miembro?' : 'Remove member?')) return
+    if (!(await confirm(locale === 'es' ? '¿Eliminar este miembro del equipo?' : 'Remove this team member?'))) return
     try {
       await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/team/members/${memberId}`,
@@ -109,7 +111,7 @@ export default function TeamManagement() {
   }
 
   const cancelInvite = async (inviteId) => {
-    if (!confirm(locale === 'es' ? '¿Cancelar invitación?' : 'Cancel invite?')) return
+    if (!(await confirm(locale === 'es' ? '¿Cancelar esta invitación?' : 'Cancel this invite?'))) return
     try {
       await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/team/invites/${inviteId}`,
@@ -240,6 +242,7 @@ export default function TeamManagement() {
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   )
 }

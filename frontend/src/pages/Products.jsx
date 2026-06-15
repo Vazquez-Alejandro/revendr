@@ -23,6 +23,7 @@ import {
   Target,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useConfirm } from '../hooks/useConfirm'
 
 const NICHOES = [
   { value: 'inmobiliaria', labelEs: 'Inmobiliarias', labelEn: 'Real Estate' },
@@ -35,6 +36,7 @@ const NICHOES = [
 
 export default function Products() {
   const { t, locale } = useI18n()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
@@ -144,7 +146,7 @@ export default function Products() {
   }
 
   const handleDelete = async (productId) => {
-    if (!confirm(locale === 'es' ? '¿Eliminar este producto?' : 'Delete this product?')) return
+    if (!(await confirm(locale === 'es' ? '¿Eliminar este producto?' : 'Delete this product?', 'Eliminar'))) return
     try {
       await deleteDoc(doc(db, 'productos', productId))
       toast.success(locale === 'es' ? 'Producto eliminado' : 'Product deleted')
@@ -503,6 +505,7 @@ export default function Products() {
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   )
 }

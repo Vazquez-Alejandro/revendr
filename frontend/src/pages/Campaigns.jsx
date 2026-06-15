@@ -35,6 +35,7 @@ import {
   RefreshCw
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useConfirm } from '../hooks/useConfirm'
 
 const RUBROS = [
   { value: 'inmobiliaria', labelEs: 'Inmobiliarias', labelEn: 'Real Estate' },
@@ -71,6 +72,7 @@ const ESTADOS_EN = {
 
 export default function Campaigns() {
   const { t, locale } = useI18n()
+  const { confirm, ConfirmDialog } = useConfirm()
   const [campaigns, setCampaigns] = useState([])
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -329,7 +331,7 @@ export default function Campaigns() {
   }
 
   const terminateCampaign = async (campaignId) => {
-    if (!confirm(t('confirmTerminate'))) return
+    if (!(await confirm(t('confirmTerminate'), 'Finalizar'))) return
     
     try {
       await updateDoc(doc(db, 'campanias', campaignId), {
@@ -1470,6 +1472,7 @@ export default function Campaigns() {
           </div>
         </div>
       )}
+      {ConfirmDialog}
     </div>
   )
 }
