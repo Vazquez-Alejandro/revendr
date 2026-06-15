@@ -14,7 +14,15 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET
 const RESEND_API_KEY = process.env.RESEND_API_KEY
+const GMAIL_USER = process.env.GMAIL_USER
+const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN // Mercado Pago (futuro)
+
+const nodemailer = GMAIL_USER && GMAIL_APP_PASSWORD ? require('nodemailer') : null
+const emailTransporter = nodemailer ? nodemailer.createTransport({
+  service: 'gmail',
+  auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
+}) : null
 
 const APIFY_ACTORS = {
   google_maps: 'compass~crawler-google-places',
@@ -2301,27 +2309,15 @@ app.post('/team/invite', async (req, res) => {
     })
 
     let emailSent = false
-    if (RESEND_API_KEY) {
+    if (emailTransporter) {
       try {
-        const emailRes = await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'Revendr <onboarding@resend.dev>',
-            to: email,
-            subject: 'Invitación a un equipo en Revendr',
-            html: `<p>Has sido invitado a un equipo en Revendr.</p><p>Haz click aquí para aceptar: <a href="https://revendr-9add8.web.app/team/accept?invite=${inviteId}">Aceptar invitación</a></p>`,
-          }),
+        await emailTransporter.sendMail({
+          from: `"Revendr" <${GMAIL_USER}>`,
+          to: email,
+          subject: 'Invitación a un equipo en Revendr',
+          html: `<p>Has sido invitado a un equipo en Revendr.</p><p>Haz click aquí para aceptar: <a href="https://revendr-9add8.web.app/team/accept?invite=${inviteId}">Aceptar invitación</a></p>`,
         })
-        const emailBody = await emailRes.text()
-        if (emailRes.ok) {
-          emailSent = true
-        } else {
-          console.error('Resend error response:', emailBody)
-        }
+        emailSent = true
       } catch (e) {
         console.error('Error sending invite email:', e.message)
       }
