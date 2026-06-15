@@ -1,28 +1,17 @@
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useI18n } from '../../contexts/I18nContext'
-import { Bell, Search, Sun, Moon, Globe } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, Sun, Moon, Globe } from 'lucide-react'
 
 export function Header() {
   const { user, adminData } = useAuth()
   const { theme, toggleTheme } = useTheme()
   const { locale, changeLocale } = useI18n()
-  const [showSearch, setShowSearch] = useState(false)
 
   return (
     <header className="h-16 bg-dark-900/80 backdrop-blur-sm border-b border-dark-700 px-6 flex items-center justify-between sticky top-0 z-30">
       <div className="flex items-center gap-4">
-        <button
-          onClick={() => setShowSearch(!showSearch)}
-          className="flex items-center gap-2 px-4 py-2 bg-dark-800 border border-dark-700 rounded-lg text-dark-400 hover:text-dark-200 hover:border-dark-600 transition-all duration-200"
-        >
-          <Search className="w-4 h-4" />
-          <span className="text-sm">Buscar...</span>
-          <kbd className="hidden md:inline-flex items-center px-2 py-0.5 text-xs bg-dark-700 rounded ml-4">
-            ⌘K
-          </kbd>
-        </button>
+        <span className="text-dark-400 text-sm">{locale === 'es' ? 'Panel de Control' : 'Dashboard'}</span>
       </div>
 
       <div className="flex items-center gap-2">
