@@ -24,7 +24,7 @@ export function Sidebar() {
   const navigate = useNavigate()
 
   const navigation = [
-    { name: locale === 'es' ? 'Mi Dashboard' : 'My Dashboard', href: '/dashboard', icon: LayoutDashboard },
+    { name: locale === 'es' ? 'Mi Dashboard' : 'My Dashboard', href: '/dashboard', icon: LayoutDashboard, end: true },
     { name: t('myProducts'), href: '/dashboard/productos', icon: Package },
     { name: t('campaigns'), href: '/dashboard/campanias', icon: Megaphone },
     { name: t('leads'), href: '/dashboard/leads', icon: Users },
@@ -60,6 +60,7 @@ export function Sidebar() {
           <NavLink
             key={item.name}
             to={item.href}
+            end={item.end}
             className={({ isActive }) =>
               clsx(
                 'flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-all duration-200',
