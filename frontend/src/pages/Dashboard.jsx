@@ -54,14 +54,14 @@ export default function Dashboard() {
   const loadDashboardData = async () => {
     try {
       const userId = auth.currentUser?.uid
-      const campaignsRef = collection(db, 'campanias')
+      const campaignsRef = query(collection(db, 'campanias'), where('user_id', '==', userId || ''))
       const campaignsSnapshot = await getDocs(campaignsRef)
-      
+
       const leadsRef = collection(db, 'leads')
-      const leadsQuery = query(leadsRef, orderBy('fecha_creacion', 'desc'), limit(5))
+      const leadsQuery = query(leadsRef, where('user_id', '==', userId || ''), orderBy('fecha_creacion', 'desc'), limit(5))
       const leadsSnapshot = await getDocs(leadsQuery)
 
-      const allLeadsSnapshot = await getDocs(leadsRef)
+      const allLeadsSnapshot = await getDocs(query(leadsRef, where('user_id', '==', userId || '')))
 
       let activeCampaigns = 0
       let leadsHoy = 0

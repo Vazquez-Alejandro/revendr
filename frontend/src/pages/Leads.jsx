@@ -105,7 +105,8 @@ export default function Leads() {
 
   const loadCampaigns = async () => {
     try {
-      const q = query(collection(db, 'campanias'), orderBy('fecha_inicio', 'desc'))
+      const userId = auth.currentUser?.uid
+      const q = query(collection(db, 'campanias'), where('user_id', '==', userId || ''), orderBy('fecha_inicio', 'desc'))
       const snapshot = await getDocs(q)
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
     } catch (error) {
@@ -116,7 +117,8 @@ export default function Leads() {
   const loadLeads = async (reset = false) => {
     setLoading(true)
     try {
-      let q = query(collection(db, 'leads'), orderBy('fecha_creacion', 'desc'))
+      const userId = auth.currentUser?.uid
+      let q = query(collection(db, 'leads'), where('user_id', '==', userId || ''), orderBy('fecha_creacion', 'desc'))
 
       if (filterRubro !== 'todos') {
         q = query(q, where('rubro', '==', filterRubro))
@@ -137,7 +139,7 @@ export default function Leads() {
       setLastVisible(snapshot.docs[snapshot.docs.length - 1])
       setHasMore(data.length === PAGE_SIZE)
 
-      const allSnapshot = await getDocs(query(collection(db, 'leads')))
+      const allSnapshot = await getDocs(query(collection(db, 'leads'), where('user_id', '==', auth.currentUser?.uid || '')))
       const statsData = {
         total: allSnapshot.size,
         scraped: 0,

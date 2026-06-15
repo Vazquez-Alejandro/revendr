@@ -63,6 +63,29 @@ app.use((req, res, next) => {
   }
 })
 
+// Auth middleware — applies to all routes except public ones
+const PUBLIC_PATHS = ['/health', '/check-email', '/webhook/stripe', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/demos/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health']
+app.use((req, res, next) => {
+  const isPublic = PUBLIC_PATHS.some(p => req.originalUrl.startsWith(p))
+  if (isPublic) return next()
+
+  const header = req.headers.authorization
+  if (!header?.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: { message: 'No auth token' } })
+  }
+  try {
+    const token = header.split('Bearer ')[1]
+    admin.auth().verifyIdToken(token).then(decoded => {
+      req.user = decoded
+      next()
+    }).catch(() => {
+      res.status(401).json({ success: false, error: { message: 'Invalid token' } })
+    })
+  } catch (e) {
+    return res.status(401).json({ success: false, error: { message: 'Invalid token' } })
+  }
+})
+
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
@@ -137,6 +160,7 @@ app.post('/support', async (req, res) => {
 app.get('/campaigns', async (req, res) => {
   try {
     const snapshot = await db.collection('campanias')
+      .where('user_id', '==', req.user.uid)
       .orderBy('fecha_creacion', 'desc')
       .limit(50)
       .get()
@@ -160,6 +184,7 @@ app.post('/campaigns', async (req, res) => {
       rubro_objetivo,
       ciudad: ciudad || '',
       mensaje_template: mensaje_template || '',
+      user_id: req.user.uid,
       estado: 'activa',
       fecha_inicio: new Date(),
       fecha_creacion: new Date(),
@@ -225,7 +250,7 @@ app.post('/campaigns/:campaignId/scrape', async (req, res) => {
 
     res.json({ success: true, data: { runId, status: 'running' } })
 
-    pollApifyRun(runId, req.params.campaignId, rubro_objetivo).catch(err => {
+    pollApifyRun(runId, req.params.campaignId, rubro_objetivo, req.user?.uid).catch(err => {
       console.error('Background scraping error:', err)
     })
   } catch (error) {
@@ -234,7 +259,7 @@ app.post('/campaigns/:campaignId/scrape', async (req, res) => {
   }
 })
 
-async function pollApifyRun(runId, campaignId, rubro) {
+async function pollApifyRun(runId, campaignId, rubro, userId) {
   const maxAttempts = 60
   let attempts = 0
 
@@ -252,7 +277,7 @@ async function pollApifyRun(runId, campaignId, rubro) {
 
       if (run.status === 'SUCCEEDED') {
         const datasetId = run.defaultDatasetId
-        await processApifyResults(datasetId, campaignId, rubro)
+        await processApifyResults(datasetId, campaignId, rubro, userId)
         return
       }
 
@@ -275,7 +300,7 @@ async function pollApifyRun(runId, campaignId, rubro) {
   })
 }
 
-async function processApifyResults(datasetId, campaignId, rubro) {
+async function processApifyResults(datasetId, campaignId, rubro, userId) {
   try {
     const response = await axios.get(
       `https://api.apify.com/v2/datasets/${datasetId}/items`,
@@ -293,6 +318,7 @@ async function processApifyResults(datasetId, campaignId, rubro) {
 
       const leadData = {
         id_campania: campaignId,
+        user_id: userId || '',
         nombre_negocio: raw.name || raw.title || raw.nombre || 'Sin nombre',
         telefono_whatsapp: phoneClean.startsWith('54') ? `+${phoneClean}` : `+54${phoneClean}`,
         email: raw.email || '',
@@ -346,7 +372,7 @@ async function processApifyResults(datasetId, campaignId, rubro) {
 app.get('/leads', async (req, res) => {
   try {
     const { rubro, estado, limit: limitParam = 50 } = req.query
-    let query = db.collection('leads')
+    let query = db.collection('leads').where('user_id', '==', req.user.uid)
 
     if (rubro && rubro !== 'todos') query = query.where('rubro', '==', rubro)
     if (estado && estado !== 'todos') query = query.where('estado_proceso', '==', estado)
@@ -366,7 +392,7 @@ app.get('/leads', async (req, res) => {
 
 app.get('/leads/stats', async (req, res) => {
   try {
-    const snapshot = await db.collection('leads').get()
+    const snapshot = await db.collection('leads').where('user_id', '==', req.user.uid).get()
     const stats = { total: 0, byRubro: {}, byStatus: {} }
 
     snapshot.docs.forEach(doc => {
@@ -2186,7 +2212,89 @@ app.delete('/admin/clients/:id', async (req, res) => {
   }
 })
 
-// ============ USAGE METERING ============
+app.post('/admin/migrate-ownership', async (req, res) => {
+  try {
+    const uid = req.user.uid
+    let migrated = { campaigns: 0, leads: 0, products: 0, crm_events: 0, revenue: 0 }
+
+    // Migrate campaigns — add user_id where missing
+    const campSnapshot = await db.collection('campanias').where('user_id', '==', '').get()
+    const campBatches = []
+    campSnapshot.docs.forEach(doc => {
+      campBatches.push(db.collection('campanias').doc(doc.id).update({ user_id: uid }))
+      migrated.campaigns++
+    })
+    await Promise.all(campBatches)
+
+    // Migrate leads — add user_id where missing
+    const leadSnapshot = await db.collection('leads').where('user_id', '==', '').get()
+    const leadBatches = []
+    leadSnapshot.docs.forEach(doc => {
+      leadBatches.push(db.collection('leads').doc(doc.id).update({ user_id: uid }))
+      migrated.leads++
+    })
+    await Promise.all(leadBatches)
+
+    // Also migrate documents with no user_id field at all (null/undefined)
+    const allCampSnapshot = await db.collection('campanias').limit(100).get()
+    const allCampBatches = []
+    allCampSnapshot.docs.forEach(doc => {
+      if (!doc.data().user_id) {
+        allCampBatches.push(db.collection('campanias').doc(doc.id).update({ user_id: uid }))
+        migrated.campaigns++
+      }
+    })
+    await Promise.all(allCampBatches)
+
+    const allLeadSnapshot = await db.collection('leads').limit(200).get()
+    const allLeadBatches = []
+    allLeadSnapshot.docs.forEach(doc => {
+      if (!doc.data().user_id) {
+        allLeadBatches.push(db.collection('leads').doc(doc.id).update({ user_id: uid }))
+        migrated.leads++
+      }
+    })
+    await Promise.all(allLeadBatches)
+
+    // Products — add user_id where missing
+    const prodSnapshot = await db.collection('productos').get()
+    const prodBatches = []
+    prodSnapshot.docs.forEach(doc => {
+      if (!doc.data().user_id) {
+        prodBatches.push(db.collection('productos').doc(doc.id).update({ user_id: uid }))
+        migrated.products++
+      }
+    })
+    await Promise.all(prodBatches)
+
+    // CRM events — add user_id where missing
+    const crmSnapshot = await db.collection('crm_events').get()
+    const crmBatches = []
+    crmSnapshot.docs.forEach(doc => {
+      if (!doc.data().user_id) {
+        crmBatches.push(db.collection('crm_events').doc(doc.id).update({ user_id: uid }))
+        migrated.crm_events++
+      }
+    })
+    await Promise.all(crmBatches)
+
+    // Revenue — add user_id where missing
+    const revSnapshot = await db.collection('revenue').get()
+    const revBatches = []
+    revSnapshot.docs.forEach(doc => {
+      if (!doc.data().user_id) {
+        revBatches.push(db.collection('revenue').doc(doc.id).update({ user_id: uid }))
+        migrated.revenue++
+      }
+    })
+    await Promise.all(revBatches)
+
+    res.json({ success: true, data: { message: 'Migration complete', migrated } })
+  } catch (error) {
+    console.error('Migration error:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
 
 app.get('/usage/:userId', async (req, res) => {
   try {

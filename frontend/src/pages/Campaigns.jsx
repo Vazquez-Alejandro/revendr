@@ -122,6 +122,7 @@ export default function Campaigns() {
     try {
       const q = query(
         collection(db, 'campanias'),
+        where('user_id', '==', auth.currentUser?.uid || ''),
         orderBy('fecha_inicio', 'desc')
       )
       const snapshot = await getDocs(q)
@@ -177,6 +178,7 @@ export default function Campaigns() {
       const selectedProduct = products.find(p => p.id === formData.producto_id)
       const docRef = await addDoc(collection(db, 'campanias'), {
         nombre: formData.nombre,
+        user_id: auth.currentUser?.uid || '',
         producto_id: formData.producto_id || null,
         producto_nombre: selectedProduct?.nombre || null,
         producto_url_demo: selectedProduct?.url_demo || null,
@@ -384,7 +386,8 @@ export default function Campaigns() {
   const handleDuplicateCampaign = async (campaign) => {
     try {
       const newCampaign = {
-        nombre: `${campaign.nombre} (copia)`,
+        nombre: campaign.nombre + ' (copia)',
+        user_id: auth.currentUser?.uid || '',
         producto_id: campaign.producto_id || null,
         producto_nombre: campaign.producto_nombre || null,
         producto_url_demo: campaign.producto_url_demo || null,

@@ -17,34 +17,69 @@ service cloud.firestore {
 
     // API Keys collection
     match /api_keys/{keyId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
     }
 
     // Campaigns collection
     match /campanias/{campaignId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
     }
 
     // Global leads collection
     match /leads/{leadId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
     }
 
     // Products collection
     match /productos/{productId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-      allow delete: if request.auth != null;
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+    }
+
+    // CRM events
+    match /crm_events/{eventId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+    }
+
+    // Revenue tracking
+    match /revenue/{revenueId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+    }
+
+    // Team members
+    match /team_members/{memberId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.owner_user_id;
+    }
+
+    // Team invites
+    match /team_invites/{inviteId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.owner_user_id;
+    }
+
+    // Generated content
+    match /generated_content/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+    }
+
+    // Message events
+    match /message_events/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+    }
+
+    // A/B tests
+    match /ab_tests/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+    }
+
+    // Support tickets
+    match /support_tickets/{ticketId} {
+      allow read, update: if request.auth != null && request.auth.uid == resource.data.user_id;
+      allow create: if true;
+    }
+
+    // Chat messages
+    match /chat_messages/{docId} {
+      allow read: if request.auth != null && request.auth.uid == resource.data.user_id;
+      allow create: if true;
     }
 
     // Demo configurations
@@ -71,42 +106,9 @@ service cloud.firestore {
       allow create: if true;
     }
 
-    // Revenue tracking
-    match /revenue/{revenueId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow update: if request.auth != null;
-    }
-
-    // Team members
-    match /team_members/{memberId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-      allow delete: if request.auth != null;
-    }
-
-    // Team invites
-    match /team_invites/{inviteId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
-    }
-
     // Health check
     match /_health/{docId} {
       allow read, write: if true;
-    }
-
-    // Support tickets
-    match /support_tickets/{ticketId} {
-      allow read: if request.auth != null;
-      allow create: if true;
-      allow update: if request.auth != null;
-    }
-
-    // CRM events
-    match /crm_events/{eventId} {
-      allow read: if request.auth != null;
-      allow create: if request.auth != null;
     }
   }
 }
