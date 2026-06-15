@@ -88,20 +88,20 @@ export default function TeamManagement() {
         <h2 className="text-sm font-medium text-dark-300 mb-4">
           {locale === 'es' ? 'Invitar Miembro' : 'Invite Member'}
         </h2>
-        <form onSubmit={inviteMember} className="flex gap-3">
+        <form onSubmit={inviteMember} className="flex gap-3 items-center">
           <input
             type="email"
             value={inviteEmail}
             onChange={e => setInviteEmail(e.target.value)}
-            className="input-field flex-1"
+            className="input-field flex-1 min-w-0"
             placeholder={locale === 'es' ? 'email@ejemplo.com' : 'email@example.com'}
             required
           />
-          <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="input-field">
+          <select value={inviteRole} onChange={e => setInviteRole(e.target.value)} className="input-field w-36 flex-shrink-0">
             <option value="member">{locale === 'es' ? 'Miembro' : 'Member'}</option>
             <option value="admin">{locale === 'es' ? 'Admin' : 'Admin'}</option>
           </select>
-          <button type="submit" disabled={inviting} className="btn-primary flex items-center gap-2">
+          <button type="submit" disabled={inviting} className="btn-primary flex items-center gap-2 flex-shrink-0">
             {inviting ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserPlus className="w-4 h-4" />}
             {locale === 'es' ? 'Invitar' : 'Invite'}
           </button>
