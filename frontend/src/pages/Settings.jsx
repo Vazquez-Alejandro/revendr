@@ -19,11 +19,20 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const DEFAULT_NOTIF_PREFS = {
+  new_lead: true,
+  demo_generated: true,
+  message_sent: false,
+  lead_converted: true,
+  scraping_error: true,
+}
+
 export default function Settings() {
   const { adminData, user } = useAuth()
   const { t, locale } = useI18n()
   const [activeTab, setActiveTab] = useState('api')
   const [saving, setSaving] = useState(false)
+  const [notifSaving, setNotifSaving] = useState(false)
   const [apiKeys, setApiKeys] = useState({
     apify: '',
     stripe_secret: '',
@@ -33,10 +42,14 @@ export default function Settings() {
     inmoxil_url: '',
     inmoxil_key: '',
   })
+  const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIF_PREFS)
 
   useEffect(() => {
     if (adminData?.api_keys) {
       setApiKeys(adminData.api_keys)
+    }
+    if (adminData?.notif_prefs) {
+      setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...adminData.notif_prefs })
     }
   }, [adminData])
 
@@ -277,27 +290,50 @@ export default function Settings() {
 
           {activeTab === 'notifications' && (
             <div className="card">
-              <h2 className="text-lg font-semibold text-dark-100 mb-6">{t('notificationsTitle')}</h2>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-dark-100">{t('notificationsTitle')}</h2>
+                {notifSaving && <Loader2 className="w-4 h-4 text-brand-400 animate-spin" />}
+              </div>
               <div className="space-y-4">
                 {[
-                  { label: t('newLeadNotif'), description: t('newLeadDesc'), enabled: true },
-                  { label: t('demoGeneratedNotif'), description: t('demoGeneratedDesc'), enabled: true },
-                  { label: t('messageSentNotif'), description: t('messageSentDesc'), enabled: false },
-                  { label: t('leadConvertedNotif'), description: t('leadConvertedDesc'), enabled: true },
-                  { label: t('scrapingErrorNotif'), description: t('scrapingErrorDesc'), enabled: true },
-                ].map((notif, i) => (
-                  <div key={i} className="flex items-center justify-between p-4 bg-dark-900 rounded-xl">
+                  { key: 'new_lead', label: t('newLeadNotif'), description: t('newLeadDesc') },
+                  { key: 'demo_generated', label: t('demoGeneratedNotif'), description: t('demoGeneratedDesc') },
+                  { key: 'message_sent', label: t('messageSentNotif'), description: t('messageSentDesc') },
+                  { key: 'lead_converted', label: t('leadConvertedNotif'), description: t('leadConvertedDesc') },
+                  { key: 'scraping_error', label: t('scrapingErrorNotif'), description: t('scrapingErrorDesc') },
+                ].map((notif) => (
+                  <div key={notif.key} className="flex items-center justify-between p-4 bg-dark-900 rounded-xl">
                     <div>
                       <h3 className="font-medium text-dark-100">{notif.label}</h3>
                       <p className="text-sm text-dark-400">{notif.description}</p>
                     </div>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" defaultChecked={notif.enabled} className="sr-only peer" />
+                      <input
+                        type="checkbox"
+                        checked={notifPrefs[notif.key]}
+                        onChange={async () => {
+                          const next = !notifPrefs[notif.key]
+                          setNotifPrefs(p => ({ ...p, [notif.key]: next }))
+                          setNotifSaving(true)
+                          try {
+                            await updateDoc(doc(db, 'usuarios_admin', user.uid), {
+                              notif_prefs: { ...notifPrefs, [notif.key]: next },
+                            })
+                          } catch { /* silent */ }
+                          setNotifSaving(false)
+                        }}
+                        className="sr-only peer"
+                      />
                       <div className="w-11 h-6 bg-dark-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
                     </label>
                   </div>
                 ))}
               </div>
+              <p className="text-xs text-dark-500 mt-4">
+                {locale === 'es'
+                  ? 'Las notificaciones push requieren permiso del navegador. Activá las que quieras recibir.'
+                  : 'Push notifications require browser permission. Enable the ones you want to receive.'}
+              </p>
             </div>
           )}
 

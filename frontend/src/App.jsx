@@ -2,6 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import { ProtectedRoute } from './routes/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/ErrorBoundary'
+import GuidedChat from './components/GuidedChat'
 import Dashboard from './pages/Dashboard'
 import Campaigns from './pages/Campaigns'
 import Leads from './pages/Leads'
@@ -90,6 +91,7 @@ function App() {
         {/* 404 */}
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <GuidedChat />
     </ErrorBoundary>
   )
 }

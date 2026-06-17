@@ -1,12 +1,30 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { getMessaging, getToken, onMessage } from 'firebase/messaging'
-import app from '../config/firebase'
+import { doc, setDoc, collection, Timestamp } from 'firebase/firestore'
+import app, { db } from '../config/firebase'
 import toast from 'react-hot-toast'
 
 const NotificationContext = createContext(null)
 
 export function useNotifications() {
   return useContext(NotificationContext)
+}
+
+export { createNotification }
+
+async function createNotification({ userId, type, title, body, link = null, data = {} }) {
+  if (!userId || !type || !title) return
+  const ref = doc(collection(db, 'notificaciones'))
+  await setDoc(ref, {
+    userId,
+    type,
+    title,
+    body: body || '',
+    data,
+    read: false,
+    createdAt: Timestamp.now(),
+    link,
+  })
 }
 
 export function NotificationProvider({ children }) {
@@ -30,13 +48,21 @@ export function NotificationProvider({ children }) {
       setPermission(result)
 
       if (result === 'granted') {
-        const messaging = getMessaging(app)
-        const token = await getToken(messaging, {
-          vapidKey: 'YOUR_VAPID_KEY',
-        })
-        setFcmToken(token)
-        toast.success('Notificaciones activadas')
-        return true
+        try {
+          const messaging = getMessaging(app)
+          const token = await getToken(messaging, {
+            vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY || '',
+          })
+          if (token) {
+            setFcmToken(token)
+            toast.success('Notificaciones activadas')
+            return true
+          }
+        } catch (e) {
+          console.warn('FCM token registration skipped (VAPID key may not be configured):', e.message)
+          toast.success('Notificaciones activadas (sin push)')
+          return true
+        }
       } else {
         toast.error('Permiso de notificaciones denegado')
         return false
@@ -50,15 +76,18 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     if (permission === 'granted') {
-      const messaging = getMessaging(app)
-      const unsubscribe = onMessage(messaging, (payload) => {
-        toast(payload.notification?.title || 'Notificación', {
-          icon: '🔔',
-          description: payload.notification?.body,
+      try {
+        const messaging = getMessaging(app)
+        const unsubscribe = onMessage(messaging, (payload) => {
+          toast(payload.notification?.title || 'Notificación', {
+            icon: '🔔',
+            description: payload.notification?.body,
+          })
         })
-      })
-
-      return () => unsubscribe()
+        return () => unsubscribe()
+      } catch {
+        // messaging not available
+      }
     }
   }, [permission])
 

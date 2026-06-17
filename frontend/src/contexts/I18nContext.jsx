@@ -118,7 +118,7 @@ const translations = {
     role: 'Rol',
     dashboardDesc: 'Vista general de tu plataforma SaaS',
     landing: {
-      title: 'Revendé tus apps de forma masiva y automatizada',
+      title: 'Automatizá tus ventas',
       subtitle: 'Un motor SaaS que scrapea leads, genera demos personalizadas, envía WhatsApp y cobra con Stripe. Todo automático, por rubro.',
       getStarted: 'Empezar Gratis',
       seeFeatures: 'Ver Features',
@@ -247,7 +247,7 @@ const translations = {
     role: 'Role',
     dashboardDesc: 'Overview of your SaaS platform',
     landing: {
-      title: 'Sell your apps at scale and on autopilot',
+      title: 'Automate your sales',
       subtitle: 'A SaaS engine that scrapes leads, generates personalized demos, sends WhatsApp and collects payments via Stripe. All automated, per niche.',
       getStarted: 'Get Started Free',
       seeFeatures: 'See Features',

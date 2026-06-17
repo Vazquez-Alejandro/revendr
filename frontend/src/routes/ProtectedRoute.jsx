@@ -1,7 +1,7 @@
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Loader2, Mail } from 'lucide-react'
-import { sendEmailVerification } from 'firebase/auth'
+import toast from 'react-hot-toast'
 import { auth } from '../config/firebase'
 
 export function ProtectedRoute({ children, requiredPermission = null }) {
@@ -35,13 +35,17 @@ export function ProtectedRoute({ children, requiredPermission = null }) {
             Verificá tu email
           </h2>
           <p className="text-dark-400 mb-4">
-            Te enviamos un link de verificación a <strong>{user.email}</strong>. Revisá tu bandeja de entrada.
+            Te enviamos un email de bienvenida a <strong>{user.email}</strong> con el link de verificación. Revisá tu bandeja de entrada.
           </p>
           <div className="space-y-3">
             <button
               onClick={async () => {
-                await sendEmailVerification(user)
-                alert('Email de verificación reenviado')
+                const res = await fetch('https://us-central1-revendr-9add8.cloudfunctions.net/api/email/resend-verification', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: user.email }),
+                })
+                if (res.ok) toast.success('Email de verificación reenviado')
               }}
               className="btn-primary w-full"
             >
@@ -50,15 +54,18 @@ export function ProtectedRoute({ children, requiredPermission = null }) {
             <button
               onClick={async () => {
                 const cu = auth.currentUser
-                if (cu) { await cu.reload(); if (cu.emailVerified) navigate('/dashboard'); else window.location.reload() }
+                if (cu) { await cu.reload(); if (cu.emailVerified) navigate('/onboarding'); else window.location.reload() }
               }}
               className="btn-secondary w-full"
             >
               Ya verifiqué mi email
             </button>
-            <a href="/login" className="block text-sm text-dark-400 hover:text-dark-200">
+            <button
+              onClick={async () => { await auth.signOut(); navigate('/login') }}
+              className="text-sm text-dark-400 hover:text-dark-200 block mx-auto"
+            >
               Volver al login
-            </a>
+            </button>
           </div>
         </div>
       </div>

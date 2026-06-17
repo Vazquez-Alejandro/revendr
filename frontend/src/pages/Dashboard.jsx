@@ -9,7 +9,7 @@ import {
   MessageCircle,
   Package,
   ArrowUpRight,
-  ArrowDownRight
+  ArrowDownRight,
 } from 'lucide-react'
 import {
   AreaChart,

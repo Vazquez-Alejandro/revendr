@@ -1,7 +1,8 @@
 import { useAuth } from '../../contexts/AuthContext'
 import { useTheme } from '../../contexts/ThemeContext'
 import { useI18n } from '../../contexts/I18nContext'
-import { Bell, Sun, Moon, Globe } from 'lucide-react'
+import { Sun, Moon, Globe } from 'lucide-react'
+import { NotificationDropdown } from '../notifications/NotificationDropdown'
 
 export function Header() {
   const { user, adminData } = useAuth()
@@ -32,10 +33,7 @@ export function Header() {
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
 
-        <button className="relative p-2 text-dark-400 hover:text-dark-200 hover:bg-dark-800 rounded-lg transition-all duration-200">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-brand-500 rounded-full"></span>
-        </button>
+        <NotificationDropdown />
 
         <div className="flex items-center gap-3 pl-4 border-l border-dark-700">
           <div className="text-right">

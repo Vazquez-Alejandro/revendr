@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from 'firebase/auth'
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
 import { doc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { Loader2, AlertCircle, Check, Mail, Zap, ArrowLeft } from 'lucide-react'
+import toast from 'react-hot-toast'
 
 const PLANS = {
   starter: { name: 'Starter', price: 49, leads: 100, rubros: 1, demos: 50, msgs: 1000 },
@@ -98,8 +99,6 @@ export default function Register() {
         onboarding_completed: false,
       })
 
-      await sendEmailVerification(user)
-
       setCreatedUser(user)
       setVerificationSent(true)
     } catch (err) {
@@ -122,13 +121,16 @@ export default function Register() {
   }
 
   const handleResendVerification = async () => {
-    const currentUser = auth.currentUser
-    if (!currentUser) return
     setLoading(true)
     try {
-      await sendEmailVerification(currentUser)
+      const res = await fetch('https://us-central1-revendr-9add8.cloudfunctions.net/api/email/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      if (!res.ok) throw new Error(await res.text())
       setError('')
-      alert(locale === 'es' ? 'Email de verificación reenviado' : 'Verification email resent')
+      toast.success(locale === 'es' ? 'Email de verificación reenviado' : 'Verification email resent')
     } catch (err) {
       setError(locale === 'es' ? 'Error al reenviar' : 'Error resending')
     } finally {
@@ -184,8 +186,8 @@ export default function Register() {
               </h1>
               <p className="text-dark-400 mb-6">
                 {locale === 'es'
-                  ? `Te enviamos un link de verificación a ${email}. Hacé click en el link para activar tu cuenta.`
-                  : `We sent a verification link to ${email}. Click the link to activate your account.`}
+                  ? `Te enviamos un email de bienvenida a ${email} con el link de verificación. Hacé click en el link para activar tu cuenta.`
+                  : `We sent a welcome email to ${email} with a verification link. Click the link to activate your account.`}
               </p>
 
               <div className="space-y-3">

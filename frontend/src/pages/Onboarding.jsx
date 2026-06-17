@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { doc, updateDoc } from 'firebase/firestore'
+import { doc, setDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import {
   Zap,
@@ -34,10 +34,16 @@ const NICHES = [
 ]
 
 export default function Onboarding() {
-  const { user } = useAuth()
+  const { user, adminData, loading: authLoading } = useAuth()
   const { locale } = useI18n()
   const navigate = useNavigate()
   const [step, setStep] = useState(0)
+
+  useEffect(() => {
+    if (!authLoading && adminData?.onboarding_completed) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [adminData, authLoading, navigate])
   const [loading, setLoading] = useState(false)
   const [data, setData] = useState({
     businessName: '',
@@ -63,11 +69,15 @@ export default function Onboarding() {
   const handleFinish = async () => {
     setLoading(true)
     try {
-      await updateDoc(doc(db, 'usuarios', user.uid), {
+      const payload = {
         onboarding_completed: true,
         onboarding_data: data,
         fecha_onboarding: new Date(),
-      })
+      }
+      await Promise.allSettled([
+        setDoc(doc(db, 'usuarios_admin', user.uid), payload, { merge: true }),
+        setDoc(doc(db, 'usuarios', user.uid), payload, { merge: true }),
+      ])
       toast.success(locale === 'es' ? '¡Listo! Tu panel está preparado' : 'Done! Your panel is ready')
       navigate('/dashboard')
     } catch (error) {

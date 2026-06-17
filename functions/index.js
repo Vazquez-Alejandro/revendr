@@ -55,18 +55,16 @@ const isCampaignExpired = (campaign) => {
 const app = express()
 app.use(cors({ origin: true }))
 
-app.use((req, res, next) => {
-  if (req.originalUrl === '/webhook/stripe') {
-    express.raw({ type: 'application/json' })(req, res, next)
-  } else {
-    express.json()(req, res, next)
+app.use(express.json({
+  verify: (req, res, buf) => {
+    req.rawBody = buf
   }
-})
+}))
 
 // Auth middleware — applies to all routes except public ones
-const PUBLIC_PATHS = ['/health', '/check-email', '/webhook/stripe', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/demos/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health']
+const PUBLIC_PATHS = ['/health', '/check-email', '/webhook/stripe', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/demos/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification']
 app.use((req, res, next) => {
-  const isPublic = PUBLIC_PATHS.some(p => req.originalUrl.startsWith(p))
+  const isPublic = PUBLIC_PATHS.some(p => req.path.startsWith(p) || req.originalUrl.startsWith(p))
   if (isPublic) return next()
 
   const header = req.headers.authorization
@@ -121,27 +119,20 @@ app.post('/support', async (req, res) => {
     })
 
     // Send notification email to admin
-    if (RESEND_API_KEY) {
+    if (emailTransporter) {
       try {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${RESEND_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            from: 'Revendr Support <support@revendr-9add8.web.app>',
-            to: 'vazquezale82@gmail.com',
-            subject: `[Revendr Soporte] ${subject}`,
-            html: `
-              <h2>Nuevo ticket de soporte</h2>
-              <p><strong>Categoría:</strong> ${category}</p>
-              <p><strong>Email:</strong> ${email}</p>
-              <p><strong>Asunto:</strong> ${subject}</p>
-              <p><strong>Mensaje:</strong></p>
-              <p>${message}</p>
-            `,
-          }),
+        await emailTransporter.sendMail({
+          from: `"Revendr" <${GMAIL_USER}>`,
+          to: 'vazquezale82@gmail.com',
+          subject: `[Revendr Soporte] ${subject}`,
+          html: `
+            <h2>Nuevo ticket de soporte</h2>
+            <p><strong>Categoría:</strong> ${category}</p>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Asunto:</strong> ${subject}</p>
+            <p><strong>Mensaje:</strong></p>
+            <p>${message}</p>
+          `,
         })
       } catch (e) {
         console.error('Error sending support email:', e)
@@ -259,6 +250,23 @@ app.post('/campaigns/:campaignId/scrape', async (req, res) => {
   }
 })
 
+async function createNotification({ userId, type, title, body, link = null, data = {} }) {
+  try {
+    await db.collection('notificaciones').add({
+      userId,
+      type,
+      title,
+      body: body || '',
+      data,
+      read: false,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      link,
+    })
+  } catch (e) {
+    console.error('Error creating notification:', e.message)
+  }
+}
+
 async function pollApifyRun(runId, campaignId, rubro, userId) {
   const maxAttempts = 60
   let attempts = 0
@@ -287,6 +295,15 @@ async function pollApifyRun(runId, campaignId, rubro, userId) {
           scraping_error: run.status,
           scraping_completed_at: new Date(),
         })
+        if (userId) {
+          createNotification({
+            userId,
+            type: 'scraping_error',
+            title: 'Error en scraping',
+            body: `El scraping falló: ${run.status}`,
+            link: `/dashboard/campanias`,
+          })
+        }
         return
       }
     } catch (error) {
@@ -356,6 +373,16 @@ async function processApifyResults(datasetId, campaignId, rubro, userId) {
       leads_count: admin.firestore.FieldValue.increment(saved),
     })
 
+    if (userId && saved > 0) {
+      createNotification({
+        userId,
+        type: 'new_lead',
+        title: `${saved} ${saved === 1 ? 'nuevo lead' : 'nuevos leads'} encontrados`,
+        body: `Scraping completado para la campaña`,
+        link: `/dashboard/leads`,
+      })
+    }
+
     console.log(`Scraping completed for campaign ${campaignId}: ${saved} leads saved`)
   } catch (error) {
     console.error('Error processing Apify results:', error)
@@ -364,6 +391,15 @@ async function processApifyResults(datasetId, campaignId, rubro, userId) {
       scraping_error: error.message,
       scraping_completed_at: new Date(),
     })
+    if (userId) {
+      createNotification({
+        userId,
+        type: 'scraping_error',
+        title: 'Error al procesar resultados',
+        body: `No se pudieron guardar los leads: ${error.message.slice(0, 100)}`,
+        link: `/dashboard/campanias`,
+      })
+    }
   }
 }
 
@@ -452,6 +488,14 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
       })
     }
 
+    createNotification({
+      userId: req.user?.uid,
+      type: 'demo_generated',
+      title: 'Demo generada',
+      body: `Demo para ${lead.nombre_negocio || 'lead'} lista`,
+      link: `/dashboard/leads`,
+    })
+
     res.json({ success: true, data: { demoUrl: demoData.url_demo, demoId } })
   } catch (error) {
     console.error('Error generating demo:', error)
@@ -526,6 +570,14 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
       await db.collection('campanias').doc(campaignId).update({
         demos_generadas: admin.firestore.FieldValue.increment(processed),
       })
+
+      createNotification({
+        userId: req.user?.uid,
+        type: 'demo_generated',
+        title: `${processed} ${processed === 1 ? 'demo generada' : 'demos generadas'}`,
+        body: `Procesamiento masivo completado para la campaña`,
+        link: `/dashboard/leads`,
+      })
     }
 
     res.json({ success: true, data: { processed, results } })
@@ -557,12 +609,12 @@ app.post('/landing/view', async (req, res) => {
       if (productDoc.exists) {
         const product = productDoc.data()
         const ownerDoc = await db.collection('usuarios_admin').doc(product.user_id).get()
-        if (ownerDoc.exists && ownerDoc.data().email && RESEND_API_KEY) {
+        if (ownerDoc.exists && ownerDoc.data().email && emailTransporter) {
           const lead = leadId ? await db.collection('leads').doc(leadId).get() : null
           const leadName = lead?.exists ? lead.data().nombre_negocio : 'Alguien'
 
-          await axios.post('https://api.resend.com/emails', {
-            from: 'Revendr <notifications@revendr.app>',
+          await emailTransporter.sendMail({
+            from: `"Revendr" <${GMAIL_USER}>`,
             to: ownerDoc.data().email,
             subject: `${leadName} vio tu landing de ${product.nombre}`,
             html: `
@@ -571,11 +623,6 @@ app.post('/landing/view', async (req, res) => {
               <p>Es un buen momento para contactarlos.</p>
               <p><small>Revendr - SaaS Engine</small></p>
             `,
-          }, {
-            headers: {
-              'Authorization': `Bearer ${RESEND_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
           })
         }
       }
@@ -1157,26 +1204,21 @@ app.post('/campaigns/:campaignId/process-followups', async (req, res) => {
 // ============ EMAIL SENDING (RESEND) ============
 
 async function sendEmail(to, subject, html) {
-  if (!RESEND_API_KEY) {
-    console.log('Resend API key not configured, skipping email')
+  if (!emailTransporter) {
+    console.log('Gmail SMTP not configured, skipping email')
     return null
   }
 
   try {
-    const response = await axios.post('https://api.resend.com/emails', {
-      from: 'Revendr <notifications@revendr.app>',
-      to: [to],
+    const info = await emailTransporter.sendMail({
+      from: `"Revendr" <${GMAIL_USER}>`,
+      to,
       subject,
       html,
-    }, {
-      headers: {
-        'Authorization': `Bearer ${RESEND_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
     })
-    return response.data
+    return info
   } catch (error) {
-    console.error('Email send error:', error.response?.data || error.message)
+    console.error('Email send error:', error.message)
     return null
   }
 }
@@ -1302,6 +1344,14 @@ app.post('/leads/:leadId/send-email', async (req, res) => {
         event_type: 'sent',
         message_type: messageType,
         timestamp: new Date(),
+      })
+
+      createNotification({
+        userId: req.user?.uid,
+        type: 'message_sent',
+        title: 'Email enviado',
+        body: `Email ${messageType} enviado a ${lead.nombre_negocio || lead.email}`,
+        link: `/dashboard/crm`,
       })
     }
 
@@ -1679,6 +1729,14 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
       })
     }
 
+    createNotification({
+      userId: req.user?.uid,
+      type: 'message_sent',
+      title: 'WhatsApp enviado',
+      body: `Mensaje enviado a ${lead.nombre_negocio || 'lead'}`,
+      link: `/dashboard/crm`,
+    })
+
     res.json({ success: true, data: { messageId: response.data.messages?.[0]?.id } })
   } catch (error) {
     console.error('Error sending WhatsApp:', error.response?.data || error.message)
@@ -1829,7 +1887,7 @@ app.post('/webhook/stripe', async (req, res) => {
     let event
 
     try {
-      event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret)
+      event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, webhookSecret)
     } catch (err) {
       console.error('Stripe signature verification failed:', err.message)
       return res.status(400).json({ error: err.message })
@@ -1910,6 +1968,14 @@ app.post('/webhook/stripe', async (req, res) => {
       }
     }
 
+    if (event.type === 'invoice.payment_failed') {
+      const invoice = event.data.object
+      const customerEmail = invoice.customer_email || invoice.customer_details?.email
+      if (customerEmail && emailTransporter) {
+        await sendTransactionalEmail(customerEmail, 'payment_failed').catch(() => {})
+      }
+    }
+
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object
       const stripe = require('stripe')(STRIPE_SECRET_KEY)
@@ -1924,6 +1990,9 @@ app.post('/webhook/stripe', async (req, res) => {
             stripe_subscription_status: 'canceled',
             fecha_desactivacion: new Date(),
           })
+          if (emailTransporter) {
+            await sendTransactionalEmail(customer.email, 'subscription_cancelled').catch(() => {})
+          }
         } catch (err) {
           console.error('Error deactivating user:', err.message)
         }
@@ -2007,7 +2076,17 @@ app.get('/subscription/:userId', async (req, res) => {
     const plan = userData.plan || 'starter'
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
 
-    const usage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+    const usage = userData.usage || { leads: 0, leads: 0, demos: 0, messages: 0 }
+
+    let trialEnd = null
+    let trialDaysRemaining = 0
+    const fechaCreacion = userData.fecha_creacion?.toDate?.() || null
+    if (fechaCreacion) {
+      trialEnd = new Date(fechaCreacion.getTime() + 14 * 24 * 60 * 60 * 1000)
+      trialDaysRemaining = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24)))
+    }
+
+    const hasSubscription = !!userData.stripe_subscription_id
 
     res.json({
       success: true,
@@ -2021,6 +2100,9 @@ app.get('/subscription/:userId', async (req, res) => {
         stripeSubscriptionId: userData.stripe_subscription_id || null,
         currentPeriodEnd: userData.current_period_end || null,
         cancelAtPeriodEnd: userData.cancel_at_period_end || false,
+        trialEnd: trialEnd?.toISOString() || null,
+        trialDaysRemaining,
+        hasSubscription,
       },
     })
   } catch (error) {
@@ -2071,6 +2153,12 @@ app.post('/subscription/change', async (req, res) => {
       plan_limits: PLAN_LIMITS[newPlan],
       fecha_actualizacion: new Date(),
     })
+
+    if (emailTransporter && userData.email) {
+      const planNames = { starter: 'Starter', growth: 'Growth', enterprise: 'Enterprise' }
+      const displayName = planNames[newPlan] || newPlan
+      await sendTransactionalEmail(userData.email, 'plan_change', { newPlan: displayName }).catch(() => {})
+    }
 
     res.json({ success: true, data: { plan: newPlan } })
   } catch (error) {
@@ -2642,9 +2730,16 @@ app.get('/status', async (req, res) => {
 
 // ============ EMAIL TEMPLATES ============
 
-async function sendTransactionalEmail(to, type, data = {}) {
-  if (!RESEND_API_KEY) return { sent: false, reason: 'no_api_key' }
+const RESEND_FROM = 'onboarding@resend.dev'
+let resendClient = null
+try {
+  const { Resend } = require('resend')
+  if (RESEND_API_KEY) resendClient = new Resend(RESEND_API_KEY)
+} catch (e) {
+  console.warn('Resend not available:', e.message)
+}
 
+async function sendTransactionalEmail(to, type, data = {}) {
   const templates = {
     welcome: {
       subject: `Bienvenido a Revendr, ${data.nombre || ''}!`,
@@ -2693,24 +2788,50 @@ async function sendTransactionalEmail(to, type, data = {}) {
         <a href="https://revendr-9add8.web.app/pricing" style="display:inline-block;background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none">Reactivar</a>
       </div>`,
     },
+    payment_reminder: {
+      subject: 'Recordatorio de pago - Revendr',
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#f59e0b">Recordatorio de pago</h1>
+        <p>Te recordamos que tu suscripción a Revendr está próxima a vencer.</p>
+        <p>Por favor asegurate de tener un método de pago válido para evitar la suspensión del servicio.</p>
+        <a href="https://revendr-9add8.web.app/dashboard/settings" style="display:inline-block;background:#6366f1;color:white;padding:12px 24px;border-radius:8px;text-decoration:none">Ir a Configuración</a>
+      </div>`,
+    },
   }
 
   const template = templates[type]
   if (!template) return { sent: false, reason: 'unknown_template' }
 
-  try {
-    const resend = require('resend')(RESEND_API_KEY)
-    await resend.emails.send({
-      from: 'Revendr <noreply@revendr.app>',
-      to,
-      subject: template.subject,
-      html: template.html,
-    })
-    return { sent: true }
-  } catch (error) {
-    console.error('Email send error:', error.message)
-    return { sent: false, reason: error.message }
+  // Try Resend first, fall back to Gmail SMTP
+  if (resendClient) {
+    try {
+      await resendClient.emails.send({
+        from: RESEND_FROM,
+        to,
+        subject: template.subject,
+        html: template.html,
+      })
+      return { sent: true, provider: 'resend' }
+    } catch (error) {
+      console.error('Resend error:', error.message)
+    }
   }
+
+  if (emailTransporter) {
+    try {
+      await emailTransporter.sendMail({
+        from: `"Revendr" <${GMAIL_USER}>`,
+        to,
+        subject: template.subject,
+        html: template.html,
+      })
+      return { sent: true, provider: 'gmail' }
+    } catch (error) {
+      console.error('Gmail SMTP error:', error.message)
+    }
+  }
+
+  return { sent: false, reason: 'no_email_provider' }
 }
 
 app.post('/email/send', async (req, res) => {
@@ -2723,6 +2844,77 @@ app.post('/email/send', async (req, res) => {
     res.json({ success: true, data: result })
   } catch (error) {
     res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ RESEND VERIFICATION EMAIL ============
+
+app.post('/email/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body
+    if (!email) return res.status(400).json({ success: false, error: { message: 'Email required' } })
+
+    const verificationLink = await admin.auth().generateEmailVerificationLink(email)
+
+    await emailTransporter.sendMail({
+      from: `"Revendr" <${GMAIL_USER}>`,
+      to: email,
+      subject: 'Verificá tu email en Revendr',
+      html: `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#6366f1">Verificá tu email</h1>
+        <p>Recibimos una solicitud para verificar tu email en Revendr.</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${verificationLink}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px">Verificar mi email</a>
+        </div>
+        <p style="color:#94a3b8;font-size:13px">Si el botón no funciona, copiá este link en tu navegador:<br>${verificationLink}</p>
+        <p style="color:#94a3b8;font-size:12px;margin-top:32px">© 2026 Revendr</p>
+      </div>`,
+    })
+
+    res.json({ success: true })
+  } catch (error) {
+    console.error('Error resending verification:', error.message)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ WELCOME EMAIL ON REGISTRATION (includes verification link) ============
+
+exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
+  try {
+    const email = user.email
+    const nombre = user.displayName || email?.split('@')[0] || 'Usuario'
+    if (!email || !emailTransporter) return
+
+    const verificationLink = await admin.auth().generateEmailVerificationLink(email)
+
+    const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+      <h1 style="color:#6366f1">Bienvenido a Revendr</h1>
+      <p>Hola ${nombre},</p>
+      <p>Tu cuenta ha sido creada exitosamente. Antes de empezar, verificá tu email:</p>
+      <div style="text-align:center;margin:24px 0">
+        <a href="${verificationLink}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px">Verificar mi email</a>
+      </div>
+      <p style="color:#94a3b8;font-size:13px">Si el botón no funciona, copiá este link en tu navegador:<br>${verificationLink}</p>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+      <p><strong>Próximos pasos después de verificar:</strong></p>
+      <ol style="color:#334155;line-height:1.8">
+        <li>Completá el onboarding (menos de 2 minutos)</li>
+        <li>Creá tu primer producto o servicio</li>
+        <li>Configurá tu primera campaña de scraping</li>
+      </ol>
+      <p style="color:#94a3b8;font-size:12px;margin-top:32px">© 2026 Revendr</p>
+    </div>`
+
+    await emailTransporter.sendMail({
+      from: `"Revendr" <${GMAIL_USER}>`,
+      to: email,
+      subject: `Bienvenido a Revendr, ${nombre}! Verificá tu email`,
+      html,
+    })
+    console.log('Welcome + verification email sent to:', email)
+  } catch (error) {
+    console.error('Error sending welcome email:', error.message)
   }
 })
 

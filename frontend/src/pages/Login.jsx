@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { Loader2, AlertCircle, Mail, Check, Zap, ArrowLeft } from 'lucide-react'
-import { sendEmailVerification } from 'firebase/auth'
+import toast from 'react-hot-toast'
 import { auth } from '../config/firebase'
 
 export default function Login() {
@@ -12,21 +12,31 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [showResend, setShowResend] = useState(false)
-  const { signIn, user, isAuthenticated, loading: authLoading } = useAuth()
+  const [pendingRedirect, setPendingRedirect] = useState(false)
+  const { signIn, signOut, user, adminData, isAuthenticated, loading: authLoading } = useAuth()
   const { t, locale } = useI18n()
   const navigate = useNavigate()
+  const staleChecked = useRef(false)
 
+  // Sign out stale sessions on mount (only once)
   useEffect(() => {
-    if (!authLoading && isAuthenticated && user) {
-      if (!user.emailVerified) {
-        setShowResend(true)
-        return
-      }
-      if (user.emailVerified) {
+    if (!authLoading && !staleChecked.current) {
+      staleChecked.current = true
+      if (isAuthenticated) signOut()
+    }
+  }, [authLoading])
+
+  // After login, navigate based on onboarding status once auth data is loaded
+  useEffect(() => {
+    if (pendingRedirect && !authLoading) {
+      setPendingRedirect(false)
+      if (adminData?.onboarding_completed) {
         navigate('/dashboard', { replace: true })
+      } else {
+        navigate('/onboarding', { replace: true })
       }
     }
-  }, [isAuthenticated, user, authLoading, navigate])
+  }, [pendingRedirect, authLoading, adminData])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -46,7 +56,7 @@ export default function Login() {
         setLoading(false)
         return
       }
-      navigate('/dashboard')
+      setPendingRedirect(true)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -55,12 +65,16 @@ export default function Login() {
   }
 
   const handleResendVerification = async () => {
-    const currentUser = auth.currentUser
-    if (!currentUser) return
+    if (!user?.email) return
     setLoading(true)
     try {
-      await sendEmailVerification(user)
-      alert(locale === 'es' ? 'Email de verificación reenviado' : 'Verification email resent')
+      const res = await fetch('https://us-central1-revendr-9add8.cloudfunctions.net/api/email/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
+      })
+      if (!res.ok) throw new Error(await res.text())
+      toast.success(locale === 'es' ? 'Email de verificación reenviado' : 'Verification email resent')
     } catch (err) {
       setError(locale === 'es' ? 'Error al reenviar' : 'Error resending')
     } finally {
@@ -105,7 +119,7 @@ export default function Login() {
                 <button
                   onClick={async () => {
                     const cu = auth.currentUser
-                    if (cu) { await cu.reload(); if (cu.emailVerified) navigate('/dashboard'); else setShowResend(true) }
+                    if (cu) { await cu.reload(); if (cu.emailVerified) navigate('/onboarding'); else setShowResend(true) }
                   }}
                   disabled={loading}
                   className="btn-primary w-full flex items-center justify-center gap-2"
@@ -118,10 +132,13 @@ export default function Login() {
                   {locale === 'es' ? 'Reenviar email de verificación' : 'Resend verification email'}
                 </button>
 
-                <Link to="/login" className="text-sm text-dark-400 hover:text-dark-200 flex items-center justify-center gap-1 mt-2">
+                <button
+                  onClick={async () => { await signOut(); navigate('/login') }}
+                  className="text-sm text-dark-400 hover:text-dark-200 flex items-center justify-center gap-1 mt-2 mx-auto"
+                >
                   <ArrowLeft className="w-3 h-3" />
                   {locale === 'es' ? 'Volver al login' : 'Back to login'}
-                </Link>
+                </button>
               </div>
             </div>
           </div>
@@ -155,6 +172,16 @@ export default function Login() {
           </div>
 
           <div className="card">
+            {isAuthenticated && user && !user.emailVerified && (
+              <div className="mb-4 flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg text-amber-400 text-sm">
+                <Mail className="w-4 h-4 flex-shrink-0" />
+                <span>
+                  {locale === 'es'
+                    ? 'Tu email aún no está verificado. Iniciá sesión con otro usuario o revisá tu bandeja de entrada.'
+                    : 'Your email is not verified yet. Sign in with another user or check your inbox.'}
+                </span>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
                 <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">

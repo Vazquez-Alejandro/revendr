@@ -18,7 +18,19 @@
       {
         "source": "**/*.js",
         "headers": [
-          { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+          { "key": "Cache-Control", "value": "max-age=31536000, immutable" }
+        ]
+      },
+      {
+        "source": "**/*.css",
+        "headers": [
+          { "key": "Cache-Control", "value": "max-age=31536000, immutable" }
+        ]
+      },
+      {
+        "source": "**/*.{png,ico,svg,webp,woff2}",
+        "headers": [
+          { "key": "Cache-Control", "value": "max-age=31536000, immutable" }
         ]
       }
     ]
