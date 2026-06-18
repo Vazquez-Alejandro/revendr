@@ -13,6 +13,7 @@ import {
 import { db, auth } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { 
+  Plus,
   Users, 
   Download, 
   Loader2,
