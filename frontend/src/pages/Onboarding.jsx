@@ -30,6 +30,9 @@ const NICHES = [
   { id: 'clinica', nameEs: 'Clínicas Médicas', nameEn: 'Medical Clinics', emoji: '🏥' },
   { id: 'restaurante', nameEs: 'Restaurantes', nameEn: 'Restaurants', emoji: '🍽️' },
   { id: 'gimnasio', nameEs: 'Gimnasios', nameEn: 'Gyms', emoji: '💪' },
+  { id: 'tecnologia', nameEs: 'Tecnología / SaaS', nameEn: 'Technology / SaaS', emoji: '💻' },
+  { id: 'agencia_marketing', nameEs: 'Agencias de Marketing', nameEn: 'Marketing Agencies', emoji: '📢' },
+  { id: 'desarrolladores', nameEs: 'Desarrolladores / Freelancers', nameEn: 'Developers / Freelancers', emoji: '👨‍💻' },
   { id: 'otro', nameEs: 'Otro', nameEn: 'Other', emoji: '🔧' },
 ]
 

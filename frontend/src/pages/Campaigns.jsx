@@ -43,6 +43,9 @@ const RUBROS = [
   { value: 'clinica', labelEs: 'Clínicas Médicas', labelEn: 'Medical Clinics' },
   { value: 'restaurante', labelEs: 'Restaurantes', labelEn: 'Restaurants' },
   { value: 'gimnasio', labelEs: 'Gimnasios', labelEn: 'Gyms' },
+  { value: 'tecnologia', labelEs: 'Tecnología / SaaS', labelEn: 'Technology / SaaS' },
+  { value: 'agencia_marketing', labelEs: 'Agencias de Marketing', labelEn: 'Marketing Agencies' },
+  { value: 'desarrolladores', labelEs: 'Desarrolladores / Freelancers', labelEn: 'Developers / Freelancers' },
   { value: 'otro', labelEs: 'Otro', labelEn: 'Other' },
 ]
 
@@ -122,11 +125,12 @@ export default function Campaigns() {
     try {
       const q = query(
         collection(db, 'campanias'),
-        where('user_id', '==', auth.currentUser?.uid || ''),
-        orderBy('fecha_inicio', 'desc')
+        where('user_id', '==', auth.currentUser?.uid || '')
       )
       const snapshot = await getDocs(q)
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      const data = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .sort((a, b) => (b.fecha_inicio?.toMillis?.() || 0) - (a.fecha_inicio?.toMillis?.() || 0))
 
       data.forEach(newCamp => {
         const oldCamp = campaigns.find(c => c.id === newCamp.id)
@@ -239,12 +243,18 @@ export default function Campaigns() {
     setProcessingAction(`${campaignId}-demos`)
     toast.loading(locale === 'es' ? 'Calificando leads y generando demos...' : 'Qualifying leads and generating demos...', { id: 'demos' })
     try {
+      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+      const authHeaders = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+      }
+
       // First, score all leads
       await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/score-all`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({ campaignId }),
         }
       )
@@ -254,8 +264,8 @@ export default function Campaigns() {
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/generate-messages`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ minScore: 30 }),
+          headers: authHeaders,
+          body: JSON.stringify({ minScore: 0 }),
         }
       ).then(r => r.json())
 
@@ -264,14 +274,14 @@ export default function Campaigns() {
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/process-demos`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders,
           body: JSON.stringify({ limit: 20 }),
         }
       ).then(r => r.json())
 
       toast.success(
-        locale === 'es' 
-          ? `${msgResult.data?.generated || 0} mensajes personalizados, ${result.data?.processed || 0} demos generadas` 
+        locale === 'es'
+          ? `${msgResult.data?.generated || 0} mensajes personalizados, ${result.data?.processed || 0} demos generadas`
           : `${msgResult.data?.generated || 0} personalized messages, ${result.data?.processed || 0} demos generated`,
         { id: 'demos', duration: 5000 }
       )

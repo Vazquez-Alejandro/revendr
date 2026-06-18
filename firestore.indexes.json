@@ -9,11 +9,35 @@
       ]
     },
     {
+      "collectionGroup": "campanias",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "fecha_inicio", "order": "DESCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "crm_events",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "lead_id", "order": "ASCENDING" },
         { "fieldPath": "timestamp", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "leads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "user_id", "order": "ASCENDING" },
+        { "fieldPath": "fecha_creacion", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "leads",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "id_campania", "order": "ASCENDING" },
+        { "fieldPath": "estado_proceso", "order": "ASCENDING" }
       ]
     }
   ]

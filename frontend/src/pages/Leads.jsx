@@ -118,7 +118,7 @@ export default function Leads() {
     setLoading(true)
     try {
       const userId = auth.currentUser?.uid
-      let q = query(collection(db, 'leads'), where('user_id', '==', userId || ''), orderBy('fecha_creacion', 'desc'))
+      let q = query(collection(db, 'leads'), where('user_id', '==', userId || ''))
 
       if (filterRubro !== 'todos') {
         q = query(q, where('rubro', '==', filterRubro))
@@ -134,6 +134,11 @@ export default function Leads() {
 
       const snapshot = await getDocs(q)
       const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      data.sort((a, b) => {
+        const dateA = a.fecha_creacion?.toDate?.() || new Date(0)
+        const dateB = b.fecha_creacion?.toDate?.() || new Date(0)
+        return dateB - dateA
+      })
       
       setLeads(data)
       setLastVisible(snapshot.docs[snapshot.docs.length - 1])

@@ -31,6 +31,9 @@ const NICHOES = [
   { value: 'clinica', labelEs: 'Clínicas Médicas', labelEn: 'Medical Clinics' },
   { value: 'restaurante', labelEs: 'Restaurantes', labelEn: 'Restaurants' },
   { value: 'gimnasio', labelEs: 'Gimnasios', labelEn: 'Gyms' },
+  { value: 'tecnologia', labelEs: 'Tecnología / SaaS', labelEn: 'Technology / SaaS' },
+  { value: 'agencia_marketing', labelEs: 'Agencias de Marketing', labelEn: 'Marketing Agencies' },
+  { value: 'desarrolladores', labelEs: 'Desarrolladores / Freelancers', labelEn: 'Developers / Freelancers' },
   { value: 'otro', labelEs: 'Otro', labelEn: 'Other' },
 ]
 
