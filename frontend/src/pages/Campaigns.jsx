@@ -242,7 +242,7 @@ export default function Campaigns() {
 
   const handleProcessDemos = async (campaignId) => {
     setProcessingAction(`${campaignId}-demos`)
-    toast.loading(locale === 'es' ? 'Calificando leads y generando demos...' : 'Qualifying leads and generating demos...', { id: 'demos' })
+    toast.loading(locale === 'es' ? 'Calificando leads y generando propuestas...' : 'Qualifying leads and generating proposals...', { id: 'demos' })
     try {
       const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
       const authHeaders = {
@@ -282,8 +282,8 @@ export default function Campaigns() {
 
       toast.success(
         locale === 'es'
-          ? `${msgResult.data?.generated || 0} mensajes personalizados, ${result.data?.processed || 0} demos generadas`
-          : `${msgResult.data?.generated || 0} personalized messages, ${result.data?.processed || 0} demos generated`,
+          ? `${msgResult.data?.generated || 0} mensajes personalizados, ${result.data?.processed || 0} propuestas generadas`
+          : `${msgResult.data?.generated || 0} personalized messages, ${result.data?.processed || 0} proposals generated`,
         { id: 'demos', duration: 5000 }
       )
       loadCampaigns()
@@ -336,7 +336,7 @@ export default function Campaigns() {
         setProcessingAction(null)
       }
     } else {
-      toast.loading(locale === 'es' ? 'Enviando demos por email...' : 'Sending demos via email...', { id: 'messages' })
+        toast.loading(locale === 'es' ? 'Enviando propuestas por email...' : 'Sending proposals via email...', { id: 'messages' })
       try {
         const result = await fetch(
           `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/send-demo-emails`,
@@ -348,8 +348,8 @@ export default function Campaigns() {
 
         toast.success(
           locale === 'es'
-            ? `${result.data?.sent || 0} demos enviadas por email, ${result.data?.skipped || 0} sin email`
-            : `${result.data?.sent || 0} demos sent via email, ${result.data?.skipped || 0} without email`,
+            ? `${result.data?.sent || 0} propuestas enviadas por email, ${result.data?.skipped || 0} sin email`
+            : `${result.data?.sent || 0} proposals sent via email, ${result.data?.skipped || 0} without email`,
           { id: 'messages', duration: 5000 }
         )
         loadCampaigns()
@@ -362,6 +362,36 @@ export default function Campaigns() {
     }
   }
 
+  const handleSendTestTelegram = async (campaignId) => {
+    setProcessingAction(`${campaignId}-test-tg`)
+    toast.loading(locale === 'es' ? 'Enviando propuesta a Telegram...' : 'Sending proposal to Telegram...', { id: 'test-tg' })
+    try {
+      const chatId = 8091046688
+      const result = await fetch(
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/test/send-demo-email?campaignId=${campaignId}&chatId=${chatId}`
+      ).then(r => r.json())
+
+      if (result.data?.sent) {
+        toast.success(
+          locale === 'es'
+          ? 'Propuesta enviada a Telegram! Revisá @Revendr_bot'
+          : 'Proposal sent to Telegram! Check @Revendr_bot',
+          { id: 'test-tg', duration: 8000 }
+        )
+      } else {
+        toast.error(
+          locale === 'es' ? 'No se pudo enviar a Telegram' : 'Could not send to Telegram',
+          { id: 'test-tg' }
+        )
+      }
+    } catch (error) {
+      console.error('Error sending test telegram:', error)
+      toast.error(locale === 'es' ? 'Error al enviar a Telegram' : 'Error sending to Telegram', { id: 'test-tg' })
+    } finally {
+      setProcessingAction(null)
+    }
+  }
+
   const handleSendTestEmail = async (campaignId) => {
     setProcessingAction(`${campaignId}-test`)
     const email = auth.currentUser?.email
@@ -370,7 +400,7 @@ export default function Campaigns() {
       setProcessingAction(null)
       return
     }
-    toast.loading(locale === 'es' ? 'Enviando demo a tu email...' : 'Sending demo to your email...', { id: 'test' })
+    toast.loading(locale === 'es' ? 'Enviando propuesta a tu email...' : 'Sending proposal to your email...', { id: 'test' })
     try {
       const result = await fetch(
         `https://us-central1-revendr-9add8.cloudfunctions.net/api/test/send-demo-email?campaignId=${campaignId}&email=${encodeURIComponent(email)}`
@@ -379,8 +409,8 @@ export default function Campaigns() {
       if (result.data?.sent) {
         toast.success(
           locale === 'es'
-            ? `Demo enviada a ${email}. Revisá tu bandeja de entrada.`
-            : `Demo sent to ${email}. Check your inbox.`,
+            ? `Propuesta enviada a ${email}. Revisá tu bandeja de entrada.`
+            : `Proposal sent to ${email}. Check your inbox.`,
           { id: 'test', duration: 8000 }
         )
       } else {
@@ -393,7 +423,7 @@ export default function Campaigns() {
       }
     } catch (error) {
       console.error('Error sending test email:', error)
-      toast.error(locale === 'es' ? 'Error al enviar demo' : 'Error sending demo', { id: 'test' })
+      toast.error(locale === 'es' ? 'Error al enviar propuesta' : 'Error sending proposal', { id: 'test' })
     } finally {
       setProcessingAction(null)
     }
@@ -528,7 +558,7 @@ export default function Campaigns() {
   const openFollowups = (campaign) => {
     setFollowupsCampaign(campaign)
     setFollowups(campaign.followups || [
-      { delayDays: 2, message: 'Hola {nombre_negocio}, ¿viste tu demo? Si tenés dudas te la explico.' },
+      { delayDays: 2, message: 'Hola {nombre_negocio}, ¿viste tu propuesta? Si tenés dudas te la explico.' },
       { delayDays: 5, message: 'Hola {nombre_negocio}, te cuento que tenemos 20% off esta semana. ¡No lo dejes pasar!' },
     ])
   }
@@ -665,7 +695,7 @@ export default function Campaigns() {
     setAbTestModal(campaign)
     setAbTestForm({
       messageA: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, te preparé algo especial: {url_demo}',
-      messageB: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, mirá lo que creamos para vos: {url_demo}',
+      messageB: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, mirá lo que armamos para vos: {url_demo}',
     })
     loadAbResults(campaign.id)
   }
@@ -927,7 +957,7 @@ export default function Campaigns() {
                   <div className="text-lg font-semibold text-brand-400">
                     {campaign.demos_generadas || 0}
                   </div>
-                  <div className="text-xs text-dark-400">Demos</div>
+                  <div className="text-xs text-dark-400">{locale === 'es' ? 'Props.' : 'Props.'}</div>
                 </div>
                 <div className="bg-dark-900 rounded-lg py-2">
                   <div className="text-lg font-semibold text-emerald-400">
@@ -966,7 +996,7 @@ export default function Campaigns() {
                   ) : (
                     <Sparkles className="w-3 h-3" />
                   )}
-                  {locale === 'es' ? 'Demos' : 'Demos'}
+                  {locale === 'es' ? 'Props.' : 'Props.'}
                 </button>
                 <button
                   onClick={() => handleSendMessages(campaign.id)}
@@ -993,7 +1023,19 @@ export default function Campaigns() {
                   ) : (
                     <Mail className="w-3 h-3" />
                   )}
-                  {locale === 'es' ? 'Enviarme prueba' : 'Send me test'}
+                  {locale === 'es' ? 'Email' : 'Email'}
+                </button>
+                <button
+                  onClick={() => handleSendTestTelegram(campaign.id)}
+                  disabled={processingAction !== null}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-lg text-xs font-medium hover:bg-sky-500/20 transition-all disabled:opacity-50"
+                >
+                  {processingAction === `${campaign.id}-test-tg` ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Send className="w-3 h-3" />
+                  )}
+                  Telegram
                 </button>
                 <button
                   onClick={() => processSequence(campaign.id)}
@@ -1097,8 +1139,8 @@ export default function Campaigns() {
                 </select>
                 <p className="text-xs text-dark-500 mt-1">
                   {locale === 'es'
-                    ? 'Si seleccionás un producto, se usa su demo URL y mensaje automáticamente'
-                    : 'If you select a product, its demo URL and message are used automatically'}
+                    ? 'Si seleccionás un producto, se usa su URL y mensaje automáticamente'
+                    : 'If you select a product, its URL and message are used automatically'}
                 </p>
               </div>
 
@@ -1247,7 +1289,7 @@ export default function Campaigns() {
               </div>
               <div className="bg-dark-900 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-violet-400">{analyticsCampaign.demos_generadas || 0}</div>
-                <div className="text-xs text-dark-400">{locale === 'es' ? 'Demos Generadas' : 'Demos Generated'}</div>
+                <div className="text-xs text-dark-400">{locale === 'es' ? 'Props. Generadas' : 'Props. Generated'}</div>
               </div>
               <div className="bg-dark-900 rounded-lg p-4 text-center">
                 <div className="text-2xl font-bold text-emerald-400">{analyticsCampaign.mensajes_enviados || 0}</div>
@@ -1268,7 +1310,7 @@ export default function Campaigns() {
               <h3 className="text-sm font-medium text-dark-300 mb-2">{locale === 'es' ? 'Funnel' : 'Funnel'}</h3>
               {[
                 { label: locale === 'es' ? 'Leads Scrapeados' : 'Leads Scraped', value: analyticsCampaign.leads_count || 0, color: 'bg-orange-500' },
-                { label: locale === 'es' ? 'Demos Generadas' : 'Demos Generated', value: analyticsCampaign.demos_generadas || 0, color: 'bg-violet-500' },
+                { label: locale === 'es' ? 'Props. Generadas' : 'Props. Generated', value: analyticsCampaign.demos_generadas || 0, color: 'bg-violet-500' },
                 { label: locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent', value: analyticsCampaign.mensajes_enviados || 0, color: 'bg-emerald-500' },
               ].map((step, i) => (
                 <div key={i} className="flex items-center gap-3">

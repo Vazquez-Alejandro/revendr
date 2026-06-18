@@ -204,7 +204,7 @@ export default function AdminPanel() {
                   </td>
                   <td className="p-4">
                     <div className="text-xs text-dark-300">
-                      {client.usage?.leads || 0} leads · {client.usage?.demos || 0} demos · {client.usage?.messages || 0} msgs
+                      {client.usage?.leads || 0} leads · {client.usage?.demos || 0} props. · {client.usage?.messages || 0} msgs
                     </div>
                   </td>
                   <td className="p-4">

@@ -189,7 +189,7 @@ export default function Dashboard() {
       value: stats.mensajesEnviados,
       icon: MessageCircle,
       color: 'amber',
-      change: `${stats.demosGeneradas} ${locale === 'es' ? 'demos' : 'demos'}`,
+      change: `${stats.demosGeneradas} ${locale === 'es' ? 'props.' : 'props.'}`,
       positive: true,
     },
   ]
@@ -211,14 +211,14 @@ export default function Dashboard() {
     }
     const labelsEs = {
       scraped: 'Scrapeado',
-      demo_generada: 'Demo Generada',
+      demo_generada: 'Propuesta Generada',
       mensaje_enviado: 'Mensaje Enviado',
       interesado: 'Interesado',
       cliente_activo: 'Cliente Activo',
     }
     const labelsEn = {
       scraped: 'Scraped',
-      demo_generada: 'Demo Generated',
+      demo_generada: 'Proposal Generated',
       mensaje_enviado: 'Message Sent',
       interesado: 'Interested',
       cliente_activo: 'Active Client',

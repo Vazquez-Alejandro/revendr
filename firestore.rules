@@ -32,10 +32,11 @@ service cloud.firestore {
       allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
     }
 
-    // Products collection
+    // Products collection - read is public for demo pages, write requires auth
     match /productos/{productId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
+      allow read: if true;
       allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
     }
 
     // CRM events

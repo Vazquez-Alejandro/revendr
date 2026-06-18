@@ -26,6 +26,13 @@ self.addEventListener('fetch', (event) => {
   if (event.request.url.includes('firestore.googleapis.com')) return
   if (event.request.url.includes('us-central1-revendr-9add8')) return
 
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match('/'))
+    )
+    return
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetched = fetch(event.request).then((response) => {

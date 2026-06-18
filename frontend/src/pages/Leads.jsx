@@ -56,7 +56,7 @@ const ESTADOS = {
 
 const ESTADOS_LABELS_ES = {
   scraped: 'Scrapeado',
-  demo_generada: 'Demo Generada',
+  demo_generada: 'Propuesta Generada',
   mensaje_enviado: 'Mensaje Enviado',
   interesado: 'Interesado',
   cliente_activo: 'Cliente Activo',
@@ -64,7 +64,7 @@ const ESTADOS_LABELS_ES = {
 
 const ESTADOS_LABELS_EN = {
   scraped: 'Scraped',
-  demo_generada: 'Demo Generated',
+  demo_generada: 'Proposal Generated',
   mensaje_enviado: 'Message Sent',
   interesado: 'Interested',
   cliente_activo: 'Active Client',
@@ -484,7 +484,7 @@ export default function Leads() {
                       {locale === 'es' ? 'Score' : 'Score'}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
-                      {locale === 'es' ? 'Demo' : 'Demo'}
+                      {locale === 'es' ? 'Link' : 'Link'}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
                       {t('source')}
@@ -804,7 +804,7 @@ export default function Leads() {
               {selectedLead.url_demo && (
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">
-                    {locale === 'es' ? 'Demo' : 'Demo'}
+                    {locale === 'es' ? 'Enlace' : 'Link'}
                   </label>
                   <a
                     href={selectedLead.url_demo}
@@ -845,7 +845,7 @@ export default function Leads() {
                   </label>
                   <div className="flex gap-2">
                     <a
-                      href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu demo: ${selectedLead.url_demo || ''}`)}`}
+                      href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_demo || ''}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-all"

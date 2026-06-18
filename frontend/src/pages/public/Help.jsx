@@ -22,8 +22,8 @@ const faqEs = [
     a: 'Usamos Apify para extraer negocios de Google Maps e Instagram. Configurá tu API key en Settings → API Keys.',
   },
   {
-    q: '¿Cómo genero demos personalizadas?',
-    a: 'Una vez que tenés leads, el sistema genera automáticamente demos personalizadas para cada negocio usando sus datos reales.',
+    q: '¿Cómo genero propuestas personalizadas?',
+    a: 'Una vez que tenés leads, el sistema genera automáticamente propuestas personalizadas para cada negocio usando sus datos reales.',
   },
   {
     q: '¿Cómo envío mensajes por WhatsApp?',
@@ -31,7 +31,7 @@ const faqEs = [
   },
   {
     q: '¿Cómo cobro a mis clientes?',
-    a: 'Configurá tu cuenta de Stripe en Settings → API Keys. Los clientes pagan directamente desde la demo con tarjeta de crédito.',
+    a: 'Configurá tu cuenta de Stripe en Settings → API Keys. Los clientes pagan con tarjeta de crédito directamente desde la propuesta.',
   },
   {
     q: '¿Puedo probar gratis?',
@@ -49,8 +49,8 @@ const faqEn = [
     a: 'We use Apify to extract businesses from Google Maps and Instagram. Set up your API key in Settings → API Keys.',
   },
   {
-    q: 'How do I generate personalized demos?',
-    a: 'Once you have leads, the system automatically generates personalized demos for each business using their real data.',
+    q: 'How do I generate personalized proposals?',
+    a: 'Once you have leads, the system automatically generates personalized proposals for each business using their real data.',
   },
   {
     q: 'How do I send WhatsApp messages?',
@@ -58,7 +58,7 @@ const faqEn = [
   },
   {
     q: 'How do I charge my clients?',
-    a: 'Set up your Stripe account in Settings → API Keys. Clients pay directly from the demo with credit card.',
+    a: 'Set up your Stripe account in Settings → API Keys. Clients pay with credit card directly from the proposal.',
   },
   {
     q: 'Can I try for free?',

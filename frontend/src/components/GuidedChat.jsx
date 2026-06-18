@@ -23,7 +23,7 @@ const TREE = {
     ],
   },
   crear_producto: {
-    text: 'Andá a **Productos → Nuevo Producto**.\n\nCompletá:\n• Nombre del producto/servicio\n• URL de tu demo o landing\n• Rubro de tu negocio\n• Personalizá la landing (título, descripción, color, botón)\n\nUna vez creado, usalo en tus campañas.',
+    text: 'Andá a **Productos → Nuevo Producto**.\n\nCompletá:\n• Nombre del producto/servicio\n• URL de tu landing o propuesta\n• Rubro de tu negocio\n• Personalizá la landing (título, descripción, color, botón)\n\nUna vez creado, usalo en tus campañas.',
     options: [
       { label: 'Ir a Productos →', type: 'link', path: '/dashboard/productos' },
       { label: '← Volver', next: 'guia' },
@@ -54,19 +54,19 @@ const TREE = {
     ],
   },
   que_es: {
-    text: 'Revendr es un motor SaaS que automatiza tu prospección comercial.\n\n• Busca leads automáticamente (scraping)\n• Genera demos personalizadas para cada prospecto\n• Envía mensajes por WhatsApp y email\n• Cobra con Stripe\n\nTodo configurado por rubro y ciudad.',
+    text: 'Revendr es un motor SaaS que automatiza tu prospección comercial.\n\n• Busca leads automáticamente (scraping)\n• Genera propuestas personalizadas para cada prospecto\n• Envía mensajes por WhatsApp y email\n• Cobra con Stripe\n\nTodo configurado por rubro y ciudad.',
     options: [
       { label: '← Volver', next: 'faq' },
     ],
   },
   scraping: {
-    text: 'El scraping busca prospectos en Google Maps según el rubro y ciudad que configures.\n\n1. Creás una campaña con un rubro y ciudad\n2. El sistema busca y analiza cada negocio\n3. Asigna un score según qué tan buen prospecto es\n4. Genera un mensaje personalizado para cada uno\n\nDespués podés generar demos y enviar mensajes.',
+    text: 'El scraping busca prospectos en Google Maps según el rubro y ciudad que configures.\n\n1. Creás una campaña con un rubro y ciudad\n2. El sistema busca y analiza cada negocio\n3. Asigna un score según qué tan buen prospecto es\n4. Genera un mensaje personalizado para cada uno\n\nDespués podés generar propuestas y enviar mensajes.',
     options: [
       { label: '← Volver', next: 'faq' },
     ],
   },
   planes: {
-    text: 'Tenemos **3 planes**:\n\n• **Starter** ($49/mes) - 200 leads, 50 demos, 100 WhatsApp\n• **Growth** ($149/mes) - 1.000 leads, 250 demos, 500 WhatsApp\n• **Enterprise** ($399/mes) - Ilimitado + prioridad\n\n🔄 Pagando anual tenés **20% de descuento**.',
+    text: 'Tenemos **3 planes**:\n\n• **Starter** ($49/mes) - 200 leads, 50 props., 100 WhatsApp\n• **Growth** ($149/mes) - 1.000 leads, 250 props., 500 WhatsApp\n• **Enterprise** ($399/mes) - Ilimitado + prioridad\n\n🔄 Pagando anual tenés **20% de descuento**.',
     options: [
       { label: 'Ver precios →', type: 'link', path: '/pricing' },
       { label: '← Volver', next: 'faq' },

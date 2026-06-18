@@ -19,3 +19,6 @@ gemini-code-*.txt
 backend/config/serviceAccountKey.json
 frontend/.env
 test.txt
+users.csv
+captura/
+functions/test-stripe.js

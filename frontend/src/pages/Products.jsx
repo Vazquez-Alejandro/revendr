@@ -90,7 +90,7 @@ export default function Products() {
       landing_titulo: '',
       landing_descripcion: '',
       landing_color: '#6366f1',
-      landing_cta: 'Ver Demo',
+      landing_cta: 'Empezar gratis',
     })
     setEditingId(null)
   }
@@ -98,7 +98,7 @@ export default function Products() {
   const handleSave = async (e) => {
     e.preventDefault()
     if (!formData.nombre || !formData.url_demo || !formData.nicho) {
-      toast.error(locale === 'es' ? 'Completa nombre, demo y nicho' : 'Fill in name, demo and niche')
+      toast.error(locale === 'es' ? 'Completa nombre, link y nicho' : 'Fill in name, link and niche')
       return
     }
 
@@ -142,7 +142,7 @@ export default function Products() {
       landing_titulo: product.landing_titulo || '',
       landing_descripcion: product.landing_descripcion || '',
       landing_color: product.landing_color || '#6366f1',
-      landing_cta: product.landing_cta || 'Ver Demo',
+      landing_cta: product.landing_cta || 'Empezar gratis',
     })
     setEditingId(product.id)
     setShowModal(true)
@@ -343,20 +343,20 @@ export default function Products() {
 
               <div>
                 <label className="block text-sm font-medium text-dark-300 mb-2">
-                  {locale === 'es' ? 'URL de la Demo' : 'Demo URL'} *
+                  {locale === 'es' ? 'Link de tu producto o servicio' : 'Your product link'} *
                 </label>
                 <input
                   type="url"
                   value={formData.url_demo}
                   onChange={(e) => setFormData({ ...formData, url_demo: e.target.value })}
                   className="input-field"
-                  placeholder="https://tu-demo.vercel.app"
+                  placeholder="https://tu-sitio.com/oferta"
                   required
                 />
                 <p className="text-xs text-dark-500 mt-1">
                   {locale === 'es'
-                    ? 'Link que verá el lead cuando reciba el mensaje'
-                    : 'Link the lead will see when they receive the message'}
+                    ? 'Link al que irá el lead cuando haga click en el botón'
+                    : 'Link the lead goes to when they click the button'}
                 </p>
               </div>
 
@@ -404,8 +404,8 @@ export default function Products() {
                   onChange={(e) => setFormData({ ...formData, mensaje_whatsapp: e.target.value })}
                   className="input-field min-h-[100px]"
                   placeholder={locale === 'es'
-                    ? 'Hola {nombre_negocio}, te propongo algo especial para tu negocio. Mirá tu demo personalizada: {url_demo}'
-                    : 'Hello {nombre_negocio}, I have something special for your business. Check your personalized demo: {url_demo}'}
+                    ? 'Hola {nombre_negocio}, te propongo algo especial para tu negocio. Mirá tu propuesta personalizada: {url_demo}'
+                    : 'Hello {nombre_negocio}, I have something special for your business. Check your personalized proposal: {url_demo}'}
                 />
                 <p className="text-xs text-dark-500 mt-1">
                   {locale === 'es' ? 'Variables:' : 'Variables:'} {'{nombre_negocio}'}, {'{url_demo}'}, {'{rubro}'}
@@ -467,15 +467,20 @@ export default function Products() {
 
                     <div>
                       <label className="block text-xs font-medium text-dark-400 mb-1">
-                        {locale === 'es' ? 'Texto del CTA' : 'CTA Text'}
+                        {locale === 'es' ? 'Texto del botón' : 'Button text'}
                       </label>
                       <input
                         type="text"
                         value={formData.landing_cta}
                         onChange={(e) => setFormData({ ...formData, landing_cta: e.target.value })}
                         className="input-field"
-                        placeholder="Ver Demo"
+                        placeholder="Empezar gratis"
                       />
+                      <p className="text-xs text-dark-500 mt-1">
+                        {locale === 'es'
+                          ? 'Ej: Empezar gratis, Ver planes, Contratar, Quiero esto'
+                          : 'E.g.: Get started, View plans, Buy now'}
+                      </p>
                     </div>
                   </div>
                 </div>

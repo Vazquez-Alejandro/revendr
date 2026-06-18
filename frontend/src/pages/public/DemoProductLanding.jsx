@@ -119,17 +119,19 @@ export default function DemoProductLanding() {
 
           {/* CTA principal */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a
-              href={productUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={handleCTAClick}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 text-white font-semibold rounded-xl transition-all"
-              style={{ backgroundColor: product.landing_color || '#6366f1' }}
-            >
-              {product.landing_cta || 'Ver Demo'}
-              <ArrowRight className="w-5 h-5" />
-            </a>
+            {productUrl ? (
+              <a
+                href={productUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={handleCTAClick}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 text-white font-semibold rounded-xl transition-all"
+                style={{ backgroundColor: product.landing_color || '#6366f1' }}
+              >
+                {product.landing_cta || 'Ver Demo'}
+                <ArrowRight className="w-5 h-5" />
+              </a>
+            ) : null}
 
             {telefono && (
               <a

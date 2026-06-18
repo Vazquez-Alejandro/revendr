@@ -136,7 +136,7 @@ export default function Onboarding() {
               <div className="grid grid-cols-2 gap-3 text-left">
                 {[
                   { icon: '🔍', text: locale === 'es' ? 'Scraping de leads' : 'Lead scraping' },
-                  { icon: '🎯', text: locale === 'es' ? 'Demos personalizadas' : 'Personalized demos' },
+                  { icon: '🎯', text: locale === 'es' ? 'Props. personalizadas' : 'Personalized proposals' },
                   { icon: '📱', text: locale === 'es' ? 'WhatsApp + Email' : 'WhatsApp + Email' },
                   { icon: '📊', text: locale === 'es' ? 'Analytics en tiempo real' : 'Real-time analytics' },
                 ].map((item, i) => (
@@ -237,7 +237,7 @@ export default function Onboarding() {
                   <div className="text-left flex-1">
                     <div className="font-medium text-dark-100">WhatsApp</div>
                     <div className="text-xs text-dark-400">
-                      {locale === 'es' ? 'Mensajes directos con demo link' : 'Direct messages with demo link'}
+                      {locale === 'es' ? 'Mensajes directos con tu link' : 'Direct messages with your link'}
                     </div>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
@@ -299,7 +299,7 @@ export default function Onboarding() {
                   </li>
                   <li className="flex items-center gap-2">
                     <span className="w-5 h-5 rounded-full bg-brand-500/20 flex items-center justify-center text-xs text-brand-400">3</span>
-                    {locale === 'es' ? 'Generá demos y enviá WhatsApp' : 'Generate demos and send WhatsApp'}
+                    {locale === 'es' ? 'Generá propuestas y enviá WhatsApp' : 'Generate proposals and send WhatsApp'}
                   </li>
                 </ul>
               </div>

@@ -17,6 +17,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY
 const GMAIL_USER = process.env.GMAIL_USER
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN // Mercado Pago (futuro)
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 
 const nodemailer = GMAIL_USER && GMAIL_APP_PASSWORD ? require('nodemailer') : null
 const emailTransporter = nodemailer ? nodemailer.createTransport({
@@ -491,8 +492,8 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
     createNotification({
       userId: req.user?.uid,
       type: 'demo_generated',
-      title: 'Demo generada',
-      body: `Demo para ${lead.nombre_negocio || 'lead'} lista`,
+      title: 'Propuesta generada',
+      body: `Propuesta para ${lead.nombre_negocio || 'lead'} lista`,
       link: `/dashboard/leads`,
     })
 
@@ -574,7 +575,7 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
       createNotification({
         userId: req.user?.uid,
         type: 'demo_generated',
-        title: `${processed} ${processed === 1 ? 'demo generada' : 'demos generadas'}`,
+        title: `${processed} ${processed === 1 ? 'propuesta generada' : 'propuestas generadas'}`,
         body: `Procesamiento masivo completado para la campaña`,
         link: `/dashboard/leads`,
       })
@@ -957,24 +958,24 @@ app.post('/leads/score-all', async (req, res) => {
 
 const MESSAGE_TEMPLATES = {
   inmobiliaria: [
-    'Hola {nombre_negocio}, vi que trabajás en {ciudad} con {rating} estrellas. Creamos una demo exclusiva para que veas cómo{nombre_negocio} puede verse online: {url_demo}\n\n¿Te gustaría que hablemos?',
+    'Hola {nombre_negocio}, vi que trabajás en {ciudad} con {rating} estrellas. Creamos una propuesta exclusiva para que veas cómo {nombre_negocio} puede verse online: {url_demo}\n\n¿Te gustaría que hablemos?',
     '{nombre_negocio}, noté que tu inmobiliaria tiene una presencia online que puede mejorar mucho. Te armé algo especial: {url_demo}\n\nMiralo y contame qué te parece.',
   ],
   estetica: [
-    'Hola {nombre_negocio}, vi tu peluquería en {ciudad} y me pareció genial. Te preparé una demo personalizada: {url_demo}\n\n¿Querés que la revisemos juntos?',
-    '{nombre_negocio}, ¿y si tu negocio pudiera captar más clientes por WhatsApp? Mirá esta demo que te preparé: {url_demo}',
+    'Hola {nombre_negocio}, vi tu peluquería en {ciudad} y me pareció genial. Te preparé una propuesta personalizada: {url_demo}\n\n¿Querés que la revisemos juntos?',
+    '{nombre_negocio}, ¿y si tu negocio pudiera captar más clientes por WhatsApp? Mirá esta propuesta que te preparé: {url_demo}',
   ],
   clinica: [
-    'Hola {nombre_negocio}, vi que tu clínica en {ciudad} tiene buena reputación. Te hice una demo para que veas cómo mejorar tu presencia digital: {url_demo}\n\n¿Te interesa?',
+    'Hola {nombre_negocio}, vi que tu clínica en {ciudad} tiene buena reputación. Te hice una propuesta para que veas cómo mejorar tu presencia digital: {url_demo}\n\n¿Te interesa?',
   ],
   restaurante: [
-    'Hola {nombre_negocio}, vi tu restaurante en {ciudad} y me encantó. Te preparé una demo para que veas cómo atraer más comensales: {url_demo}\n\n¿Lo revisamos?',
+    'Hola {nombre_negocio}, vi tu restaurante en {ciudad} y me encantó. Te preparé una propuesta para que veas cómo atraer más comensales: {url_demo}\n\n¿Lo revisamos?',
   ],
   gimnasio: [
     'Hola {nombre_negocio}, vi que tu gimnasio en {ciudad} tiene {rating} estrellas. Te armé algo especial para que veas cómo crecer: {url_demo}\n\n¿Querés que hablemos?',
   ],
   otro: [
-    'Hola {nombre_negocio}, vi tu negocio en {ciudad} y me pareció interesante. Te preparé una demo personalizada: {url_demo}\n\n¿Te gustaría que la revisemos?',
+    'Hola {nombre_negocio}, vi tu negocio en {ciudad} y me pareció interesante. Te preparé una propuesta personalizada: {url_demo}\n\n¿Te gustaría que la revisemos?',
   ],
 }
 
@@ -1231,7 +1232,7 @@ function generateEmailTemplate(lead, product, messageType = 'initial') {
 
   const subjects = {
     initial: `Hola ${negocioName}, creamos algo especial para vos`,
-    reminder: `${negocioName}, ¿viste la demo que te preparé?`,
+    reminder: `${negocioName}, ¿viste la propuesta que te preparé?`,
     discount: `${negocioName}, 20% OFF exclusivo para vos`,
     lastChance: `Última oportunidad para ${negocioName}`,
   }
@@ -1241,10 +1242,10 @@ function generateEmailTemplate(lead, product, messageType = 'initial') {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #0ea5e9;">Hola ${negocioName} 👋</h2>
         <p>Vi que trabajás en ${ciudad} y me pareció interesante lo que hacés.</p>
-        <p>Creamos una <strong>demo personalizada</strong> para que veas cómo ${productName} puede ayudar a tu negocio:</p>
+        <p>Creamos una <strong>propuesta personalizada</strong> para que veas cómo ${productName} puede ayudar a tu negocio:</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${demoUrl}" style="background-color: #0ea5e9; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-            Ver mi Demo →
+            Ver Propuesta →
           </a>
         </div>
         <p>¿Te gustaría que hablemos? Respondé este email o escribinos por WhatsApp.</p>
@@ -1255,11 +1256,11 @@ function generateEmailTemplate(lead, product, messageType = 'initial') {
     reminder: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #f59e0b;">${negocioName}, te escribí antes 👋</h2>
-        <p>Hace unos días te armé una demo personalizada. ¿La tuviste chance de ver?</p>
+        <p>Hace unos días te armé una propuesta personalizada. ¿La tuviste chance de ver?</p>
         <p>Miralá acá, toma solo 2 minutos:</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${demoUrl}" style="background-color: #f59e0b; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-            Revisar mi Demo →
+            Revisar Propuesta →
           </a>
         </div>
         <p>Si tenés dudas, respondé este email y te ayudo.</p>
@@ -1271,10 +1272,10 @@ function generateEmailTemplate(lead, product, messageType = 'initial') {
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #10b981;">🎉 20% OFF para ${negocioName}</h2>
         <p>Tenemos una oferta especial para vos: <strong>20% de descuento</strong> en tu primer mes.</p>
-        <p>Acá va la demo que te preparé:</p>
+        <p>Acá va la propuesta que te preparé:</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${demoUrl}" style="background-color: #10b981; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-            Ver Demo + Descuento →
+            Ver Propuesta →
           </a>
         </div>
         <p style="color: #ef4444; font-weight: bold;">Oferta válida por 7 días.</p>
@@ -1285,7 +1286,7 @@ function generateEmailTemplate(lead, product, messageType = 'initial') {
     lastChance: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #ef4444;">Última oportunidad, ${negocioName}</h2>
-        <p>Quería avisarte que la demo personalizada que te armé va a expirar pronto.</p>
+        <p>Quería avisarte que la propuesta personalizada que te armé va a expirar pronto.</p>
         <p>Si querés aprovecharla, hacelo ahora:</p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${demoUrl}" style="background-color: #ef4444; color: white; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
@@ -1689,7 +1690,7 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
     }
 
     if (!lead.url_demo) {
-      return res.status(400).json({ success: false, error: { message: 'Lead has no demo URL. Generate demo first.' } })
+      return res.status(400).json({ success: false, error: { message: 'Lead has no proposal URL. Generate proposal first.' } })
     }
 
     const customMessage = req.body.customMessage
@@ -2904,18 +2905,18 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
       const negocio = lead.nombre_negocio || 'tu negocio'
       const demoUrl = lead.url_demo || ''
       const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
-        <h1 style="color:#6366f1">Demo lista para ${negocio}</h1>
+        <h1 style="color:#6366f1">Propuesta para ${negocio}</h1>
         <p>Hola ${negocio},</p>
-        <p>Te preparamos una demo personalizada para tu negocio.</p>
+        <p>Te preparamos una propuesta personalizada para tu negocio.</p>
         <div style="text-align:center;margin:24px 0">
-          <a href="${demoUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px">Ver mi demo</a>
+          <a href="${demoUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px">Ver propuesta</a>
         </div>
         <p style="color:#94a3b8;font-size:13px">Si el botón no funciona, copiá este link:<br>${demoUrl}</p>
         <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
         <p style="color:#6366f1;font-size:14px">Creado con Revendr — Automatizá tus ventas</p>
       </div>`
 
-      const result = await sendSimpleEmail(email, `Demo personalizada para ${negocio}`, html)
+      const result = await sendSimpleEmail(email, `Propuesta personalizada para ${negocio}`, html)
       if (result.sent) {
         await leadDoc.ref.update({
           email_enviado: true,
@@ -2939,7 +2940,7 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
       createNotification({
         userId: req.user?.uid,
         type: 'email_sent',
-        title: `${sent} ${sent === 1 ? 'demo enviada' : 'demos enviadas'} por email`,
+        title: `${sent} ${sent === 1 ? 'propuesta enviada' : 'propuestas enviadas'} por email`,
         body: `Envío masivo completado para la campaña`,
         link: `/dashboard/leads`,
       })
@@ -3281,19 +3282,19 @@ const TRADUCCIONES = {
   es: {
     saludo: 'Hola',
     cierre: '¿Te gustaría que hablemos?',
-    verDemo: 'Ver mi Demo',
+    verDemo: 'Ver Propuesta',
     descuento: '20% OFF exclusivo para vos',
   },
   en: {
     saludo: 'Hello',
     cierre: 'Would you like to chat?',
-    verDemo: 'View my Demo',
+    verDemo: 'View Proposal',
     descuento: '20% OFF exclusive for you',
   },
   pt: {
     saludo: 'Olá',
     cierre: 'Você gostaria de conversar?',
-    verDemo: 'Ver minha Demo',
+    verDemo: 'Ver Proposta',
     descuento: '20% OFF exclusivo para você',
   },
 }
@@ -3505,13 +3506,13 @@ app.get('/mercadopago/config', async (req, res) => {
           name: 'Starter',
           price_usd: 29,
           price_ars: 32000,
-          features: ['100 leads/mes', '50 demos', '1000 mensajes WhatsApp', 'Scraping básico'],
+          features: ['100 leads/mes', '50 props.', '1000 mensajes WhatsApp', 'Scraping básico'],
         },
         growth: {
           name: 'Growth',
           price_usd: 79,
           price_ars: 87000,
-          features: ['500 leads/mes', '250 demos', '10000 mensajes WhatsApp', 'A/B Testing', 'Secuencia inteligente', 'Multi-canal'],
+          features: ['500 leads/mes', '250 props.', '10000 mensajes WhatsApp', 'A/B Testing', 'Secuencia inteligente', 'Multi-canal'],
         },
         enterprise: {
           name: 'Enterprise',
@@ -4329,13 +4330,29 @@ app.get('/analytics/trends', async (req, res) => {
   }
 })
 
+async function sendTelegramMessage(chatId, text) {
+  if (!TELEGRAM_BOT_TOKEN) return { sent: false, reason: 'no_telegram_token' }
+  try {
+    const res = await axios.post(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
+      chat_id: chatId,
+      text,
+      parse_mode: 'HTML',
+      disable_web_page_preview: false,
+    })
+    return { sent: true }
+  } catch (error) {
+    console.error('Telegram error:', error.message)
+    return { sent: false, reason: error.message }
+  }
+}
+
 // ============ TEST ENDPOINT (public, no auth) ============
 
 app.get('/test/send-demo-email', async (req, res) => {
   try {
-    const { campaignId, email } = req.query
-    if (!campaignId || !email) {
-      return res.status(400).json({ success: false, error: { message: 'campaignId and email required' } })
+    const { campaignId, email, chatId } = req.query
+    if (!campaignId || (!email && !chatId)) {
+      return res.status(400).json({ success: false, error: { message: 'campaignId and email or chatId required' } })
     }
 
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
@@ -4360,6 +4377,16 @@ app.get('/test/send-demo-email', async (req, res) => {
       return res.json({ success: true, data: { sent: false, reason: 'no_demo_links_found' } })
     }
 
+    if (chatId) {
+      let text = `<b>🎯 Demos generadas - ${campaignDoc.data().nombre}</b>\n\n`
+      for (const dl of demoLinks) {
+        text += `• <b>${dl.nombre}</b>\n${dl.url}\n\n`
+      }
+      text += `——————\nCreado con Revendr`
+      const result = await sendTelegramMessage(chatId, text)
+      return res.json({ success: true, data: { sent: result.sent, provider: 'telegram', demos: demoLinks.length, chatId } })
+    }
+
     let html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
       <h1 style="color:#6366f1">Test - Tus demos generadas</h1>
       <p>Estas son las demos generadas para tu campaña <strong>${campaignDoc.data().nombre}</strong>:</p>
@@ -4372,7 +4399,7 @@ app.get('/test/send-demo-email', async (req, res) => {
       <p style="color:#94a3b8;font-size:12px">© 2026 Revendr</p>
     </div>`
 
-    let subject = `Test: ${demoLinks.length} ${demoLinks.length === 1 ? 'demo generada' : 'demos generadas'}`
+    let subject = `Test: ${demoLinks.length} ${demoLinks.length === 1 ? 'propuesta generada' : 'propuestas generadas'}`
     const result = await sendSimpleEmail(email, subject, html)
     res.json({ success: true, data: { sent: result.sent, provider: result.provider, demos: demoLinks.length, email } })
   } catch (error) {
