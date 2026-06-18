@@ -32,7 +32,8 @@ import {
   MessageCircle,
   LayoutGrid,
   List,
-  Megaphone
+  Megaphone,
+  RefreshCw
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
@@ -815,23 +816,88 @@ export default function Leads() {
                 </div>
               </div>
 
-              {/* Demo Link */}
-              {selectedLead.url_demo && (
-                <div>
-                  <label className="block text-sm font-medium text-dark-300 mb-2">
-                    {locale === 'es' ? 'Enlace' : 'Link'}
-                  </label>
-                  <a
-                    href={selectedLead.url_demo}
-                    target="_blank"
-                    rel="noopener noreferrer"
+              {/* Propuesta */}
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Propuesta' : 'Proposal'}
+                </label>
+                {selectedLead.url_demo ? (
+                  <div className="flex gap-2">
+                    <a
+                      href={selectedLead.url_demo}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-sm font-medium hover:bg-brand-500/20 transition-all"
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                      {locale === 'es' ? 'Abrir' : 'Open'}
+                    </a>
+                    <button
+                      onClick={async () => {
+                        const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+                        try {
+                          toast.loading(locale === 'es' ? 'Generando propuesta...' : 'Generating proposal...', { id: 'gen-demo' })
+                          const res = await fetch(
+                            `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/${selectedLead.id}/generate-demo`,
+                            {
+                              method: 'POST',
+                              headers: {
+                                'Content-Type': 'application/json',
+                                ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                              },
+                            }
+                          ).then(r => r.json())
+                          if (res.success) {
+                            toast.success(locale === 'es' ? 'Propuesta generada de nuevo' : 'Proposal regenerated', { id: 'gen-demo' })
+                            loadLeads()
+                            setSelectedLead({ ...selectedLead, url_demo: res.data.demoUrl })
+                          } else {
+                            toast.error(locale === 'es' ? 'Error al generar' : 'Error generating', { id: 'gen-demo' })
+                          }
+                        } catch (error) {
+                          toast.error(locale === 'es' ? 'Error' : 'Error', { id: 'gen-demo' })
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-sm font-medium hover:bg-amber-500/20 transition-all"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      {locale === 'es' ? 'Regenerar' : 'Regenerate'}
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={async () => {
+                      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+                      try {
+                        toast.loading(locale === 'es' ? 'Generando propuesta...' : 'Generating proposal...', { id: 'gen-demo' })
+                        const res = await fetch(
+                          `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/${selectedLead.id}/generate-demo`,
+                          {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+                            },
+                          }
+                        ).then(r => r.json())
+                        if (res.success) {
+                          toast.success(locale === 'es' ? 'Propuesta generada' : 'Proposal generated', { id: 'gen-demo' })
+                          loadLeads()
+                          setSelectedLead({ ...selectedLead, url_demo: res.data.demoUrl })
+                        } else {
+                          toast.error(locale === 'es' ? 'Error al generar' : 'Error generating', { id: 'gen-demo' })
+                        }
+                      } catch (error) {
+                        toast.error(locale === 'es' ? 'Error' : 'Error', { id: 'gen-demo' })
+                      }
+                    }}
                     className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-sm font-medium hover:bg-brand-500/20 transition-all"
                   >
-                    <ExternalLink className="w-4 h-4" />
-                    {locale === 'es' ? 'Ver Landing' : 'View Landing'}
-                  </a>
-                </div>
-              )}
+                    <Sparkles className="w-4 h-4" />
+                    {locale === 'es' ? 'Generar propuesta' : 'Generate proposal'}
+                  </button>
+                )}
+              </div>
 
               {/* AI Generated Message */}
               {selectedLead.mensaje_personalizado && (
