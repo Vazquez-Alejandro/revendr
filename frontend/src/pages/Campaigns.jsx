@@ -24,6 +24,7 @@ import {
   Globe,
   Sparkles,
   MessageCircle,
+  Mail,
   Search,
   Package,
   Copy,
@@ -296,32 +297,103 @@ export default function Campaigns() {
 
   const handleSendMessages = async (campaignId) => {
     setProcessingAction(`${campaignId}-messages`)
-    toast.loading(locale === 'es' ? 'Enviando mensajes a leads calificados...' : 'Sending messages to qualified leads...', { id: 'messages' })
+    const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+    const authHeaders = {
+      'Content-Type': 'application/json',
+      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+    }
+
+    // Check if WhatsApp is configured
+    const configRes = await fetch(
+      `https://us-central1-revendr-9add8.cloudfunctions.net/api/whatsapp/config`,
+      { headers: authHeaders }
+    ).then(r => r.json())
+    const whatsappConfigured = configRes?.data?.configured
+
+    if (whatsappConfigured) {
+      toast.loading(locale === 'es' ? 'Enviando mensajes por WhatsApp...' : 'Sending WhatsApp messages...', { id: 'messages' })
+      try {
+        const result = await fetch(
+          `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/send-messages`,
+          {
+            method: 'POST',
+            headers: authHeaders,
+            body: JSON.stringify({ limit: 10, minScore: 30 }),
+          }
+        ).then(r => r.json())
+
+        toast.success(
+          locale === 'es'
+            ? `${result.data?.sent || 0} mensajes enviados, ${result.data?.failed || 0} fallidos, ${result.data?.skippedLowScore || 0} descartados (score bajo)`
+            : `${result.data?.sent || 0} messages sent, ${result.data?.failed || 0} failed, ${result.data?.skippedLowScore || 0} skipped (low score)`,
+          { id: 'messages', duration: 5000 }
+        )
+        loadCampaigns()
+      } catch (error) {
+        console.error('Error sending WhatsApp messages:', error)
+        toast.error(locale === 'es' ? 'Error al enviar por WhatsApp' : 'Error sending via WhatsApp', { id: 'messages' })
+      } finally {
+        setProcessingAction(null)
+      }
+    } else {
+      toast.loading(locale === 'es' ? 'Enviando demos por email...' : 'Sending demos via email...', { id: 'messages' })
+      try {
+        const result = await fetch(
+          `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/send-demo-emails`,
+          {
+            method: 'POST',
+            headers: authHeaders,
+          }
+        ).then(r => r.json())
+
+        toast.success(
+          locale === 'es'
+            ? `${result.data?.sent || 0} demos enviadas por email, ${result.data?.skipped || 0} sin email`
+            : `${result.data?.sent || 0} demos sent via email, ${result.data?.skipped || 0} without email`,
+          { id: 'messages', duration: 5000 }
+        )
+        loadCampaigns()
+      } catch (error) {
+        console.error('Error sending demo emails:', error)
+        toast.error(locale === 'es' ? 'Error al enviar por email' : 'Error sending via email', { id: 'messages' })
+      } finally {
+        setProcessingAction(null)
+      }
+    }
+  }
+
+  const handleSendTestEmail = async (campaignId) => {
+    setProcessingAction(`${campaignId}-test`)
+    const email = auth.currentUser?.email
+    if (!email) {
+      toast.error(locale === 'es' ? 'No hay email registrado en tu cuenta' : 'No email on your account')
+      setProcessingAction(null)
+      return
+    }
+    toast.loading(locale === 'es' ? 'Enviando demo a tu email...' : 'Sending demo to your email...', { id: 'test' })
     try {
       const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/send-messages`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ limit: 10, minScore: 30 }),
-        }
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/test/send-demo-email?campaignId=${campaignId}&email=${encodeURIComponent(email)}`
       ).then(r => r.json())
 
-      toast.success(
-        locale === 'es' 
-          ? `${result.data?.sent || 0} mensajes enviados, ${result.data?.failed || 0} fallidos, ${result.data?.skippedLowScore || 0} descartados (score bajo)` 
-          : `${result.data?.sent || 0} messages sent, ${result.data?.failed || 0} failed, ${result.data?.skippedLowScore || 0} skipped (low score)`,
-        { id: 'messages', duration: 5000 }
-      )
-      loadCampaigns()
+      if (result.data?.sent) {
+        toast.success(
+          locale === 'es'
+            ? `Demo enviada a ${email}. Revisá tu bandeja de entrada.`
+            : `Demo sent to ${email}. Check your inbox.`,
+          { id: 'test', duration: 8000 }
+        )
+      } else {
+        toast.error(
+          locale === 'es'
+            ? `No se pudo enviar: ${result.data?.reason || 'error'}`
+            : `Could not send: ${result.data?.reason || 'error'}`,
+          { id: 'test' }
+        )
+      }
     } catch (error) {
-      console.error('Error sending messages:', error)
-      toast.error(
-        error.message?.includes('not configured')
-          ? (locale === 'es' ? 'WhatsApp no configurado. Andá a Settings.' : 'WhatsApp not configured. Go to Settings.')
-          : (locale === 'es' ? 'Error al enviar mensajes' : 'Error sending messages'),
-        { id: 'messages' }
-      )
+      console.error('Error sending test email:', error)
+      toast.error(locale === 'es' ? 'Error al enviar demo' : 'Error sending demo', { id: 'test' })
     } finally {
       setProcessingAction(null)
     }
@@ -910,8 +982,19 @@ export default function Campaigns() {
                 </button>
               </div>
 
-              {/* Smart Sequence & A/B Testing */}
               <div className="flex gap-2 mt-2">
+                <button
+                  onClick={() => handleSendTestEmail(campaign.id)}
+                  disabled={processingAction !== null}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-medium hover:bg-blue-500/20 transition-all disabled:opacity-50"
+                >
+                  {processingAction === `${campaign.id}-test` ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Mail className="w-3 h-3" />
+                  )}
+                  {locale === 'es' ? 'Enviarme prueba' : 'Send me test'}
+                </button>
                 <button
                   onClick={() => processSequence(campaign.id)}
                   disabled={processingAction !== null}

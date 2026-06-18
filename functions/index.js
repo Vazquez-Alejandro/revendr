@@ -62,7 +62,7 @@ app.use(express.json({
 }))
 
 // Auth middleware — applies to all routes except public ones
-const PUBLIC_PATHS = ['/health', '/check-email', '/webhook/stripe', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/demos/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification']
+const PUBLIC_PATHS = ['/health', '/check-email', '/webhook/stripe', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/demos/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification', '/test/send-demo-email']
 app.use((req, res, next) => {
   const isPublic = PUBLIC_PATHS.some(p => req.path.startsWith(p) || req.originalUrl.startsWith(p))
   if (isPublic) return next()
@@ -2739,6 +2739,36 @@ try {
   console.warn('Resend not available:', e.message)
 }
 
+async function sendSimpleEmail(to, subject, html) {
+  if (resendClient) {
+    try {
+      await resendClient.emails.send({
+        from: RESEND_FROM,
+        to,
+        subject,
+        html,
+      })
+      return { sent: true, provider: 'resend' }
+    } catch (error) {
+      console.error('Resend error:', error.message)
+    }
+  }
+  if (emailTransporter) {
+    try {
+      await emailTransporter.sendMail({
+        from: `"Revendr" <${GMAIL_USER}>`,
+        to,
+        subject,
+        html,
+      })
+      return { sent: true, provider: 'gmail' }
+    } catch (error) {
+      console.error('Gmail SMTP error:', error.message)
+    }
+  }
+  return { sent: false, reason: 'no_email_provider' }
+}
+
 async function sendTransactionalEmail(to, type, data = {}) {
   const templates = {
     welcome: {
@@ -2843,6 +2873,81 @@ app.post('/email/send', async (req, res) => {
     const result = await sendTransactionalEmail(to, type, data)
     res.json({ success: true, data: result })
   } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
+  try {
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', req.params.campaignId)
+      .where('estado_proceso', '==', 'demo_generada')
+      .get()
+
+    let sent = 0
+    let skipped = 0
+    const results = []
+
+    for (const leadDoc of leadsSnapshot.docs) {
+      const lead = leadDoc.data()
+      const email = lead.email || ''
+      if (!email || !email.includes('@')) {
+        skipped++
+        continue
+      }
+
+      const negocio = lead.nombre_negocio || 'tu negocio'
+      const demoUrl = lead.url_demo || ''
+      const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+        <h1 style="color:#6366f1">Demo lista para ${negocio}</h1>
+        <p>Hola ${negocio},</p>
+        <p>Te preparamos una demo personalizada para tu negocio.</p>
+        <div style="text-align:center;margin:24px 0">
+          <a href="${demoUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold;font-size:16px">Ver mi demo</a>
+        </div>
+        <p style="color:#94a3b8;font-size:13px">Si el botón no funciona, copiá este link:<br>${demoUrl}</p>
+        <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+        <p style="color:#6366f1;font-size:14px">Creado con Revendr — Automatizá tus ventas</p>
+      </div>`
+
+      const result = await sendSimpleEmail(email, `Demo personalizada para ${negocio}`, html)
+      if (result.sent) {
+        await leadDoc.ref.update({
+          email_enviado: true,
+          fecha_envio_email: new Date(),
+          estado_proceso: 'mensaje_enviado',
+          fecha_actualizacion: new Date(),
+        })
+        sent++
+        results.push({ leadId: leadDoc.id, email, status: 'sent', provider: result.provider })
+      } else {
+        skipped++
+        results.push({ leadId: leadDoc.id, email, status: 'failed', reason: result.reason })
+      }
+    }
+
+    if (sent > 0) {
+      await db.collection('campanias').doc(req.params.campaignId).update({
+        mensajes_enviados: admin.firestore.FieldValue.increment(sent),
+      })
+
+      createNotification({
+        userId: req.user?.uid,
+        type: 'email_sent',
+        title: `${sent} ${sent === 1 ? 'demo enviada' : 'demos enviadas'} por email`,
+        body: `Envío masivo completado para la campaña`,
+        link: `/dashboard/leads`,
+      })
+    }
+
+    res.json({ success: true, data: { sent, skipped, total: leadsSnapshot.size, results } })
+  } catch (error) {
+    console.error('Error sending demo emails:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
@@ -4220,6 +4325,58 @@ app.get('/analytics/trends', async (req, res) => {
 
     res.json({ success: true, data: trends })
   } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+// ============ TEST ENDPOINT (public, no auth) ============
+
+app.get('/test/send-demo-email', async (req, res) => {
+  try {
+    const { campaignId, email } = req.query
+    if (!campaignId || !email) {
+      return res.status(400).json({ success: false, error: { message: 'campaignId and email required' } })
+    }
+
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', campaignId)
+      .where('estado_proceso', '==', 'demo_generada')
+      .get()
+
+    let demoLinks = []
+    for (const leadDoc of leadsSnapshot.docs) {
+      const lead = leadDoc.data()
+      if (lead.url_demo) {
+        demoLinks.push({ nombre: lead.nombre_negocio, url: lead.url_demo })
+      }
+    }
+
+    if (demoLinks.length === 0) {
+      return res.json({ success: true, data: { sent: false, reason: 'no_demo_links_found' } })
+    }
+
+    let html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">
+      <h1 style="color:#6366f1">Test - Tus demos generadas</h1>
+      <p>Estas son las demos generadas para tu campaña <strong>${campaignDoc.data().nombre}</strong>:</p>
+      <ul>`
+    for (const dl of demoLinks) {
+      html += `<li style="margin:12px 0"><strong>${dl.nombre}</strong><br><a href="${dl.url}" style="color:#6366f1">${dl.url}</a></li>`
+    }
+    html += `</ul>
+      <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0">
+      <p style="color:#94a3b8;font-size:12px">© 2026 Revendr</p>
+    </div>`
+
+    let subject = `Test: ${demoLinks.length} ${demoLinks.length === 1 ? 'demo generada' : 'demos generadas'}`
+    const result = await sendSimpleEmail(email, subject, html)
+    res.json({ success: true, data: { sent: result.sent, provider: result.provider, demos: demoLinks.length, email } })
+  } catch (error) {
+    console.error('Test email error:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
