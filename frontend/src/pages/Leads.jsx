@@ -97,6 +97,14 @@ export default function Leads() {
   })
   const [viewMode, setViewMode] = useState('table')
   const [emailInput, setEmailInput] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [createForm, setCreateForm] = useState({
+    nombre_negocio: '',
+    telefono_whatsapp: '',
+    email: '',
+    direccion: '',
+    rubro: 'otro',
+  })
 
   useEffect(() => {
     loadLeads(true)
@@ -329,6 +337,13 @@ export default function Leads() {
             onChange={handleImportCSV}
             className="hidden"
           />
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            {locale === 'es' ? 'Nuevo Lead' : 'New Lead'}
+          </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={importing}
@@ -960,6 +975,128 @@ export default function Leads() {
                 </p>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="card w-full max-w-md animate-slide-up">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-dark-100">
+                {locale === 'es' ? 'Nuevo Lead' : 'New Lead'}
+              </h2>
+              <button onClick={() => setShowCreateModal(false)} className="text-dark-400 hover:text-dark-200">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={async (e) => {
+              e.preventDefault()
+              if (!createForm.nombre_negocio) {
+                toast.error(locale === 'es' ? 'El nombre es obligatorio' : 'Name is required')
+                return
+              }
+              try {
+                const userId = auth.currentUser?.uid
+                await addDoc(collection(db, 'leads'), {
+                  ...createForm,
+                  estado_proceso: 'scraped',
+                  id_campania: null,
+                  fecha_creacion: new Date(),
+                  user_id: userId,
+                  source: 'manual',
+                })
+                toast.success(locale === 'es' ? 'Lead creado' : 'Lead created')
+                setShowCreateModal(false)
+                setCreateForm({ nombre_negocio: '', telefono_whatsapp: '', email: '', direccion: '', rubro: 'otro' })
+                loadLeads()
+              } catch (error) {
+                toast.error(locale === 'es' ? 'Error al crear' : 'Error creating')
+              }
+            }} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Nombre del negocio' : 'Business name'} *
+                </label>
+                <input
+                  type="text"
+                  value={createForm.nombre_negocio}
+                  onChange={e => setCreateForm({ ...createForm, nombre_negocio: e.target.value })}
+                  className="input-field"
+                  placeholder="Ej: Panadería La Central"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Teléfono / WhatsApp' : 'Phone / WhatsApp'}
+                </label>
+                <input
+                  type="text"
+                  value={createForm.telefono_whatsapp}
+                  onChange={e => setCreateForm({ ...createForm, telefono_whatsapp: e.target.value })}
+                  className="input-field"
+                  placeholder="Ej: +541123456789"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  Email
+                </label>
+                <input
+                  type="email"
+                  value={createForm.email}
+                  onChange={e => setCreateForm({ ...createForm, email: e.target.value })}
+                  className="input-field"
+                  placeholder="Ej: info@central.com"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Dirección' : 'Address'}
+                </label>
+                <input
+                  type="text"
+                  value={createForm.direccion}
+                  onChange={e => setCreateForm({ ...createForm, direccion: e.target.value })}
+                  className="input-field"
+                  placeholder="Ej: Av. Siempre Viva 123"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Rubro' : 'Niche'}
+                </label>
+                <select
+                  value={createForm.rubro}
+                  onChange={e => setCreateForm({ ...createForm, rubro: e.target.value })}
+                  className="select-field"
+                >
+                  {RUBROS.filter(r => r.value !== 'todos').map(r => (
+                    <option key={r.value} value={r.value}>
+                      {locale === 'es' ? r.labelEs : r.labelEn}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="btn-secondary flex-1"
+                >
+                  {t('cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="btn-primary flex-1 flex items-center justify-center gap-2"
+                >
+                  <Plus className="w-4 h-4" />
+                  {locale === 'es' ? 'Crear' : 'Create'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
