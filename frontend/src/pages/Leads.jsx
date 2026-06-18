@@ -4,6 +4,7 @@ import {
   getDocs, 
   addDoc,
   updateDoc,
+  deleteDoc,
   doc,
   query, 
   where, 
@@ -34,7 +35,8 @@ import {
   LayoutGrid,
   List,
   Megaphone,
-  RefreshCw
+  RefreshCw,
+  Trash2
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
@@ -238,6 +240,32 @@ export default function Leads() {
       toast.success(locale === 'es' ? 'Nota guardada' : 'Note saved')
     } catch (error) {
       console.error('Error updating notes:', error)
+    }
+  }
+
+  const deleteLead = async (leadId) => {
+    if (!confirm(locale === 'es' ? '¿Eliminar este lead definitivamente?' : 'Delete this lead permanently?')) return
+    try {
+      await deleteDoc(doc(db, 'leads', leadId))
+      toast.success(locale === 'es' ? 'Lead eliminado' : 'Lead deleted')
+      setSelectedLead(null)
+      loadLeads()
+    } catch (error) {
+      console.error('Error deleting lead:', error)
+      toast.error(locale === 'es' ? 'Error al eliminar' : 'Error deleting')
+    }
+  }
+
+  const updateLeadField = async (leadId, field, value) => {
+    try {
+      await updateDoc(doc(db, 'leads', leadId), {
+        [field]: value,
+        fecha_actualizacion: new Date(),
+      })
+      setSelectedLead({ ...selectedLead, [field]: value })
+    } catch (error) {
+      console.error('Error updating lead field:', error)
+      toast.error(locale === 'es' ? 'Error al actualizar' : 'Error updating')
     }
   }
 
@@ -625,52 +653,98 @@ export default function Leads() {
         <div className="fixed inset-0 bg-dark-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="card w-full max-w-lg max-h-[90vh] overflow-y-auto animate-slide-up">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-dark-100">
-                {selectedLead.nombre_negocio}
-              </h2>
+              <input
+                type="text"
+                value={selectedLead.nombre_negocio}
+                onChange={e => setSelectedLead({ ...selectedLead, nombre_negocio: e.target.value })}
+                onBlur={e => updateLeadField(selectedLead.id, 'nombre_negocio', e.target.value)}
+                className="text-xl font-semibold text-dark-100 bg-transparent border-b border-transparent hover:border-dark-500 focus:border-brand-500 focus:outline-none px-1 -ml-1 w-full"
+              />
               <button
                 onClick={() => setSelectedLead(null)}
-                className="text-dark-400 hover:text-dark-200"
+                className="text-dark-400 hover:text-dark-200 shrink-0"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="space-y-4">
-              {/* Contact Info */}
+              {/* Basic Info */}
               <div className="bg-dark-900 rounded-lg p-4 space-y-3">
-                {selectedLead.telefono_whatsapp && (
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-dark-400" />
-                    <span className="text-sm text-dark-200">{selectedLead.telefono_whatsapp}</span>
-                  </div>
-                )}
-                {selectedLead.email && (
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-dark-400" />
-                    <span className="text-sm text-dark-200">{selectedLead.email}</span>
-                  </div>
-                )}
-                {selectedLead.direccion && (
-                  <div className="flex items-center gap-3">
-                    <MapPin className="w-4 h-4 text-dark-400" />
-                    <span className="text-sm text-dark-200">{selectedLead.direccion}</span>
-                  </div>
-                )}
-                {selectedLead.calificacion && (
-                  <div className="flex items-center gap-3">
-                    <Star className="w-4 h-4 text-amber-400" />
-                    <span className="text-sm text-dark-200">{selectedLead.calificacion} ⭐</span>
-                  </div>
-                )}
+                <div className="flex items-center gap-3">
+                  <Phone className="w-4 h-4 text-dark-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={selectedLead.telefono_whatsapp || ''}
+                    onChange={e => setSelectedLead({ ...selectedLead, telefono_whatsapp: e.target.value })}
+                    onBlur={e => updateLeadField(selectedLead.id, 'telefono_whatsapp', e.target.value)}
+                    placeholder={locale === 'es' ? 'Teléfono / WhatsApp' : 'Phone / WhatsApp'}
+                    className="text-sm text-dark-200 bg-transparent border-b border-transparent hover:border-dark-500 focus:border-brand-500 focus:outline-none px-1 -ml-1 w-full"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Mail className="w-4 h-4 text-dark-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={selectedLead.email || ''}
+                    onChange={e => setSelectedLead({ ...selectedLead, email: e.target.value })}
+                    onBlur={e => updateLeadField(selectedLead.id, 'email', e.target.value)}
+                    placeholder={locale === 'es' ? 'Email' : 'Email'}
+                    className="text-sm text-dark-200 bg-transparent border-b border-transparent hover:border-dark-500 focus:border-brand-500 focus:outline-none px-1 -ml-1 w-full"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <MapPin className="w-4 h-4 text-dark-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={selectedLead.direccion || ''}
+                    onChange={e => setSelectedLead({ ...selectedLead, direccion: e.target.value })}
+                    onBlur={e => updateLeadField(selectedLead.id, 'direccion', e.target.value)}
+                    placeholder={locale === 'es' ? 'Dirección' : 'Address'}
+                    className="text-sm text-dark-200 bg-transparent border-b border-transparent hover:border-dark-500 focus:border-brand-500 focus:outline-none px-1 -ml-1 w-full"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Star className="w-4 h-4 text-amber-400 shrink-0" />
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="0"
+                    max="5"
+                    value={selectedLead.calificacion || ''}
+                    onChange={e => setSelectedLead({ ...selectedLead, calificacion: parseFloat(e.target.value) || '' })}
+                    onBlur={e => updateLeadField(selectedLead.id, 'calificacion', parseFloat(e.target.value) || 0)}
+                    placeholder="0.0"
+                    className="text-sm text-dark-200 bg-transparent border-b border-transparent hover:border-dark-500 focus:border-brand-500 focus:outline-none px-1 -ml-1 w-16"
+                  />
+                  <span className="text-sm text-dark-400">⭐</span>
+                </div>
                 {selectedLead.fecha_creacion && (
                   <div className="flex items-center gap-3">
-                    <Calendar className="w-4 h-4 text-dark-400" />
+                    <Calendar className="w-4 h-4 text-dark-400 shrink-0" />
                     <span className="text-sm text-dark-200">
                       {selectedLead.fecha_creacion?.toDate?.()?.toLocaleDateString('es-AR')}
                     </span>
                   </div>
                 )}
+              </div>
+
+              {/* Rubro */}
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Rubro' : 'Niche'}
+                </label>
+                <select
+                  value={selectedLead.rubro || 'otro'}
+                  onChange={e => updateLeadField(selectedLead.id, 'rubro', e.target.value)}
+                  className="select-field"
+                >
+                  {RUBROS.filter(r => r.value !== 'todos').map(r => (
+                    <option key={r.value} value={r.value}>
+                      {locale === 'es' ? r.labelEs : r.labelEn}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Status */}
@@ -1041,6 +1115,14 @@ export default function Leads() {
                   {locale === 'es' ? 'Se guarda automáticamente al salir del campo' : 'Auto-saves on blur'}
                 </p>
               </div>
+
+              <button
+                onClick={() => deleteLead(selectedLead.id)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-sm font-medium hover:bg-red-500/20 transition-all"
+              >
+                <Trash2 className="w-4 h-4" />
+                {locale === 'es' ? 'Eliminar lead' : 'Delete lead'}
+              </button>
             </div>
           </div>
         </div>
