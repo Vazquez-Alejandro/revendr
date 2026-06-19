@@ -17,9 +17,9 @@ import toast from 'react-hot-toast'
 import { useConfirm } from '../hooks/useConfirm'
 
 const PLANS = [
-  { id: 'starter', name: 'Starter', price: 49, icon: Zap, limits: { leads: 100, rubros: 1, demos: 50, messages: 1000 } },
-  { id: 'growth', name: 'Growth', price: 149, icon: Building2, popular: true, limits: { leads: 1000, rubros: 3, demos: 500, messages: 10000 } },
-  { id: 'enterprise', name: 'Enterprise', price: 399, icon: Sparkles, limits: { leads: -1, rubros: -1, demos: -1, messages: -1 } },
+  { id: 'starter', name: 'Starter', price: 49, icon: Zap, limits: { leads: 100, rubros: 1, propuestas: 50, messages: 1000 } },
+  { id: 'growth', name: 'Growth', price: 149, icon: Building2, popular: true, limits: { leads: 1000, rubros: 3, propuestas: 500, messages: 10000 } },
+  { id: 'enterprise', name: 'Enterprise', price: 399, icon: Sparkles, limits: { leads: -1, rubros: -1, propuestas: -1, messages: -1 } },
 ]
 
 const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
@@ -137,8 +137,8 @@ export default function Subscription() {
 
   const sub = subscription || {
     plan: 'starter', status: 'active',
-    usage: { leads: 0, demos: 0, messages: 0 },
-    limits: { leads: 100, rubros: 1, demos: 50, messages: 1000 },
+    usage: { leads: 0, propuestas: 0, messages: 0 },
+    limits: { leads: 100, rubros: 1, propuestas: 50, messages: 1000 },
     hasSubscription: false, trialDaysRemaining: 14, trialEnd: null,
   }
 

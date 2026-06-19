@@ -95,7 +95,7 @@ app.get('/subscription/:userId', async (req, res) => {
     const userData = userDoc.data()
     const plan = userData.plan || 'starter'
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
-    const usage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+    const usage = userData.usage || { leads: 0, propuestas: 0, messages: 0 }
     let trialEnd = null, trialDaysRemaining = 0
     const fechaCreacion = userData.fecha_creacion?.toDate?.() || null
     if (fechaCreacion) { trialEnd = new Date(fechaCreacion.getTime() + 14 * 24 * 60 * 60 * 1000); trialDaysRemaining = Math.max(0, Math.ceil((trialEnd - new Date()) / (1000 * 60 * 60 * 24))) }

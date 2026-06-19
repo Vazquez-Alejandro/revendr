@@ -128,7 +128,7 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
     for (const leadDoc of leadsSnapshot.docs) {
       try {
         const lead = leadDoc.data()
-        const propuestaId = `demo-${lead.rubro}-${leadDoc.id}`
+        const propuestaId = `propuesta-${lead.rubro}-${leadDoc.id}`
         const propuestaUrl = campaign.producto_id
           ? `https://revendr-9add8.web.app/demo/producto/${campaign.producto_id}?negocio=${encodeURIComponent(lead.nombre_negocio)}&telefono=${encodeURIComponent(lead.telefono_whatsapp || '')}`
           : campaign.producto_url_demo

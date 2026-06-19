@@ -47,7 +47,7 @@ export default function DemoWhatsApp() {
   if (loading) {
     return (
       <div className="min-h-screen bg-dark-950 flex items-center justify-center">
-        <div className="text-dark-400">Cargando demo...</div>
+        <div className="text-dark-400">Cargando propuesta...</div>
       </div>
     )
   }
@@ -56,8 +56,8 @@ export default function DemoWhatsApp() {
     return (
       <div className="min-h-screen bg-dark-950 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-dark-50 mb-2">Demo no encontrada</h1>
-          <p className="text-dark-400">Esta demo no existe o fue eliminada.</p>
+          <h1 className="text-2xl font-bold text-dark-50 mb-2">Propuesta no encontrada</h1>
+          <p className="text-dark-400">Esta propuesta no existe o fue eliminada.</p>
         </div>
       </div>
     )

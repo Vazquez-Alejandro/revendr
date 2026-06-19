@@ -46,7 +46,7 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
       telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8,
       logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '',
       horarios: lead.datos_personalizados?.horarios || [],
-      url_propuesta: `https://revendr-9add8.web.app/demo/${lead.rubro}/${leadDoc.id}`, fecha_creacion: new Date(),
+      url_propuesta: `https://revendr-9add8.web.app/demo/${lead.rubro}/${propuestaId}`, fecha_creacion: new Date(),
     }
     await db.collection('propuestas').doc(propuestaId).set(propuestaData)
     await db.collection('leads').doc(req.params.leadId).update({

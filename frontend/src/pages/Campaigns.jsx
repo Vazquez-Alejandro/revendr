@@ -196,7 +196,7 @@ export default function Campaigns() {
         fecha_creacion: new Date(),
         fecha_fin: formData.fecha_fin || null,
         leads_count: 0,
-        demos_generadas: 0,
+        propuestas_generadas: 0,
         mensajes_enviados: 0,
       })
 
@@ -547,7 +547,7 @@ export default function Campaigns() {
         fecha_inicio: new Date(),
         fecha_creacion: new Date(),
         leads_count: 0,
-        demos_generadas: 0,
+        propuestas_generadas: 0,
         mensajes_enviados: 0,
       }
       await addDoc(collection(db, 'campanias'), newCampaign)
@@ -991,7 +991,7 @@ export default function Campaigns() {
                 </div>
                 <div className="bg-dark-900 rounded-lg py-2">
                   <div className="text-lg font-semibold text-brand-400">
-                    {campaign.demos_generadas || 0}
+                    {campaign.propuestas_generadas || 0}
                   </div>
                   <div className="text-xs text-dark-400">{locale === 'es' ? 'Props.' : 'Props.'}</div>
                 </div>
@@ -1336,7 +1336,7 @@ export default function Campaigns() {
                 <div className="text-xs text-dark-400">{locale === 'es' ? 'Leads Scrapeados' : 'Leads Scraped'}</div>
               </div>
               <div className="bg-dark-900 rounded-lg p-4 text-center">
-                <div className="text-2xl font-bold text-violet-400">{analyticsCampaign.demos_generadas || 0}</div>
+                <div className="text-2xl font-bold text-violet-400">{analyticsCampaign.propuestas_generadas || 0}</div>
                 <div className="text-xs text-dark-400">{locale === 'es' ? 'Props. Generadas' : 'Props. Generated'}</div>
               </div>
               <div className="bg-dark-900 rounded-lg p-4 text-center">
@@ -1358,7 +1358,7 @@ export default function Campaigns() {
               <h3 className="text-sm font-medium text-dark-300 mb-2">{locale === 'es' ? 'Funnel' : 'Funnel'}</h3>
               {[
                 { label: locale === 'es' ? 'Leads Scrapeados' : 'Leads Scraped', value: analyticsCampaign.leads_count || 0, color: 'bg-orange-500' },
-                { label: locale === 'es' ? 'Props. Generadas' : 'Props. Generated', value: analyticsCampaign.demos_generadas || 0, color: 'bg-violet-500' },
+                { label: locale === 'es' ? 'Props. Generadas' : 'Props. Generated', value: analyticsCampaign.propuestas_generadas || 0, color: 'bg-violet-500' },
                 { label: locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent', value: analyticsCampaign.mensajes_enviados || 0, color: 'bg-emerald-500' },
               ].map((step, i) => (
                 <div key={i} className="flex items-center gap-3">
