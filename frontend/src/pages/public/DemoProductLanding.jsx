@@ -100,12 +100,20 @@ export default function DemoProductLanding() {
       ? `https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${negocio}, vi tu propuesta en Revendr y me interesa.`)}`
       : '#'
 
+    const rating = demo.calificacion || demo.datos_personalizados?.rating
+    const website = demo.datos_personalizados?.website || demo.website
+    const address = demo.direccion || demo.datos_personalizados?.address
+    const reviewsCount = demo.datos_personalizados?.reviewsCount
+
     return (
       <div className="min-h-screen bg-gray-950 flex flex-col">
-        <div className="flex-1 flex items-center justify-center px-4 py-16">
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-500/5 via-transparent to-transparent pointer-events-none" />
+        <div className="flex-1 flex items-center justify-center px-4 py-16 relative">
           <div className="max-w-xl w-full text-center">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-8 border border-brand-500/30 bg-brand-500/15">
-              <span className="text-sm text-brand-400">Propuesta para {negocio}</span>
+              <span className="text-sm text-brand-400">
+                {demo.rubro || 'Propuesta personalizada'}
+              </span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-bold text-white mb-4 leading-tight">
@@ -113,30 +121,38 @@ export default function DemoProductLanding() {
             </h1>
 
             <p className="text-lg text-gray-400 mb-8">
-              {demo.rubro && `Rubro: ${demo.rubro}`}
-              {demo.ciudad && ` · ${demo.ciudad}`}
+              Te preparamos una propuesta especial para potenciar tu negocio
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 mb-10">
-              {demo.calificacion && (
-                <div className="flex items-center gap-1 text-amber-400 text-sm">
+              {rating && (
+                <div className="flex items-center gap-1 text-amber-400 text-sm bg-amber-400/10 px-3 py-1.5 rounded-full">
                   <Star className="w-4 h-4 fill-amber-400" />
-                  {demo.calificacion}
+                  {rating}
+                  {reviewsCount && <span className="text-amber-400/60">({reviewsCount})</span>}
                 </div>
               )}
-              {demo.direccion && (
-                <div className="flex items-center gap-1 text-gray-400 text-sm">
+              {address && (
+                <div className="flex items-center gap-1 text-gray-400 text-sm bg-gray-800/50 px-3 py-1.5 rounded-full">
                   <MapPin className="w-4 h-4" />
-                  {demo.direccion}
+                  {address}
                 </div>
               )}
-              {demo.datos_personalizados?.website && (
-                <div className="flex items-center gap-1 text-gray-400 text-sm">
+              {website && (
+                <div className="flex items-center gap-1 text-gray-400 text-sm bg-gray-800/50 px-3 py-1.5 rounded-full">
                   <Globe className="w-4 h-4" />
-                  {demo.datos_personalizados.website}
+                  {website}
                 </div>
               )}
             </div>
+
+            {demo.descripcion_propuesta && (
+              <div className="mb-10 text-left bg-gray-900/50 border border-gray-800 rounded-2xl p-6">
+                <p className="text-gray-300 leading-relaxed">
+                  {demo.descripcion_propuesta}
+                </p>
+              </div>
+            )}
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               {telefono && (
@@ -145,10 +161,10 @@ export default function DemoProductLanding() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => trackEngagement('whatsapp_click')}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-600/20"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  Contactar
+                  Quiero saber más
                 </a>
               )}
             </div>
@@ -156,11 +172,9 @@ export default function DemoProductLanding() {
         </div>
 
         <div className="border-t border-gray-800/50 py-6 px-4">
-          <div className="max-w-xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-gray-500">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4" />
-              <span>Generado con Revendr</span>
-            </div>
+          <div className="max-w-xl mx-auto flex items-center justify-center gap-2 text-xs text-gray-500">
+            <Shield className="w-4 h-4" />
+            <span>Generado con Revendr — {new Date().getFullYear()}</span>
           </div>
         </div>
       </div>

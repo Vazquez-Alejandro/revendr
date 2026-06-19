@@ -378,12 +378,16 @@ export default function Campaigns() {
           }
         ).then(r => r.json())
 
+        const waFallback = result.data?.whatsapp_fallback || 0
         toast.success(
           locale === 'es'
-            ? `${result.data?.sent || 0} propuestas enviadas por email, ${result.data?.skipped || 0} sin email`
-            : `${result.data?.sent || 0} proposals sent via email, ${result.data?.skipped || 0} without email`,
-          { id: 'messages', duration: 5000 }
+            ? `${result.data?.sent || 0} por email, ${waFallback} vía WhatsApp, ${result.data?.skipped || 0} sin contacto`
+            : `${result.data?.sent || 0} via email, ${waFallback} via WhatsApp, ${result.data?.skipped || 0} no contact`,
+          { id: 'messages', duration: 6000 }
         )
+        if (result.data?.hasWhatsappLinks) {
+          toast(locale === 'es' ? '📱 Revisá Telegram para los enlaces WhatsApp de leads sin email' : '📱 Check Telegram for WhatsApp links of leads without email', { duration: 8000 })
+        }
         loadCampaigns()
       } catch (error) {
         console.error('Error sending demo emails:', error)
