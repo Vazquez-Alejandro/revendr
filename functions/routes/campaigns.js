@@ -396,6 +396,44 @@ app.post('/messages/track', async (req, res) => {
   } catch (error) { res.json({ success: true }) }
 })
 
+app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
+    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    const leadsSnapshot = await db.collection('leads')
+      .where('id_campania', '==', campaignId)
+      .where('estado_proceso', '==', 'propuesta_generada')
+      .get()
+    let sent = 0, whatsappFallback = 0, skipped = 0
+    const whatsappLinks = []
+    for (const leadDoc of leadsSnapshot.docs) {
+      const lead = leadDoc.data()
+      if (!lead.url_propuesta) { skipped++; continue }
+      if (lead.email) {
+        const subject = `Tu propuesta personalizada - ${lead.nombre_negocio}`
+        const html = `<p>Hola,</p><p>Tu propuesta personalizada está lista:</p><p><a href="${lead.url_propuesta}">Ver propuesta</a></p><p>Saludos,<br/>Revendr</p>`
+        try {
+          await sendSimpleEmail(lead.email, subject, html)
+          sent++
+        } catch (err) { console.error(`Email error for ${leadDoc.id}:`, err.message); whatsappFallback++ }
+      } else {
+        whatsappFallback++
+        if (lead.telefono_whatsapp) {
+          whatsappLinks.push({ nombre: lead.nombre_negocio, link: `https://wa.me/${lead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent('Hola, te comparto tu propuesta: ' + lead.url_propuesta)}` })
+        }
+      }
+    }
+    if (whatsappLinks.length > 0) {
+      await sendTelegramMessage(`📬 Leads sin email (${whatsappLinks.length}):\n\n${whatsappLinks.slice(0, 10).map(w => `${w.nombre}: ${w.link}`).join('\n')}${whatsappLinks.length > 10 ? `\n...y ${whatsappLinks.length - 10} más` : ''}`)
+    }
+    res.json({ success: true, data: { sent, whatsapp_fallback: whatsappFallback, skipped, hasWhatsappLinks: whatsappLinks.length > 0 } })
+  } catch (error) {
+    console.error('Error sending demo emails:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
   try {
     const campaignId = req.params.campaignId

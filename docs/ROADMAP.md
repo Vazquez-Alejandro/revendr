@@ -11,7 +11,7 @@ Revendr ahora es una plataforma para **vender productos SaaS** (Inmoxil, TurnosO
 - [x] Firebase Cloud Functions (backend API)
 - [x] Firebase Auth + Firestore
 - [x] Scraping de Google Maps con Apify
-- [x] Generación automática de demos
+- [x] Generación automática de propuestas
 - [x] Envío de WhatsApp (endpoint funcionando)
 - [x] Stripe checkout + webhooks (test mode)
 - [x] Landing page personalizada por lead
@@ -58,7 +58,7 @@ Revendr ahora es una plataforma para **vender productos SaaS** (Inmoxil, TurnosO
 ### TÉCNICO (calidad y seguridad)
 - [ ] **Dominio propio** — Comprar revendr.app o similar
 - [ ] **Email de bienvenida** — Al registrarse
-- [ ] **Email de confirmación** — Al generar demo o enviar mensaje
+- [ ] **Email de confirmación** — Al generar propuesta o enviar mensaje
 - [ ] **Rate limiting** — Proteger la API de abuso
 - [ ] **Error tracking** — Sentry o similar
 - [ ] **Monitoring** — UptimeRobot o similar
@@ -114,7 +114,7 @@ Revendr ahora es una plataforma para **vender productos SaaS** (Inmoxil, TurnosO
 2. [ ] Configurar landing (título, descripción, color)
 3. [ ] Crear campaña "Test" → elegir Inmoxil
 4. [ ] Esperar scraping (~1-5 min)
-5. [ ] Hacer click en "Demos"
+5. [ ] Hacer click en "Props."
 6. [ ] Verificar que la landing se genera correctamente
 7. [ ] (WhatsApp no funciona sin token — es normal)
 

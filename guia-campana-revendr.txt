@@ -145,7 +145,7 @@ Opción D: WhatsApp masivo (botón "WhatsApp" en la campaña)
 PASO 6: SEGUIMIENTO
 =====================================================
 En el lead podés ver:
-  - Estado (scraped → demo_generada → mensaje_enviado → interesado)
+  - Estado (scraped → propuesta_generada → mensaje_enviado → interesado)
   - Temperatura (Hot/Warm/Cold)
   - Score (0-100)
   - Notas

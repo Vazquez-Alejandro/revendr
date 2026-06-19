@@ -33,7 +33,7 @@ Idioma: Español (LATAM)
 Body:
 Hola {{1}}, somos Revendr y te propusimos algo especial para tu negocio.
 
-Mirá esta demo personalizada: {{2}}
+Mirá esta propuesta personalizada: {{2}}
 
 Si te interesa, respondé este mensaje y te damos más info.
 
@@ -41,12 +41,12 @@ Footer:
 Revendr - Software para tu negocio
 
 Botones:
-[URL] Ver mi demo → {{2}}
+[URL] Ver mi propuesta → {{2}}
 ```
 
 ### Variables:
 - `{{1}}` = nombre del negocio
-- `{{2}}` = URL de la demo
+- `{{2}}` = URL de la propuesta
 
 ## Paso 4: Enviar para aprobación
 

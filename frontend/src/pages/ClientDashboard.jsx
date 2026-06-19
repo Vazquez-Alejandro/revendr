@@ -63,7 +63,7 @@ export default function ClientDashboard() {
         {[
           { label: locale === 'es' ? 'Campañas' : 'Campaigns', value: d.totalCampaigns || 0, icon: Megaphone, color: 'text-brand-400' },
           { label: locale === 'es' ? 'Leads' : 'Leads', value: d.totalLeads || 0, icon: Users, color: 'text-blue-400' },
-          { label: locale === 'es' ? 'Demos' : 'Demos', value: d.totalDemos || 0, icon: Eye, color: 'text-violet-400' },
+          { label: locale === 'es' ? 'Propuestas' : 'Proposals', value: d.totalPropuestas || 0, icon: Eye, color: 'text-violet-400' },
           { label: locale === 'es' ? 'Mensajes' : 'Messages', value: d.messagesSent || 0, icon: MessageCircle, color: 'text-emerald-400' },
         ].map(item => (
           <div key={item.label} className="card">
@@ -124,10 +124,10 @@ export default function ClientDashboard() {
           {[
             { label: locale === 'es' ? 'Leads Totales' : 'Total Leads', value: d.totalLeads || 0, color: 'bg-blue-500' },
             { label: locale === 'es' ? 'Calificados' : 'Qualified', value: d.qualifiedLeads || 0, color: 'bg-violet-500' },
-            { label: locale === 'es' ? 'Demos Generadas' : 'Demos Generated', value: d.totalDemos || 0, color: 'bg-amber-500' },
+            { label: locale === 'es' ? 'Propuestas' : 'Proposals', value: d.totalPropuestas || 0, color: 'bg-amber-500' },
             { label: locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent', value: d.messagesSent || 0, color: 'bg-emerald-500' },
           ].map((step, i) => {
-            const maxVal = Math.max(d.totalLeads || 1, d.qualifiedLeads || 1, d.totalDemos || 1, d.messagesSent || 1)
+            const maxVal = Math.max(d.totalLeads || 1, d.qualifiedLeads || 1, d.totalPropuestas || 1, d.messagesSent || 1)
             const pct = (step.value / maxVal) * 100
             return (
               <div key={i}>

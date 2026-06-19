@@ -83,7 +83,7 @@ export default function Dashboard() {
       allLeadsSnapshot.docs.forEach(doc => {
         const lead = doc.data()
         if (lead.fecha_creacion?.toDate?.()?.toDateString() === today) leadsHoy++
-        if (lead.estado_proceso === 'demo_generada') demosGeneradas++
+        if (lead.estado_proceso === 'propuesta_generada') demosGeneradas++
         if (lead.estado_proceso === 'cliente_activo') clientesActivos++
 
         const date = lead.fecha_creacion?.toDate?.()
@@ -204,21 +204,21 @@ export default function Dashboard() {
   const getStatusBadge = (status) => {
     const badges = {
       scraped: 'badge-info',
-      demo_generada: 'badge-warning',
+      propuesta_generada: 'badge-warning',
       mensaje_enviado: 'badge-info',
       interesado: 'badge-success',
       cliente_activo: 'badge-success',
     }
     const labelsEs = {
       scraped: 'Scrapeado',
-      demo_generada: 'Propuesta Generada',
+      propuesta_generada: 'Propuesta Generada',
       mensaje_enviado: 'Mensaje Enviado',
       interesado: 'Interesado',
       cliente_activo: 'Cliente Activo',
     }
     const labelsEn = {
       scraped: 'Scraped',
-      demo_generada: 'Proposal Generated',
+      propuesta_generada: 'Proposal Generated',
       mensaje_enviado: 'Message Sent',
       interesado: 'Interested',
       cliente_activo: 'Active Client',

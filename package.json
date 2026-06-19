@@ -1,7 +1,7 @@
 {
   "name": "revendr-saas-engine",
   "version": "1.0.0",
-  "description": "B2B SaaS Engine - Plataforma centralizada de automatización de prospección y generación de demos",
+  "description": "B2B SaaS Engine - Plataforma centralizada de automatización de prospección y generación de propuestas",
   "private": true,
   "scripts": {
     "dev:frontend": "npm run dev --prefix frontend",

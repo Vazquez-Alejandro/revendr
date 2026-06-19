@@ -76,8 +76,8 @@ class ApiService {
     updateStatus: (id, status) => this.patch(`/campaigns/${id}/status`, { estado: status }),
     triggerScrape: (campaignId, data) => this.post(`/campaigns/${campaignId}/scrape`, data),
     triggerGoogleScrape: (campaignId, data) => this.post(`/campaigns/${campaignId}/scrape-google`, data),
-    processDemos: (campaignId, limit) => this.post(`/campaigns/${campaignId}/process-demos`, null, { limit }),
-    sendMessages: (campaignId, limit) => this.post(`/campaigns/${campaignId}/send-messages`, null, { limit }),
+    processDemos: (campaignId, limit) => this.post(`/campaigns/${campaignId}/process-demos`, { limit }),
+    sendMessages: (campaignId, limit) => this.post(`/campaigns/${campaignId}/send-messages`, { limit }),
   }
 
   leads = {

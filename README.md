@@ -55,11 +55,11 @@ Revendr (Plataforma)
 │   └── Envío de WhatsApp con link a landing
 │
 ├── Leads → Base de datos de negocios contactados
-│   ├── Scraped → Demo Generada → Mensaje Enviado → Interesado → Cliente
+│   ├── Scraped → Propuesta Generada → Mensaje Enviado → Interesado → Cliente
 │   └── Export CSV
 │
 └── Dashboard → Métricas en tiempo real
-    ├── Leads por día, demos, envíos
+    ├── Leads por día, propuestas, envíos
     └── Gráficos interactivos
 ```
 

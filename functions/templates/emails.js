@@ -37,7 +37,7 @@ const welcomeEmail = (userName, loginUrl) => `
 </html>
 `
 
-const bookingConfirmation = (userName, businessName, service, date, time, demoUrl) => `
+const bookingConfirmation = (userName, businessName, service, date, time, propuestaUrl) => `
 <!DOCTYPE html>
 <html>
 <head>
@@ -82,8 +82,8 @@ const bookingConfirmation = (userName, businessName, service, date, time, demoUr
                 </tr>
               </table>
 
-              <a href="${demoUrl}" style="display:inline-block;background-color:#0ea5e9;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px;">
-                Ver mi Demo
+              <a href="${propuestaUrl}" style="display:inline-block;background-color:#0ea5e9;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:600;font-size:16px;">
+                Ver mi Propuesta
               </a>
             </td>
           </tr>

@@ -53,7 +53,7 @@ const RUBROS = [
 
 const ESTADOS = {
   scraped: { class: 'badge-info' },
-  demo_generada: { class: 'badge-warning' },
+  propuesta_generada: { class: 'badge-warning' },
   mensaje_enviado: { class: 'badge-info' },
   interesado: { class: 'badge-success' },
   cliente_activo: { class: 'badge-success' },
@@ -61,7 +61,7 @@ const ESTADOS = {
 
 const ESTADOS_LABELS_ES = {
   scraped: 'Scrapeado',
-  demo_generada: 'Propuesta Generada',
+  propuesta_generada: 'Propuesta Generada',
   mensaje_enviado: 'Mensaje Enviado',
   interesado: 'Interesado',
   cliente_activo: 'Cliente Activo',
@@ -69,7 +69,7 @@ const ESTADOS_LABELS_ES = {
 
 const ESTADOS_LABELS_EN = {
   scraped: 'Scraped',
-  demo_generada: 'Proposal Generated',
+  propuesta_generada: 'Proposal Generated',
   mensaje_enviado: 'Message Sent',
   interesado: 'Interested',
   cliente_activo: 'Active Client',
@@ -95,7 +95,7 @@ export default function Leads() {
   const [stats, setStats] = useState({
     total: 0,
     scraped: 0,
-    demo_generada: 0,
+    propuesta_generada: 0,
     mensaje_enviado: 0,
     interesado: 0,
     cliente_activo: 0,
@@ -162,7 +162,7 @@ export default function Leads() {
       const statsData = {
         total: allSnapshot.size,
         scraped: 0,
-        demo_generada: 0,
+        propuesta_generada: 0,
         mensaje_enviado: 0,
         interesado: 0,
         cliente_activo: 0,
@@ -409,7 +409,7 @@ export default function Leads() {
         {[
           { label: t('total'), value: stats.total, color: 'text-dark-100' },
           { label: t('scrapedEs'), value: stats.scraped, color: 'text-brand-400' },
-          { label: t('demosEs'), value: stats.demo_generada, color: 'text-amber-400' },
+          { label: t('demosEs'), value: stats.propuesta_generada, color: 'text-amber-400' },
           { label: t('sentEs'), value: stats.mensaje_enviado, color: 'text-violet-400' },
           { label: t('clientsEs'), value: stats.cliente_activo, color: 'text-emerald-400' },
         ].map(stat => (
@@ -806,7 +806,7 @@ export default function Leads() {
                   className="select-field"
                 >
                   <option value="scraped">{ESTADOS_LABELS_ES.scraped}</option>
-                  <option value="demo_generada">{ESTADOS_LABELS_ES.demo_generada}</option>
+                  <option value="propuesta_generada">{ESTADOS_LABELS_ES.propuesta_generada}</option>
                   <option value="mensaje_enviado">{ESTADOS_LABELS_ES.mensaje_enviado}</option>
                   <option value="interesado">{ESTADOS_LABELS_ES.interesado}</option>
                   <option value="cliente_activo">{ESTADOS_LABELS_ES.cliente_activo}</option>
