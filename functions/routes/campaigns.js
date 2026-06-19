@@ -27,7 +27,7 @@ app.post('/campaigns', async (req, res) => {
     const docRef = await db.collection('campanias').add({
       nombre, rubro_objetivo, ciudad: ciudad || '', mensaje_template: mensaje_template || '',
       user_id: req.user.uid, estado: 'activa', fecha_inicio: new Date(), fecha_creacion: new Date(),
-      leads_count: 0, demos_generadas: 0, mensajes_enviados: 0,
+      leads_count: 0, propuestas_generadas: 0, mensajes_enviados: 0,
     })
     res.status(201).json({ success: true, data: { id: docRef.id } })
   } catch (error) {
@@ -128,26 +128,26 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
     for (const leadDoc of leadsSnapshot.docs) {
       try {
         const lead = leadDoc.data()
-        const demoId = `demo-${lead.rubro}-${leadDoc.id}`
-        const demoUrl = campaign.producto_id
+        const propuestaId = `demo-${lead.rubro}-${leadDoc.id}`
+        const propuestaUrl = campaign.producto_id
           ? `https://revendr-9add8.web.app/demo/producto/${campaign.producto_id}?negocio=${encodeURIComponent(lead.nombre_negocio)}&telefono=${encodeURIComponent(lead.telefono_whatsapp || '')}`
           : campaign.producto_url_demo
             ? `${campaign.producto_url_demo}?negocio=${encodeURIComponent(lead.nombre_negocio)}&ciudad=${encodeURIComponent(lead.ciudad || '')}`
-            : `https://revendr-9add8.web.app/demo/${lead.rubro}/${demoId}`
-        const demoData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_demo: demoUrl, producto_url: campaign.producto_url_demo || null, fecha_creacion: new Date() }
-        await db.collection('demos').doc(demoId).set(demoData)
-        await db.collection('leads').doc(leadDoc.id).update({ estado_proceso: 'demo_generada', url_demo: demoData.url_demo, demo_id: demoId, fecha_generacion_demo: new Date(), fecha_actualizacion: new Date() })
+            : `https://revendr-9add8.web.app/demo/${lead.rubro}/${propuestaId}`
+        const propuestaData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_propuesta: propuestaUrl, producto_url: campaign.producto_url_demo || null, fecha_creacion: new Date() }
+        await db.collection('propuestas').doc(propuestaId).set(propuestaData)
+        await db.collection('leads').doc(leadDoc.id).update({ estado_proceso: 'propuesta_generada', url_propuesta: propuestaData.url_propuesta, propuesta_id: propuestaId, fecha_generacion_propuesta: new Date(), fecha_actualizacion: new Date() })
         processed++
-        results.push({ leadId: leadDoc.id, demoUrl: demoData.url_demo })
-      } catch (err) { console.error(`Error generating demo for lead ${leadDoc.id}:`, err.message) }
+        results.push({ leadId: leadDoc.id, propuestaUrl: propuestaData.url_propuesta })
+      } catch (err) { console.error(`Error generating propuesta for lead ${leadDoc.id}:`, err.message) }
     }
     if (processed > 0) {
-      await db.collection('campanias').doc(campaignId).update({ demos_generadas: admin.firestore.FieldValue.increment(processed) })
-      createNotification({ userId: req.user?.uid, type: 'demo_generated', title: `${processed} ${processed === 1 ? 'propuesta generada' : 'propuestas generadas'}`, body: 'Procesamiento masivo completado para la campaña', link: `/dashboard/leads` })
+      await db.collection('campanias').doc(campaignId).update({ propuestas_generadas: admin.firestore.FieldValue.increment(processed) })
+      createNotification({ userId: req.user?.uid, type: 'propuesta_generated', title: `${processed} ${processed === 1 ? 'propuesta generada' : 'propuestas generadas'}`, body: 'Procesamiento masivo completado para la campaña', link: `/dashboard/leads` })
     }
     res.json({ success: true, data: { processed, results } })
   } catch (error) {
-    console.error('Error batch generating demos:', error)
+    console.error('Error batch generating propuestas:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
@@ -272,7 +272,7 @@ app.post('/campaigns/:campaignId/process-followups', async (req, res) => {
         if (daysSinceSend < followup.delayDays) continue
         const followupKey = `followup_${followup.delayDays}_sent`
         if (lead[followupKey]) continue
-        const message = followup.message.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_demo}/g, lead.url_demo).replace(/{rubro}/g, lead.rubro)
+        const message = followup.message.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_propuesta}/g, lead.url_propuesta).replace(/{rubro}/g, lead.rubro)
         try {
           await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'text', text: { body: message } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
           await db.collection('leads').doc(leadDoc.id).update({ [followupKey]: true, fecha_ultimo_followup: new Date(), fecha_actualizacion: new Date() })
@@ -338,11 +338,11 @@ app.post('/campaigns/:campaignId/ab-test', async (req, res) => {
     const groupB = shuffled.slice(half)
     const abTestRef = await db.collection('ab_tests').add({ campaign_id: campaignId, message_a: messageA, message_b: messageB, group_a_count: groupA.length, group_b_count: groupB.length, status: 'running', fecha_creacion: new Date() })
     for (const leadDoc of groupA) {
-      const message = messageA.replace(/{nombre_negocio}/g, leadDoc.data().nombre_negocio).replace(/{url_demo}/g, leadDoc.data().url_demo).replace(/{rubro}/g, leadDoc.data().rubro)
+      const message = messageA.replace(/{nombre_negocio}/g, leadDoc.data().nombre_negocio).replace(/{url_propuesta}/g, leadDoc.data().url_propuesta).replace(/{rubro}/g, leadDoc.data().rubro)
       await leadDoc.ref.update({ ab_test_id: abTestRef.id, ab_group: 'A', mensaje_personalizado: message })
     }
     for (const leadDoc of groupB) {
-      const message = messageB.replace(/{nombre_negocio}/g, leadDoc.data().nombre_negocio).replace(/{url_demo}/g, leadDoc.data().url_demo).replace(/{rubro}/g, leadDoc.data().rubro)
+      const message = messageB.replace(/{nombre_negocio}/g, leadDoc.data().nombre_negocio).replace(/{url_propuesta}/g, leadDoc.data().url_propuesta).replace(/{rubro}/g, leadDoc.data().rubro)
       await leadDoc.ref.update({ ab_test_id: abTestRef.id, ab_group: 'B', mensaje_personalizado: message })
     }
     res.json({ success: true, data: { testId: abTestRef.id, groupA: groupA.length, groupB: groupB.length } })
@@ -406,7 +406,7 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
     if (isCampaignExpired(campaign)) return res.status(400).json({ success: false, error: { message: 'Campaign has expired' } })
     if (!isBusinessHours()) return res.status(400).json({ success: false, error: { message: 'Outside business hours (Mon-Fri 9-18hs)' } })
-    const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'demo_generada').get()
+    const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'propuesta_generada').get()
     let sent = 0, failed = 0, skippedLowScore = 0
     const DELAY_BETWEEN_MESSAGES = 45000, MAX_PER_BATCH = 10, BATCH_PAUSE = 180000
     const leadsWithScore = leadsSnapshot.docs.map(doc => ({ ref: doc, data: doc.data(), score: calculateLeadScore(doc.data()) })).sort((a, b) => b.score - a.score)
@@ -415,12 +415,12 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
       if (i > 0 && i % MAX_PER_BATCH === 0) await new Promise(resolve => setTimeout(resolve, BATCH_PAUSE))
       try {
         const { ref: leadDoc, data: lead, score } = toSend[i]
-        if (!lead.url_demo || !lead.telefono_whatsapp) { failed++; continue }
+        if (!lead.url_propuesta || !lead.telefono_whatsapp) { failed++; continue }
         if (score < minScore) { skippedLowScore++; continue }
         let message = lead.mensaje_personalizado
         if (!message) {
-          const messageTemplate = campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, te propuse algo especial para tu {rubro}.\n\nMirá tu demo: {url_demo}'
-          message = messageTemplate.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_demo}/g, lead.url_demo).replace(/{rubro}/g, lead.rubro)
+          const messageTemplate = campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, te propuse algo especial para tu {rubro}.\n\nMirá tu propuesta: {url_propuesta}'
+          message = messageTemplate.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_propuesta}/g, lead.url_propuesta).replace(/{rubro}/g, lead.rubro)
         }
         await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_MESSAGES + Math.floor(Math.random() * 20000)))
         const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'text', text: { body: message } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })

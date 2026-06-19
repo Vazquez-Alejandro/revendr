@@ -404,11 +404,11 @@ export default function Products() {
                   onChange={(e) => setFormData({ ...formData, mensaje_whatsapp: e.target.value })}
                   className="input-field min-h-[100px]"
                   placeholder={locale === 'es'
-                    ? 'Hola {nombre_negocio}, te propongo algo especial para tu negocio. Mirá tu propuesta personalizada: {url_demo}'
-                    : 'Hello {nombre_negocio}, I have something special for your business. Check your personalized proposal: {url_demo}'}
+                    ? 'Hola {nombre_negocio}, te propongo algo especial para tu negocio. Mirá tu propuesta personalizada: {url_propuesta}'
+                    : 'Hello {nombre_negocio}, I have something special for your business. Check your personalized proposal: {url_propuesta}'}
                 />
                 <p className="text-xs text-dark-500 mt-1">
-                  {locale === 'es' ? 'Variables:' : 'Variables:'} {'{nombre_negocio}'}, {'{url_demo}'}, {'{rubro}'}
+                  {locale === 'es' ? 'Variables:' : 'Variables:'} {'{nombre_negocio}'}, {'{url_propuesta}'}, {'{rubro}'}
                 </p>
               </div>
 

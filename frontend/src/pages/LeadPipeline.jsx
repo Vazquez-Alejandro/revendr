@@ -148,9 +148,9 @@ export default function LeadPipeline({ leads, onRefresh }) {
                 </div>
 
                 <div className="flex items-center gap-1">
-                  {lead.url_demo && (
+                  {lead.url_propuesta && (
                     <a
-                      href={lead.url_demo}
+                      href={lead.url_propuesta}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
@@ -162,7 +162,7 @@ export default function LeadPipeline({ leads, onRefresh }) {
                   {lead.telefono_whatsapp && (
                     <a
                       href={`https://wa.me/${lead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(
-                        `Hola ${lead.nombre_negocio}, mirá tu demo: ${lead.url_demo || ''}`
+                        `Hola ${lead.nombre_negocio}, mirá tu propuesta: ${lead.url_propuesta || ''}`
                       )}`}
                       target="_blank"
                       rel="noopener noreferrer"

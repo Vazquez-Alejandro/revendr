@@ -149,20 +149,20 @@ async function autoScoreLead(leadId, lead) {
 const MESSAGE_TEMPLATES = {
   inmobiliaria: [
     'Hola {nombre}! 👋 Soy {vendedor} de {empresa}. Te escribo porque vi tu inmobiliaria en {ciudad} y tengo una propuesta que puede interesarte. Hicimos un análisis de tu presencia digital y creemos que podemos ayudarte a captar más clientes. ¿Tenés 5 minutos para verlo?',
-    'Hola {nombre}, soy {vendedor}. En {empresa} ayudamos a inmobiliarias como la tuya a conseguir más leads calificados. Te preparamos un demo personalizado para tu negocio. ¿Te parecen 5 minutos para mostrártelo?',
+    'Hola {nombre}, soy {vendedor}. En {empresa} ayudamos a inmobiliarias como la tuya a conseguir más leads calificados. Te preparamos una propuesta personalizada para tu negocio. ¿Te parecen 5 minutos para mostrártelo?',
   ],
   estetica: [
     'Hola {nombre}! ✨ Soy {vendedor} de {empresa}. Vimos tu centro de estética en {ciudad} y nos encantó. Preparamos una propuesta especial para ayudarte a atraer más clientas. ¿Te tomarías 2 minutos para verla?',
-    'Hola {nombre}! 💅 Te habla {vendedor} de {empresa}. Tenemos una herramienta que está ayudando a centros de estética como el tuyo a llenar la agenda. Te dejamos una demo para que la veas cuando puedas.',
+    'Hola {nombre}! 💅 Te habla {vendedor} de {empresa}. Tenemos una herramienta que está ayudando a centros de estética como el tuyo a llenar la agenda. Te dejamos una propuesta para que la veas cuando puedas.',
   ],
   clinica: [
-    'Hola {nombre}! 🏥 Soy {vendedor} de {empresa}. Vimos tu clínica/consultorio en {ciudad} y tenemos una propuesta que puede ayudarlos a gestionar mejor sus turnos y pacientes. ¿Te interesa ver una demo rápida?',
+    'Hola {nombre}! 🏥 Soy {vendedor} de {empresa}. Vimos tu clínica/consultorio en {ciudad} y tenemos una propuesta que puede ayudarlos a gestionar mejor sus turnos y pacientes. ¿Te interesa verla?',
   ],
   restaurante: [
     'Hola {nombre}! 🍕 Soy {vendedor} de {empresa}. Vimos tu restaurante en {ciudad} y tenemos una idea para ayudarte a atraer más comensales. Te preparamos una propuesta personalizada. ¿La ves?',
   ],
   gimnasio: [
-    'Hola {nombre}! 💪 Soy {vendedor} de {empresa}. Vimos tu gimnasio en {ciudad} y tenemos una herramienta que puede ayudarte a retener y atraer más socios. ¿Te interesa ver una demo?',
+    'Hola {nombre}! 💪 Soy {vendedor} de {empresa}. Vimos tu gimnasio en {ciudad} y tenemos una herramienta que puede ayudarte a retener y atraer más socios. ¿Te interesa ver la propuesta?',
   ],
   otro: [
     'Hola {nombre}! 👋 Soy {vendedor} de {empresa}. Te escribo porque encontramos tu negocio en {ciudad} y tenemos una propuesta que puede ayudarte a crecer. ¿Tenés 5 minutos para verla?',
@@ -206,27 +206,27 @@ async function sendEmail(to, subject, html) {
 function generateEmailTemplate(lead, product, messageType = 'initial') {
   const negocio = lead.nombre_negocio || 'tu negocio'
   const rubro = lead.rubro || 'tu industria'
-  const demoUrl = lead.url_demo || ''
+  const propuestaUrl = lead.url_propuesta || ''
   const templates = {
     initial: { subject: `Propuesta personalizada para ${negocio}`, body: `
       <h1 style="color:#6366f1">Hola ${negocio}</h1>
       <p>En ${product?.nombre || 'Revendr'} analizamos tu negocio y preparamos una propuesta especialmente para vos.</p>
       <p>Hacé clic en el botón para verla:</p>
-      <div style="text-align:center;margin:24px 0"><a href="${demoUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver propuesta</a></div>
+      <div style="text-align:center;margin:24px 0"><a href="${propuestaUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver propuesta</a></div>
       <p style="color:#94a3b8">Saludos,<br>El equipo de ${product?.nombre || 'Revendr'}</p>` },
     reminder: { subject: `Recordatorio: Propuesta para ${negocio}`, body: `
       <h1 style="color:#6366f1">¿Viste tu propuesta?</h1>
       <p>Hace unos días te enviamos una propuesta para ${negocio}. Queríamos asegurarnos de que la hayas visto.</p>
-      <div style="text-align:center;margin:24px 0"><a href="${demoUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver propuesta</a></div>
+      <div style="text-align:center;margin:24px 0"><a href="${propuestaUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver propuesta</a></div>
       <p style="color:#94a3b8">Saludos</p>` },
     discount: { subject: `🎁 Oferta especial para ${negocio}`, body: `
       <h1 style="color:#6366f1">Oferta por tiempo limitado</h1>
       <p>Para ${negocio} tenemos un descuento especial si activás antes de 7 días.</p>
-      <div style="text-align:center;margin:24px 0"><a href="${demoUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver oferta</a></div>` },
+      <div style="text-align:center;margin:24px 0"><a href="${propuestaUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver oferta</a></div>` },
     lastChance: { subject: `⏰ Último aviso - Propuesta para ${negocio}`, body: `
       <h1 style="color:#ef4444">Última oportunidad</h1>
       <p>Esta es la última vez que te contactamos sobre la propuesta para ${negocio}. No queremos molestarte, pero la oferta se cierra pronto.</p>
-      <div style="text-align:center;margin:24px 0"><a href="${demoUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver propuesta</a></div>` },
+      <div style="text-align:center;margin:24px 0"><a href="${propuestaUrl}" style="display:inline-block;background:#6366f1;color:white;padding:14px 32px;border-radius:8px;text-decoration:none;font-weight:bold">Ver propuesta</a></div>` },
   }
   const t = templates[messageType] || templates.initial
   const baseHtml = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px">${t.body}<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0"><p style="color:#94a3b8;font-size:12px">© ${new Date().getFullYear()} Revendr</p></div>`

@@ -31,7 +31,7 @@ const featuresEs = [
   {
     icon: CreditCard,
     title: 'Cobros con Stripe/Mercado Pago',
-    description: 'El cliente paga directo desde la demo. Integración con Stripe y Mercado Pago para Argentina.',
+    description: 'El cliente paga directo desde la propuesta. Integración con Stripe y Mercado Pago para Argentina.',
   },
   {
     icon: BarChart3,
@@ -64,7 +64,7 @@ const featuresEn = [
   {
     icon: CreditCard,
     title: 'Stripe/Mercado Pago',
-    description: 'Clients pay directly from the demo. Integration with Stripe and Mercado Pago for Argentina.',
+    description: 'Clients pay directly from the proposal. Integration with Stripe and Mercado Pago for Argentina.',
   },
   {
     icon: BarChart3,

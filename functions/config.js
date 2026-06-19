@@ -52,7 +52,7 @@ const isCampaignExpired = (campaign) => {
   return new Date() > fechaFin
 }
 
-const PUBLIC_PATHS = ['/health', '/check-email', '/webhook/stripe', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/demos/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification', '/test/send-demo-email']
+const PUBLIC_PATHS = ['/health', '/check-email', '/webhook/stripe', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/propuestas/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification', '/test/send-demo-email']
 
 const STRIPE_PRICES = {
   starter: {
@@ -70,9 +70,9 @@ const STRIPE_PRICES = {
 }
 
 const PLAN_LIMITS = {
-  starter: { leads: 100, rubros: 1, demos: 50, messages: 1000 },
-  growth: { leads: 1000, rubros: 3, demos: 500, messages: 10000 },
-  enterprise: { leads: -1, rubros: -1, demos: -1, messages: -1 },
+  starter: { leads: 100, rubros: 1, propuestas: 50, messages: 1000 },
+  growth: { leads: 1000, rubros: 3, propuestas: 500, messages: 10000 },
+  enterprise: { leads: -1, rubros: -1, propuestas: -1, messages: -1 },
 }
 
 const RESEND_FROM = 'onboarding@resend.dev'

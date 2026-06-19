@@ -97,10 +97,10 @@ app.post('/email/resend-verification', async (req, res) => {
 app.get('/stats/dashboard', async (req, res) => {
   try {
     const [campaignsSnap, leadsSnap] = await Promise.all([db.collection('campanias').get(), db.collection('leads').get()])
-    let activeCampaigns = 0, demosGeneradas = 0, clientesActivos = 0
+    let activeCampaigns = 0, propuestasGeneradas = 0, clientesActivos = 0
     campaignsSnap.docs.forEach(doc => { if (doc.data().estado === 'activa') activeCampaigns++ })
-    leadsSnap.docs.forEach(doc => { const l = doc.data(); if (l.estado_proceso === 'demo_generada') demosGeneradas++; if (l.estado_proceso === 'cliente_activo') clientesActivos++ })
-    res.json({ success: true, data: { totalCampaigns: campaignsSnap.size, activeCampaigns, totalLeads: leadsSnap.size, demosGeneradas, clientesActivos, conversionRate: leadsSnap.size > 0 ? ((clientesActivos / leadsSnap.size) * 100).toFixed(1) : 0 } })
+    leadsSnap.docs.forEach(doc => { const l = doc.data(); if (l.estado_proceso === 'propuesta_generada') propuestasGeneradas++; if (l.estado_proceso === 'cliente_activo') clientesActivos++ })
+    res.json({ success: true, data: { totalCampaigns: campaignsSnap.size, activeCampaigns, totalLeads: leadsSnap.size, propuestasGeneradas, clientesActivos, conversionRate: leadsSnap.size > 0 ? ((clientesActivos / leadsSnap.size) * 100).toFixed(1) : 0 } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
@@ -108,11 +108,11 @@ app.get('/stats/products', async (req, res) => {
   try {
     const [productsSnapshot, campaignsSnapshot, leadsSnapshot] = await Promise.all([db.collection('productos').get(), db.collection('campanias').get(), db.collection('leads').get()])
     const statsByProduct = {}
-    productsSnapshot.docs.forEach(doc => { statsByProduct[doc.id] = { nombre: doc.data().nombre, nicho: doc.data().nicho, totalCampaigns: 0, activeCampaigns: 0, totalLeads: 0, qualifiedLeads: 0, demosGenerated: 0, messagesSent: 0, clients: 0, totalRevenue: 0 } })
+    productsSnapshot.docs.forEach(doc => { statsByProduct[doc.id] = { nombre: doc.data().nombre, nicho: doc.data().nicho, totalCampaigns: 0, activeCampaigns: 0, totalLeads: 0, qualifiedLeads: 0, propuestasGenerated: 0, messagesSent: 0, clients: 0, totalRevenue: 0 } })
     campaignsSnapshot.docs.forEach(doc => { const c = doc.data(); if (c.producto_id && statsByProduct[c.producto_id]) { statsByProduct[c.producto_id].totalCampaigns++; if (c.estado === 'activa') statsByProduct[c.producto_id].activeCampaigns++; statsByProduct[c.producto_id].messagesSent += c.mensajes_enviados || 0; statsByProduct[c.producto_id].totalRevenue += c.total_revenue || 0 } })
     const campaignProductMap = {}
     campaignsSnapshot.docs.forEach(doc => { if (doc.data().producto_id) campaignProductMap[doc.id] = doc.data().producto_id })
-    leadsSnapshot.docs.forEach(doc => { const lead = doc.data(); const pid = campaignProductMap[lead.id_campania]; if (pid && statsByProduct[pid]) { statsByProduct[pid].totalLeads++; if ((lead.lead_score || 0) >= 50) statsByProduct[pid].qualifiedLeads++; if (lead.estado_proceso === 'demo_generada') statsByProduct[pid].demosGenerated++; if (lead.estado_proceso === 'mensaje_enviado') statsByProduct[pid].messagesSent++; if (lead.estado_proceso === 'cliente_activo') statsByProduct[pid].clients++ } })
+    leadsSnapshot.docs.forEach(doc => { const lead = doc.data(); const pid = campaignProductMap[lead.id_campania]; if (pid && statsByProduct[pid]) { statsByProduct[pid].totalLeads++; if ((lead.lead_score || 0) >= 50) statsByProduct[pid].qualifiedLeads++; if (lead.estado_proceso === 'propuesta_generada') statsByProduct[pid].propuestasGenerated++; if (lead.estado_proceso === 'mensaje_enviado') statsByProduct[pid].messagesSent++; if (lead.estado_proceso === 'cliente_activo') statsByProduct[pid].clients++ } })
     res.json({ success: true, data: statsByProduct })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
@@ -159,22 +159,22 @@ app.post('/test/send-demo-email', async (req, res) => {
     if (!campaignId || (!email && !chatId)) return res.status(400).json({ success: false, error: { message: 'campaignId and email or chatId required' } })
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
-    const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'demo_generada').get()
-    const demoLinks = []
-    for (const leadDoc of leadsSnapshot.docs) { const lead = leadDoc.data(); if (lead.url_demo) demoLinks.push({ nombre: lead.nombre_negocio, url: lead.url_demo }) }
-    if (demoLinks.length === 0) return res.json({ success: true, data: { sent: false, reason: 'no_demo_links_found' } })
+    const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'propuesta_generada').get()
+    const propuestaLinks = []
+    for (const leadDoc of leadsSnapshot.docs) { const lead = leadDoc.data(); if (lead.url_propuesta) propuestaLinks.push({ nombre: lead.nombre_negocio, url: lead.url_propuesta }) }
+    if (propuestaLinks.length === 0) return res.json({ success: true, data: { sent: false, reason: 'no_propuesta_links_found' } })
     if (chatId) {
-      let text = `<b>🎯 Demos generadas - ${campaignDoc.data().nombre}</b>\n\n`
-      for (const dl of demoLinks) text += `• <b>${dl.nombre}</b>\n${dl.url}\n\n`
+      let text = `<b>🎯 Propuestas generadas - ${campaignDoc.data().nombre}</b>\n\n`
+      for (const pl of propuestaLinks) text += `• <b>${pl.nombre}</b>\n${pl.url}\n\n`
       text += `——————\nCreado con Revendr`
       const result = await sendTelegramMessage(chatId, text)
-      return res.json({ success: true, data: { sent: result.sent, provider: 'telegram', demos: demoLinks.length, chatId } })
+      return res.json({ success: true, data: { sent: result.sent, provider: 'telegram', propuestas: propuestaLinks.length, chatId } })
     }
-    let html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px"><h1 style="color:#6366f1">Test - Tus demos generadas</h1><p>Estas son las demos generadas para tu campaña <strong>${campaignDoc.data().nombre}</strong>:</p><ul>`
-    for (const dl of demoLinks) html += `<li style="margin:12px 0"><strong>${dl.nombre}</strong><br><a href="${dl.url}" style="color:#6366f1">${dl.url}</a></li>`
+    let html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:20px"><h1 style="color:#6366f1">Test - Tus propuestas generadas</h1><p>Estas son las propuestas generadas para tu campaña <strong>${campaignDoc.data().nombre}</strong>:</p><ul>`
+    for (const pl of propuestaLinks) html += `<li style="margin:12px 0"><strong>${pl.nombre}</strong><br><a href="${pl.url}" style="color:#6366f1">${pl.url}</a></li>`
     html += `</ul><hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0"><p style="color:#94a3b8;font-size:12px">© 2026 Revendr</p></div>`
-    const result = await sendSimpleEmail(email, `Test: ${demoLinks.length} ${demoLinks.length === 1 ? 'propuesta generada' : 'propuestas generadas'}`, html)
-    res.json({ success: true, data: { sent: result.sent, provider: result.provider, demos: demoLinks.length, email } })
+    const result = await sendSimpleEmail(email, `Test: ${propuestaLinks.length} ${propuestaLinks.length === 1 ? 'propuesta generada' : 'propuestas generadas'}`, html)
+    res.json({ success: true, data: { sent: result.sent, provider: result.provider, propuestas: propuestaLinks.length, email } })
   } catch (error) { console.error('Test email error:', error); res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
@@ -183,7 +183,7 @@ app.post('/test/send-demo-email', async (req, res) => {
 app.get('/admin/clients', async (req, res) => {
   try {
     const snapshot = await db.collection('usuarios').orderBy('fecha_creacion', 'desc').get()
-    const clients = snapshot.docs.map(doc => { const d = doc.data(); return { id: doc.id, email: d.email, nombre: d.nombre, empresa: d.empresa || '', plan: d.plan || 'starter', activo: d.activo !== false, emailVerified: d.emailVerified || false, onboarding_completed: d.onboarding_completed || false, fecha_creacion: d.fecha_creacion, last_login: d.last_login || null, usage: d.usage || { leads: 0, demos: 0, messages: 0 } } })
+    const clients = snapshot.docs.map(doc => { const d = doc.data(); return { id: doc.id, email: d.email, nombre: d.nombre, empresa: d.empresa || '', plan: d.plan || 'starter', activo: d.activo !== false, emailVerified: d.emailVerified || false, onboarding_completed: d.onboarding_completed || false, fecha_creacion: d.fecha_creacion, last_login: d.last_login || null, usage: d.usage || { leads: 0, propuestas: 0, messages: 0 } } })
     res.json({ success: true, data: clients })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
@@ -237,9 +237,9 @@ app.get('/usage/:userId', async (req, res) => {
     const userData = userDoc.data()
     const plan = userData.plan || 'starter'
     const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
-    const usage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+    const usage = userData.usage || { leads: 0, propuestas: 0, messages: 0 }
     const calcPct = (used, limit) => limit === -1 ? 0 : Math.min(100, Math.round((used / limit) * 100))
-    res.json({ success: true, data: { plan, limits, usage, percentages: { leads: calcPct(usage.leads, limits.leads), demos: calcPct(usage.demos, limits.demos), messages: calcPct(usage.messages, limits.messages) } } })
+    res.json({ success: true, data: { plan, limits, usage, percentages: { leads: calcPct(usage.leads, limits.leads), propuestas: calcPct(usage.propuestas, limits.propuestas), messages: calcPct(usage.messages, limits.messages) } } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
@@ -251,7 +251,7 @@ app.post('/usage/increment', async (req, res) => {
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
     const userData = userDoc.data()
     const limits = PLAN_LIMITS[userData.plan || 'starter'] || PLAN_LIMITS.starter
-    const currentUsage = userData.usage || { leads: 0, demos: 0, messages: 0 }
+    const currentUsage = userData.usage || { leads: 0, propuestas: 0, messages: 0 }
     const increment = amount || 1
     if (limits[type] !== -1 && (currentUsage[type] || 0) + increment > limits[type]) return res.status(403).json({ success: false, error: { message: `Plan limit exceeded for ${type}` } })
     await db.collection('usuarios').doc(userId).update({ [`usage.${type}`]: (currentUsage[type] || 0) + increment })
@@ -328,11 +328,11 @@ app.get('/client/dashboard/:userId', async (req, res) => {
     const { userId } = req.params
     const [userDoc, campaignsSnap, leadsSnap] = await Promise.all([db.collection('usuarios').doc(userId).get(), db.collection('campanias').where('user_id', '==', userId).get(), db.collection('leads').where('user_id', '==', userId).get()])
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
-    const userData = userDoc.data(); const plan = userData.plan || 'starter'; const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter; const usage = userData.usage || { leads: 0, demos: 0, messages: 0 }
-    let activeCampaigns = 0, totalDemos = 0, qualifiedLeads = 0, messagesSent = 0, totalRevenue = 0
+    const userData = userDoc.data(); const plan = userData.plan || 'starter'; const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter; const usage = userData.usage || { leads: 0, propuestas: 0, messages: 0 }
+    let activeCampaigns = 0, totalPropuestas = 0, qualifiedLeads = 0, messagesSent = 0, totalRevenue = 0
     campaignsSnap.docs.forEach(doc => { if (doc.data().estado === 'activa') activeCampaigns++ })
-    leadsSnap.docs.forEach(doc => { const l = doc.data(); if (l.estado_proceso === 'demo_generada') totalDemos++; if ((l.lead_score || 0) >= 60) qualifiedLeads++; if (l.mensaje_enviado) messagesSent++; totalRevenue += l.revenue || 0 })
-    res.json({ success: true, data: { plan, limits, usage, stats: { totalCampaigns: campaignsSnap.size, activeCampaigns, totalLeads: leadsSnap.size, totalDemos, qualifiedLeads, messagesSent, totalRevenue, conversionRate: leadsSnap.size > 0 ? ((qualifiedLeads / leadsSnap.size) * 100).toFixed(1) : 0 } } })
+    leadsSnap.docs.forEach(doc => { const l = doc.data(); if (l.estado_proceso === 'propuesta_generada') totalPropuestas++; if ((l.lead_score || 0) >= 60) qualifiedLeads++; if (l.mensaje_enviado) messagesSent++; totalRevenue += l.revenue || 0 })
+    res.json({ success: true, data: { plan, limits, usage, stats: { totalCampaigns: campaignsSnap.size, activeCampaigns, totalLeads: leadsSnap.size, totalPropuestas, qualifiedLeads, messagesSent, totalRevenue, conversionRate: leadsSnap.size > 0 ? ((qualifiedLeads / leadsSnap.size) * 100).toFixed(1) : 0 } } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
@@ -512,7 +512,7 @@ app.post('/content/generate', async (req, res) => {
     if (productId) { const prodDoc = await db.collection('productos').doc(productId).get(); if (prodDoc.exists) product = prodDoc.data() }
     const templates = CONTENT_TEMPLATES[type] || CONTENT_TEMPLATES.launch
     const template = templates[Math.floor(Math.random() * templates.length)]
-    const params = { producto: product?.nombre || customParams?.producto || 'nuestro producto', descripcion: product?.descripcion || customParams?.descripcion || 'una solución innovadora', url: product?.url_demo || customParams?.url || 'https://revendr-9add8.web.app', beneficio: customParams?.beneficio || 'multiplicar tus ventas', cliente: customParams?.cliente || 'un cliente satisfecho', testimonial: customParams?.testimonial || 'Es increíble', descuento: customParams?.descuento || '20%' }
+    const params = { producto: product?.nombre || customParams?.producto || 'nuestro producto', descripcion: product?.descripcion || customParams?.descripcion || 'una solución innovadora', url: product?.url_propuesta || customParams?.url || 'https://revendr-9add8.web.app', beneficio: customParams?.beneficio || 'multiplicar tus ventas', cliente: customParams?.cliente || 'un cliente satisfecho', testimonial: customParams?.testimonial || 'Es increíble', descuento: customParams?.descuento || '20%' }
     let content = template
     Object.entries(params).forEach(([k, v]) => { content = content.replace(new RegExp(`\\{${k}\\}`, 'g'), v) })
     const platformInfo = SOCIAL_PLATFORMS[platform] || SOCIAL_PLATFORMS.twitter
@@ -583,7 +583,7 @@ app.get('/analytics/trends', async (req, res) => {
 // ============ PUBLIC API ============
 
 app.get('/api-docs', (req, res) => {
-  res.json({ name: 'Revendr API', version: '1.0.0', description: 'API pública para integrar Revendr con tu sistema', baseUrl: 'https://us-central1-revendr-9add8.cloudfunctions.net/api', authentication: { type: 'API Key', header: 'x-api-key' }, endpoints: { leads: { 'GET /leads': 'Listar leads', 'GET /leads/stats': 'Estadísticas', 'POST /leads/score-all': 'Recalcular scores', 'POST /leads/:id/generate-message': 'Generar mensaje', 'POST /leads/:id/send-email': 'Enviar email', 'POST /leads/:id/send-whatsapp': 'Enviar WhatsApp' }, campaigns: { 'GET /campaigns': 'Listar campañas', 'POST /campaigns': 'Crear campaña', 'POST /campaigns/:id/scrape': 'Scraping', 'POST /campaigns/:id/process-demos': 'Generar demos', 'POST /campaigns/:id/send-messages': 'Enviar WhatsApp' } }, rateLimits: { default: '100 requests/min', scraping: '5 requests/min' } })
+  res.json({ name: 'Revendr API', version: '1.0.0', description: 'API pública para integrar Revendr con tu sistema', baseUrl: 'https://us-central1-revendr-9add8.cloudfunctions.net/api', authentication: { type: 'API Key', header: 'x-api-key' }, endpoints: { leads: { 'GET /leads': 'Listar leads', 'GET /leads/stats': 'Estadísticas', 'POST /leads/score-all': 'Recalcular scores', 'POST /leads/:id/generate-message': 'Generar mensaje', 'POST /leads/:id/send-email': 'Enviar email', 'POST /leads/:id/send-whatsapp': 'Enviar WhatsApp' }, campaigns: { 'GET /campaigns': 'Listar campañas', 'POST /campaigns': 'Crear campaña', 'POST /campaigns/:id/scrape': 'Scraping', 'POST /campaigns/:id/process-demos': 'Generar propuestas', 'POST /campaigns/:id/send-messages': 'Enviar WhatsApp' } }, rateLimits: { default: '100 requests/min', scraping: '5 requests/min' } })
 })
 
 }

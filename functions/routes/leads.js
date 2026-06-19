@@ -39,27 +39,27 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
-    const demoId = `demo-${lead.rubro}-${req.params.leadId}`
-    const demoData = {
+    const propuestaId = `propuesta-${lead.rubro}-${req.params.leadId}`
+    const propuestaData = {
       lead_id: req.params.leadId, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro,
       ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '',
       telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8,
       logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '',
       horarios: lead.datos_personalizados?.horarios || [],
-      url_demo: `https://revendr-9add8.web.app/demo/${lead.rubro}/${demoId}`, fecha_creacion: new Date(),
+      url_propuesta: `https://revendr-9add8.web.app/demo/${lead.rubro}/${leadDoc.id}`, fecha_creacion: new Date(),
     }
-    await db.collection('demos').doc(demoId).set(demoData)
+    await db.collection('propuestas').doc(propuestaId).set(propuestaData)
     await db.collection('leads').doc(req.params.leadId).update({
-      estado_proceso: 'demo_generada', url_demo: demoData.url_demo, demo_id: demoId,
-      fecha_generacion_demo: new Date(), fecha_actualizacion: new Date(),
+      estado_proceso: 'propuesta_generada', url_propuesta: propuestaData.url_propuesta, propuesta_id: propuestaId,
+      fecha_generacion_propuesta: new Date(), fecha_actualizacion: new Date(),
     })
     if (lead.id_campania) {
-      await db.collection('campanias').doc(lead.id_campania).update({ demos_generadas: admin.firestore.FieldValue.increment(1) })
+      await db.collection('campanias').doc(lead.id_campania).update({ propuestas_generadas: admin.firestore.FieldValue.increment(1) })
     }
-    createNotification({ userId: req.user?.uid, type: 'demo_generated', title: 'Propuesta generada', body: `Propuesta para ${lead.nombre_negocio || 'lead'} lista`, link: `/dashboard/leads` })
-    res.json({ success: true, data: { demoUrl: demoData.url_demo, demoId } })
+    createNotification({ userId: req.user?.uid, type: 'propuesta_generated', title: 'Propuesta generada', body: `Propuesta para ${lead.nombre_negocio || 'lead'} lista`, link: `/dashboard/leads` })
+    res.json({ success: true, data: { propuestaUrl: propuestaData.url_propuesta, propuestaId } })
   } catch (error) {
-    console.error('Error generating demo:', error)
+    console.error('Error generating propuesta:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
@@ -109,11 +109,11 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
-    if (!lead.url_demo) return res.status(400).json({ success: false, error: { message: 'Lead has no proposal URL. Generate proposal first.' } })
+    if (!lead.url_propuesta) return res.status(400).json({ success: false, error: { message: 'Lead has no proposal URL. Generate proposal first.' } })
     const customMessage = req.body.customMessage
     const message = customMessage
-      ? customMessage.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_demo}/g, lead.url_demo).replace(/{rubro}/g, lead.rubro)
-      : `Hola ${lead.nombre_negocio}, te propuse algo especial para tu ${lead.rubro}.\n\nMirá tu demo personalizada: ${lead.url_demo}\n\n¿Te gustaría que hablemos?`
+      ? customMessage.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_propuesta}/g, lead.url_propuesta).replace(/{rubro}/g, lead.rubro)
+      : `Hola ${lead.nombre_negocio}, te propuse algo especial para tu ${lead.rubro}.\n\nMirá tu propuesta personalizada: ${lead.url_propuesta}\n\n¿Te gustaría que hablemos?`
     const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'text', text: { body: message } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
     await db.collection('leads').doc(req.params.leadId).update({ estado_proceso: 'mensaje_enviado', whatsapp_message_id: response.data.messages?.[0]?.id, fecha_envio_whatsapp: new Date(), fecha_actualizacion: new Date() })
     if (lead.id_campania) await db.collection('campanias').doc(lead.id_campania).update({ mensajes_enviados: admin.firestore.FieldValue.increment(1) })

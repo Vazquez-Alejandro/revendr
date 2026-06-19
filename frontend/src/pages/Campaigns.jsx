@@ -730,8 +730,8 @@ export default function Campaigns() {
   const openAbTest = (campaign) => {
     setAbTestModal(campaign)
     setAbTestForm({
-      messageA: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, te preparé algo especial: {url_demo}',
-      messageB: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, mirá lo que armamos para vos: {url_demo}',
+      messageA: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, te preparé algo especial: {url_propuesta}',
+      messageB: campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, mirá lo que armamos para vos: {url_propuesta}',
     })
     loadAbResults(campaign.id)
   }
@@ -1118,7 +1118,7 @@ export default function Campaigns() {
                   <p className="text-xs text-dark-300 whitespace-pre-line leading-relaxed">
                     {(campaign.producto_mensaje || campaign.mensaje_template || '')
                       .replace(/{nombre_negocio}/g, 'Ej: Revendr')
-                      .replace(/{url_demo}/g, 'https://revendr-9add8.web.app/...')
+                      .replace(/{url_propuesta}/g, 'https://revendr-9add8.web.app/...')
                       .replace(/{rubro}/g, 'inmobiliaria')
                       .substring(0, 200)}
                     {(campaign.producto_mensaje || campaign.mensaje_template || '').length > 200 && '...'}
@@ -1266,7 +1266,7 @@ export default function Campaigns() {
                   placeholder={locale === 'es' ? 'Hola {nombre_negocio}, te propongo algo interesante...' : 'Hello {nombre_negocio}, I have something interesting for you...'}
                 />
                 <p className="text-xs text-dark-500 mt-1">
-                  {locale === 'es' ? 'Variables disponibles:' : 'Available variables:'} {'{nombre_negocio}'}, {'{url_demo}'}, {'{rubro}'}
+                  {locale === 'es' ? 'Variables disponibles:' : 'Available variables:'} {'{nombre_negocio}'}, {'{url_propuesta}'}, {'{rubro}'}
                 </p>
               </div>
 

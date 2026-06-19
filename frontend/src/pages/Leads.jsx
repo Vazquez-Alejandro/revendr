@@ -623,9 +623,9 @@ export default function Leads() {
                         </span>
                       </td>
                       <td className="py-3 px-4">
-                        {lead.url_demo ? (
+                        {lead.url_propuesta ? (
                           <a 
-                            href={lead.url_demo} 
+                            href={lead.url_propuesta} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="inline-flex items-center gap-1 px-2 py-1 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-xs font-medium hover:bg-brand-500/20 transition-all"
@@ -944,10 +944,10 @@ export default function Leads() {
                 <label className="block text-sm font-medium text-dark-300 mb-2">
                   {locale === 'es' ? 'Propuesta' : 'Proposal'}
                 </label>
-                {selectedLead.url_demo ? (
+                {selectedLead.url_propuesta ? (
                   <div className="flex gap-2">
                     <a
-                      href={selectedLead.url_demo}
+                      href={selectedLead.url_propuesta}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-sm font-medium hover:bg-brand-500/20 transition-all"
@@ -973,7 +973,7 @@ export default function Leads() {
                           if (res.success) {
                             toast.success(locale === 'es' ? 'Propuesta generada de nuevo' : 'Proposal regenerated', { id: 'gen-demo' })
                             loadLeads()
-                            setSelectedLead({ ...selectedLead, url_demo: res.data.demoUrl })
+                            setSelectedLead({ ...selectedLead, url_propuesta: res.data.propuestaUrl })
                           } else {
                             toast.error(locale === 'es' ? 'Error al generar' : 'Error generating', { id: 'gen-demo' })
                           }
@@ -1006,7 +1006,7 @@ export default function Leads() {
                         if (res.success) {
                           toast.success(locale === 'es' ? 'Propuesta generada' : 'Proposal generated', { id: 'gen-demo' })
                           loadLeads()
-                          setSelectedLead({ ...selectedLead, url_demo: res.data.demoUrl })
+                          setSelectedLead({ ...selectedLead, url_propuesta: res.data.propuestaUrl })
                         } else {
                           toast.error(locale === 'es' ? 'Error al generar' : 'Error generating', { id: 'gen-demo' })
                         }
@@ -1049,7 +1049,7 @@ export default function Leads() {
                   </label>
                   <div className="flex gap-2">
                     <a
-                      href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_demo || ''}`)}`}
+                      href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_propuesta || ''}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-all"
@@ -1058,7 +1058,7 @@ export default function Leads() {
                       WhatsApp
                     </a>
                     <a
-                      href={`https://t.me/+${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_demo || ''}`)}`}
+                      href={`https://t.me/+${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_propuesta || ''}`)}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-lg text-sm font-medium hover:bg-sky-500/20 transition-all"
