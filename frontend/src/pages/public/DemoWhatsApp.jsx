@@ -22,7 +22,7 @@ export default function DemoWhatsApp() {
 
   const loadDemo = async () => {
     try {
-      const docRef = doc(db, 'demos', demoId)
+      const docRef = doc(db, 'propuestas', demoId)
       const docSnap = await getDoc(docRef)
       if (docSnap.exists()) {
         setDemo({ id: docSnap.id, ...docSnap.data() })

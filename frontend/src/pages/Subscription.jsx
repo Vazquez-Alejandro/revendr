@@ -208,7 +208,7 @@ export default function Subscription() {
         <div className="grid grid-cols-3 gap-4 mb-4">
           {[
             { key: 'leads', label: 'Leads', used: sub.usage.leads, limit: sub.limits.leads },
-            { key: 'demos', label: 'Props.', used: sub.usage.demos, limit: sub.limits.demos },
+            { key: 'propuestas', label: 'Props.', used: sub.usage.propuestas, limit: sub.limits.propuestas },
             { key: 'messages', label: 'Mensajes', used: sub.usage.messages, limit: sub.limits.messages },
           ].map(item => {
             const pct = item.limit === -1 ? 0 : Math.min(100, (item.used / item.limit) * 100)

@@ -88,7 +88,7 @@ export default function ClientDashboard() {
         <div className="space-y-4">
           {[
             { key: 'leads', label: locale === 'es' ? 'Leads Procesados' : 'Leads Processed', used: usage.leads || 0, limit: limits.leads },
-            { key: 'demos', label: locale === 'es' ? 'Demos Generadas' : 'Demos Generated', used: usage.demos || 0, limit: limits.demos },
+            { key: 'propuestas', label: locale === 'es' ? 'Propuestas Generadas' : 'Proposals Generated', used: usage.propuestas || 0, limit: limits.propuestas },
             { key: 'messages', label: locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent', used: usage.messages || 0, limit: limits.messages },
           ].map(item => {
             const pct = calcPct(item.used, item.limit)

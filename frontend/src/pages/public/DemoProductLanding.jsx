@@ -59,10 +59,10 @@ export default function DemoProductLanding() {
         return
       }
 
-      const demoRef = doc(db, 'demos', id)
-      const demoSnap = await getDoc(demoRef)
-      if (demoSnap.exists()) {
-        setDemo({ id: demoSnap.id, ...demoSnap.data() })
+      const propuestaRef = doc(db, 'propuestas', id)
+      const propuestaSnap = await getDoc(propuestaRef)
+      if (propuestaSnap.exists()) {
+        setDemo({ id: propuestaSnap.id, ...propuestaSnap.data() })
         setLoading(false)
         return
       }
@@ -89,8 +89,20 @@ export default function DemoProductLanding() {
 
   if (error || (!product && !demo)) {
     return (
-      <div className="min-h-screen bg-gray-950 flex items-center justify-center">
-        <p className="text-gray-400">{error || 'No encontrado'}</p>
+      <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center gap-4 px-4">
+        <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center">
+          <span className="text-2xl">🔍</span>
+        </div>
+        <h1 className="text-xl font-semibold text-white">Propuesta no encontrada</h1>
+        <p className="text-gray-400 text-sm text-center max-w-sm">
+          Esta propuesta no existe o fue eliminada. Verificá el link o contactá al remitente.
+        </p>
+        <a
+          href="/"
+          className="mt-2 inline-flex items-center gap-2 px-6 py-2.5 bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium rounded-xl transition-all"
+        >
+          Ir al inicio
+        </a>
       </div>
     )
   }
