@@ -36,7 +36,8 @@ import {
   List,
   Megaphone,
   RefreshCw,
-  Trash2
+  Trash2,
+  Send
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
@@ -993,11 +994,11 @@ export default function Leads() {
                 </div>
               )}
 
-              {/* WhatsApp - Quick Send */}
+              {/* WhatsApp / Telegram - Quick Send */}
               {selectedLead.telefono_whatsapp && (
                 <div>
                   <label className="block text-sm font-medium text-dark-300 mb-2">
-                    WhatsApp
+                    {locale === 'es' ? 'Enviar por' : 'Send via'}
                   </label>
                   <div className="flex gap-2">
                     <a
@@ -1007,7 +1008,16 @@ export default function Leads() {
                       className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-all"
                     >
                       <MessageCircle className="w-4 h-4" />
-                      {locale === 'es' ? 'Enviar WhatsApp' : 'Send WhatsApp'}
+                      WhatsApp
+                    </a>
+                    <a
+                      href={`https://t.me/+${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_demo || ''}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-sky-500/10 text-sky-400 border border-sky-500/20 rounded-lg text-sm font-medium hover:bg-sky-500/20 transition-all"
+                    >
+                      <Send className="w-4 h-4" />
+                      Telegram
                     </a>
                   </div>
                 </div>

@@ -217,13 +217,13 @@ export default function Campaigns() {
 
   const handleScrape = async (campaignId) => {
     setProcessingAction(`${campaignId}-scrape`)
-    toast.loading(locale === 'es' ? 'Iniciando scraping...' : 'Starting scrape...', { id: 'scrape' })
+    toast.loading(locale === 'es' ? 'Iniciando scraping Apify...' : 'Starting Apify scrape...', { id: 'scrape' })
     try {
       const result = await api.campaigns.triggerScrape(campaignId, {})
       toast.success(
         locale === 'es' 
-          ? `Scraping iniciado. Buscando leads...` 
-          : `Scrape started. Searching for leads...`,
+          ? `Scraping Apify iniciado. Buscando leads...` 
+          : `Apify scrape started. Searching for leads...`,
         { id: 'scrape' }
       )
       setTimeout(loadCampaigns, 3000)
@@ -231,9 +231,41 @@ export default function Campaigns() {
       console.error('Error starting scrape:', error)
       toast.error(
         error.message.includes('not configured')
-          ? (locale === 'es' ? 'Token de Apify no configurado. Andá a Settings.' : 'Apify token not configured. Go to Settings.')
+          ? (locale === 'es' ? 'Token de Apify no configurado.' : 'Apify token not configured.')
           : (locale === 'es' ? 'Error al iniciar scraping' : 'Error starting scrape'),
         { id: 'scrape' }
+      )
+    } finally {
+      setProcessingAction(null)
+    }
+  }
+
+  const handleGoogleScrape = async (campaignId) => {
+    setProcessingAction(`${campaignId}-google`)
+    toast.loading(locale === 'es' ? 'Buscando en Google Places...' : 'Searching Google Places...', { id: 'google' })
+    try {
+      const result = await api.campaigns.triggerGoogleScrape(campaignId, {})
+      if (result.data?.saved > 0) {
+        toast.success(
+          locale === 'es'
+            ? `${result.data.saved} leads encontrados via Google Places`
+            : `${result.data.saved} leads found via Google Places`,
+          { id: 'google' }
+        )
+        loadCampaigns()
+      } else {
+        toast.success(
+          locale === 'es' ? 'Búsqueda completada, sin leads nuevos' : 'Search completed, no new leads',
+          { id: 'google' }
+        )
+      }
+    } catch (error) {
+      console.error('Error in Google Places scrape:', error)
+      toast.error(
+        error.message.includes('not configured')
+          ? (locale === 'es' ? 'Google Places API key no configurada. Agregala en .env' : 'Google Places API key not configured. Add it in .env')
+          : (locale === 'es' ? 'Error al buscar en Google Places' : 'Error searching Google Places'),
+        { id: 'google' }
       )
     } finally {
       setProcessingAction(null)
@@ -984,7 +1016,19 @@ export default function Campaigns() {
                   ) : (
                     <Search className="w-3 h-3" />
                   )}
-                  {locale === 'es' ? 'Scraping' : 'Scrape'}
+                  Apify
+                </button>
+                <button
+                  onClick={() => handleGoogleScrape(campaign.id)}
+                  disabled={processingAction !== null}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs font-medium hover:bg-green-500/20 transition-all disabled:opacity-50"
+                >
+                  {processingAction === `${campaign.id}-google` ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Globe className="w-3 h-3" />
+                  )}
+                  Google
                 </button>
                 <button
                   onClick={() => handleProcessDemos(campaign.id)}

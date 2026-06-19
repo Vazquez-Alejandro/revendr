@@ -206,6 +206,119 @@ app.patch('/campaigns/:id/status', async (req, res) => {
   }
 })
 
+const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY
+
+// ============ GOOGLE PLACES SCRAPING ============
+
+app.post('/campaigns/:campaignId/scrape-google', async (req, res) => {
+  try {
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) {
+      return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    }
+
+    const campaign = campaignDoc.data()
+    const { ciudad, rubro_objetivo } = campaign
+    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''}`.trim()
+
+    if (!GOOGLE_PLACES_API_KEY) {
+      return res.status(500).json({ success: false, error: { message: 'Google Places API key not configured. Set GOOGLE_PLACES_API_KEY in .env' } })
+    }
+
+    await db.collection('campanias').doc(req.params.campaignId).update({
+      scraping_status: 'running',
+      scraping_started_at: new Date(),
+    })
+
+    const searchRes = await axios.post(
+      'https://places.googleapis.com/v1/places:searchText',
+      {
+        textQuery: searchTerm,
+        pageSize: 20,
+        languageCode: 'es',
+      },
+      {
+        headers: {
+          'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY,
+          'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.googleMapsUri,places.rating,places.userRatingCount,places.websiteUri,places.regularOpeningHours,places.priceLevel',
+          'Content-Type': 'application/json',
+        },
+      }
+    )
+
+    const places = searchRes.data.places || []
+    let saved = 0
+
+    for (const place of places) {
+      const phone = place.internationalPhoneNumber || ''
+      const phoneClean = phone.replace(/\D/g, '')
+
+      if (!phoneClean || phoneClean.length < 8) continue
+
+      const leadData = {
+        id_campania: req.params.campaignId,
+        user_id: req.user?.uid || '',
+        nombre_negocio: place.displayName?.text || 'Sin nombre',
+        telefono_whatsapp: phoneClean.startsWith('54') ? `+${phoneClean}` : `+54${phoneClean}`,
+        email: '',
+        rubro: rubro_objetivo || 'general',
+        ciudad: ciudad || '',
+        direccion: place.formattedAddress || '',
+        url_origen: place.googleMapsUri || '',
+        url_google_maps: place.googleMapsUri || '',
+        calificacion: place.rating || null,
+        reviews_count: place.userRatingCount || 0,
+        total_reviews: place.userRatingCount || 0,
+        datos_personalizados: {
+          logo: '',
+          horarios: place.regularOpeningHours?.weekdayDescriptions || [],
+          website: place.websiteUri || '',
+        },
+        estado_proceso: 'scraped',
+        fecha_creacion: new Date(),
+      }
+
+      const score = calculateLeadScore(leadData)
+      leadData.lead_score = score
+      leadData.temperatura = getTemperature(score)
+      leadData.score_label = getScoreLabel(score).label
+      leadData.qualifies_for_messaging = score >= 30
+
+      await db.collection('leads').add(leadData)
+      saved++
+    }
+
+    await db.collection('campanias').doc(req.params.campaignId).update({
+      scraping_status: 'completed',
+      scraping_completed_at: new Date(),
+      leads_count: admin.firestore.FieldValue.increment(saved),
+    })
+
+    if (req.user?.uid && saved > 0) {
+      createNotification({
+        userId: req.user.uid,
+        type: 'new_lead',
+        title: `${saved} ${saved === 1 ? 'nuevo lead' : 'nuevos leads'} encontrados`,
+        body: `Google Places completado para ${campaign.nombre || 'la campaña'}`,
+        link: `/dashboard/leads`,
+      })
+    }
+
+    res.json({ success: true, data: { saved, status: 'completed' } })
+  } catch (error) {
+    console.error('Error in Google Places scrape:', error.message)
+    if (error.response) {
+      console.error('Google API response:', error.response.status, JSON.stringify(error.response.data))
+    }
+    await db.collection('campanias').doc(req.params.campaignId).update({
+      scraping_status: 'error',
+      scraping_error: error.message,
+      scraping_completed_at: new Date(),
+    })
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 // ============ APIFY SCRAPING ============
 
 app.post('/campaigns/:campaignId/scrape', async (req, res) => {
