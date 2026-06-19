@@ -1,0 +1,176 @@
+GUÍA COMPLETA: CAMPAÑA DE REVENDR PARA VENDER REVENDR
+=====================================================
+
+OBJETIVO
+--------
+Usar Revendr para conseguir clientes que quieran comprar Revendr.
+Target: dueños de negocios (inmobiliarias, estéticas, clínicas, restaurantes,
+gimnasios, etc.) que quieran generar clientes automáticamente.
+
+=====================================================
+PASO 1: CREAR UN PRODUCTO (opcional pero recomendado)
+=====================================================
+Ir a: https://revendr-9add8.web.app → Productos → Nuevo Producto
+
+Campos:
+-------
+Nombre del producto:
+  "Revendr - Generación de Clientes Automática"
+
+Descripción:
+  "Revendr es un sistema que encuentra leads automáticamente en Google Maps,
+   genera propuestas de venta personalizadas y las envía por WhatsApp, Email
+   o Telegram. Ideal para inmobiliarias, estéticas, clínicas, restaurantes,
+   gimnasios y cualquier negocio que quiera más clientes sin hacer frío."
+
+Link de tu producto:
+  https://revendr-9add8.web.app
+
+Texto del botón:
+  "Quiero más clientes"
+
+Mensaje para WhatsApp:
+  "Hola {{nombre_negocio}}! 👋
+   Somos Revendr. Te generamos clientes automáticamente para tu negocio.
+   Buscamos leads en Google Maps, creamos propuestas y las enviamos por
+   WhatsApp/Email. Sin complicación.
+   ¿Te interesa? Te lo muestro sin compromiso."
+
+Precio:
+  0 (lo dejás en 0 si no querés mostrar precio)
+
+Moneda:
+  ARS
+
+Color del botón:
+  #6366f1 (índigo, el color de Revendr)
+
+Luego guardás el producto y te va a dar un ID (ej: "abc123").
+
+=====================================================
+PASO 2: CREAR UNA CAMPAÑA
+=====================================================
+Ir a: Campañas → Nueva Campaña
+
+Campos:
+-------
+Nombre de la campaña:
+  "Revendr - Inmobiliarias CABA"
+
+Producto:
+  Seleccionás "Revendr - Generación de Clientes Automática" (el que creaste arriba)
+
+Rubro:
+  "Inmobiliarias"
+
+Ciudad:
+  "Capital Federal" o "CABA" (empezá por una zona)
+
+Mensaje de WhatsApp:
+  "Hola {{nombre_negocio}}! 👋
+   Somos Revendr. Te ayudamos a conseguir más clientes para tu inmobiliaria
+   de forma automática. Buscamos leads, generamos propuestas y las enviamos
+   por WhatsApp.
+   ¿Te interesa probarlo? Te lo muestro sin compromiso."
+
+Fecha de fin:
+  Dejalo vacío (sin fecha de fin) o poné 30 días desde hoy.
+
+Creás la campaña.
+
+=====================================================
+PASO 3: BUSCAR LEADS CON GOOGLE PLACES
+=====================================================
+Apenas creás la campaña, apretá el botón **Google** (verde).
+Te va a buscar negocios del rubro elegido en esa ciudad.
+Ejemplos de búsquedas que hace Google Places:
+  - "inmobiliaria Capital Federal" → inmobiliarias en CABA
+  - "restaurante Palermo" → restaurantes en Palermo
+  - "clinica medica Belgrano" → clínicas en Belgrano
+  - "peluqueria estetica Recoleta" → peluquerías en Recoleta
+  - "gimnasio San Isidro" → gimnasios en San Isidro
+
+Máximo 20 leads por búsqueda (gratis). Para más, creá otra campaña
+con distinta ciudad o cambiale el nombre.
+
+Consejo: creá varias campañas en simultáneo:
+  - "Revendr - Inmobiliarias CABA"
+  - "Revendr - Inmobiliarias Zona Norte"
+  - "Revendr - Inmobiliarias Zona Sur"
+  - "Revendr - Estéticas Palermo"
+  - "Revendr - Clínicas Belgrano"
+  etc.
+
+Cada campaña te busca 20 leads de ese rubro en esa zona.
+En total pueden ser cientos de leads.
+
+=====================================================
+PASO 4: GENERAR PROPUESTAS
+=====================================================
+Ir a: Leads → vas a ver los leads que se encontraron.
+Hacé click en cada lead → Generar propuesta.
+
+O desde la campaña: apretá el botón **Props.** (violeta).
+Esto genera propuestas para TODOS los leads de golpe.
+
+Cada propuesta es una URL única tipo:
+https://revendr-9add8.web.app/demo/producto/ID_PRODUCTO
+
+Si querés personalizar, podés editar el lead (click en el lead →
+editá nombre, teléfono, email, dirección, calificación, rubro).
+
+=====================================================
+PASO 5: ENVIAR PROPUESTAS
+=====================================================
+Opción A: WhatsApp
+  - En el panel del lead, apretá WhatsApp
+  - Te abre WhatsApp Web con el mensaje prefijado
+  - Mandalo manualmente
+
+Opción B: Email
+  - En el panel del lead, ingresá un email (o usá el del lead)
+  - Apretá "Enviar Email"
+  - Le llega la propuesta al mail
+
+Opción C: Telegram
+  - En el panel del lead, apretá Telegram
+  - Te abre Telegram con el mensaje prefijado
+
+Opción D: WhatsApp masivo (botón "WhatsApp" en la campaña)
+  - Apretá "WhatsApp" en la campaña
+  - Envía a todos los leads que tengan propuesta generada
+  - (Requiere WhatsApp Business API → pago)
+
+=====================================================
+PASO 6: SEGUIMIENTO
+=====================================================
+En el lead podés ver:
+  - Estado (scraped → demo_generada → mensaje_enviado → interesado)
+  - Temperatura (Hot/Warm/Cold)
+  - Score (0-100)
+  - Notas
+
+Cambiá el estado a "interesado" o "cliente_activo" cuando
+respondan. Usá las notas para llevar registro.
+
+=====================================================
+ESTRATEGIA RECOMENDADA
+=====================================================
+1. CREAR 5-10 CAMPAÑAS de distintos rubros/ciudades
+   Ej: Inmobiliarias CABA, Estéticas Palermo, Clínicas Belgrano,
+       Restaurantes Puerto Madero, Gimnasios Zona Norte
+
+2. CORRER GOOGLE en cada una (20 leads por campaña = 100-200 leads)
+
+3. GENERAR PROPUESTAS de todos (botón Props. en cada campaña)
+
+4. ENVIAR por EMAIL a los que tengan email, y por WHATSAPP a los que tengan
+   WhatsApp. Alterná: primero los Hot (score > 60) y Warm (score 35-60).
+
+5. SEGUIR semanalmente: cuando te respondan, cambialos a "interesado"
+   y eventualmente a "cliente_activo" cuando compren Revendr.
+
+6. ESCALAR: cuando se acerque septiembre (vence el trial de Google),
+   evaluá si las campañas están rindiendo. Si sí, creá una key de Google
+   Maps Platform con tarjeta de crédito para seguir (sigue siendo gratis
+   hasta ~125.000 leads/mes).

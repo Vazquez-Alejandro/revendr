@@ -43,7 +43,7 @@ import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
 
 const RUBROS = [
-  { value: 'todos', labelEs: 'Todos los Rubros', labelEn: 'All Niches' },
+  { value: 'todos', labelEs: 'Rubros', labelEn: 'Niche' },
   { value: 'inmobiliaria', labelEs: 'Inmobiliarias', labelEn: 'Real Estate' },
   { value: 'estetica', labelEs: 'Estética / Peluquería', labelEn: 'Beauty / Salon' },
   { value: 'clinica', labelEs: 'Clínicas Médicas', labelEn: 'Medical Clinics' },
@@ -101,6 +101,7 @@ export default function Leads() {
     cliente_activo: 0,
   })
   const [viewMode, setViewMode] = useState('table')
+  const [sortMode, setSortMode] = useState('date')
   const [emailInput, setEmailInput] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [createForm, setCreateForm] = useState({
@@ -201,6 +202,13 @@ export default function Leads() {
     }
 
     return true
+  }).sort((a, b) => {
+    if (sortMode === 'score') {
+      return (b.lead_score || 0) - (a.lead_score || 0)
+    }
+    const dateA = a.fecha_creacion?.toDate?.() || new Date(0)
+    const dateB = b.fecha_creacion?.toDate?.() || new Date(0)
+    return dateB - dateA
   })
 
   const updateLeadStatus = async (leadId, newStatus) => {
@@ -448,7 +456,7 @@ export default function Leads() {
             onChange={(e) => setFilterCampania(e.target.value)}
             className="select-field w-full md:w-48"
           >
-            <option value="todas">{locale === 'es' ? 'Todas las campañas' : 'All campaigns'}</option>
+            <option value="todas">{locale === 'es' ? 'Campañas' : 'Campaigns'}</option>
             {campaigns.map(c => (
               <option key={c.id} value={c.id}>{c.nombre}</option>
             ))}
@@ -458,13 +466,35 @@ export default function Leads() {
             onChange={(e) => setFilterScore(e.target.value)}
             className="select-field w-full md:w-48"
           >
-            <option value="todos">{locale === 'es' ? 'Todos los scores' : 'All scores'}</option>
+            <option value="todos">{locale === 'es' ? 'Scores' : 'Scores'}</option>
             <option value="excellent">{locale === 'es' ? 'Excelente (80+)' : 'Excellent (80+)'}</option>
             <option value="good">{locale === 'es' ? 'Bueno (60-79)' : 'Good (60-79)'}</option>
             <option value="regular">{locale === 'es' ? 'Regular (40-59)' : 'Regular (40-59)'}</option>
             <option value="low">{locale === 'es' ? 'Bajo (20-39)' : 'Low (20-39)'}</option>
             <option value="veryLow">{locale === 'es' ? 'Muy Bajo (<20)' : 'Very Low (<20)'}</option>
           </select>
+          <div className="flex border border-dark-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => setSortMode('date')}
+              className={`px-3 py-2 text-xs font-medium transition-all ${
+                sortMode === 'date'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-dark-800 text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              {locale === 'es' ? 'Reciente' : 'Recent'}
+            </button>
+            <button
+              onClick={() => setSortMode('score')}
+              className={`px-3 py-2 text-xs font-medium transition-all ${
+                sortMode === 'score'
+                  ? 'bg-brand-500 text-white'
+                  : 'bg-dark-800 text-dark-400 hover:text-dark-200'
+              }`}
+            >
+              Score
+            </button>
+          </div>
           <div className="flex border border-dark-700 rounded-lg overflow-hidden">
             <button
               onClick={() => setViewMode('table')}
@@ -744,6 +774,23 @@ export default function Leads() {
                     <option key={r.value} value={r.value}>
                       {locale === 'es' ? r.labelEs : r.labelEn}
                     </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Campaign */}
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Campaña' : 'Campaign'}
+                </label>
+                <select
+                  value={selectedLead.id_campania || 'ninguna'}
+                  onChange={e => updateLeadField(selectedLead.id, 'id_campania', e.target.value === 'ninguna' ? null : e.target.value)}
+                  className="select-field"
+                >
+                  <option value="ninguna">{locale === 'es' ? 'Sin campaña' : 'No campaign'}</option>
+                  {campaigns.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
                   ))}
                 </select>
               </div>

@@ -57,6 +57,7 @@ function App() {
         <Route path="/demo/clinica/:demoId" element={<DemoClinic />} />
         <Route path="/demo/whatsapp/:demoId" element={<DemoWhatsApp />} />
         <Route path="/demo/producto/:productId" element={<DemoProductLanding />} />
+        <Route path="/demo/:rubro/:demoId" element={<DemoProductLanding />} />
 
         {/* Auth routes */}
         <Route path="/login" element={<Login />} />
