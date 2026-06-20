@@ -417,10 +417,10 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
 <img src="https://revendr-9add8.web.app/logo.png" alt="Revendr" style="height:32px;" onerror="this.style.display='none'"/>
 </div>
 <h2 style="color:#1e293b;margin:0 0 8px 0;">Hola,</h2>
-<p style="color:#475569;line-height:1.6;margin:0 0 16px 0;">Generamos una propuesta digital personalizada para <strong>${lead.nombre_negocio}</strong>. Incluye la informaci&oacute;n de tu negocio, rese&ntilde;as de Google y un diseño moderno listo para compartir con tus clientes.</p>
+<p style="color:#475569;line-height:1.6;margin:0 0 16px 0;">Generamos una propuesta digital personalizada para <strong>${lead.nombre_negocio}</strong>. Incluye rese&ntilde;as de Google, datos de tu negocio y un diseño moderno que pod&eacute;s enviar al instante por WhatsApp o email a tus clientes.</p>
 <div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;border-left:4px solid #6366f1;">
 <p style="margin:0 0 4px 0;color:#64748b;font-size:14px;"><strong>¿Qué incluye?</strong></p>
-<p style="margin:0;color:#475569;font-size:14px;">✅ Landing page con rese&ntilde;as reales de Google<br/>✅ Enlace para compartir en WhatsApp y redes<br/>✅ Dise&ntilde;o adaptado a tu rubro</p>
+<p style="margin:0;color:#475569;font-size:14px;">✅ Landing page con rese&ntilde;as reales de Google<br/>✅ Envio automatizado por WhatsApp y email<br/>✅ Dise&ntilde;o adaptado a tu rubro</p>
 </div>
 <div style="text-align:center;margin:24px 0;">
 <a href="${lead.url_propuesta}" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:16px;">Ver mi propuesta</a>
