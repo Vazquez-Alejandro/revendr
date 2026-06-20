@@ -432,6 +432,11 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
 </div>
 <p style="color:#94a3b8;font-size:13px;line-height:1.5;text-align:center;margin:16px 0 0 0;">Si ten&eacute;s dudas o quer&eacute;s personalizar algo, respond&eacute; a este correo.</p>
 <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 16px 0;"/>
+<div style="background:#f1f5f9;border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
+<p style="margin:0 0 6px 0;color:#475569;font-size:13px;font-weight:bold;">¿Qu&eacute; es Revendr?</p>
+<p style="margin:0 0 10px 0;color:#64748b;font-size:13px;line-height:1.5;">Revendr automatiza la generaci&oacute;n de propuestas digitales y el env&iacute;o de mensajes por WhatsApp y email para potenciar tu negocio. Sin esfuerzo manual.</p>
+<a href="https://revendr-9add8.web.app/" style="color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;">Conoc&eacute; m&aacute;s sobre Revendr →</a>
+</div>
 <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">© 2026 Revendr &middot; Plataforma de crecimiento para tu negocio</p>
 </div>`
         try {
