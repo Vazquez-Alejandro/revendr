@@ -122,6 +122,11 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    let productPrice = null
+    if (campaign.producto_id) {
+      const prodDoc = await db.collection('productos').doc(campaign.producto_id).get()
+      if (prodDoc.exists) productPrice = prodDoc.data().precio || null
+    }
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'scraped').limit(parseInt(limitParam)).get()
     let processed = 0
     const results = []
@@ -134,7 +139,7 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
           : campaign.producto_url_demo
             ? `${campaign.producto_url_demo}?negocio=${encodeURIComponent(lead.nombre_negocio)}&ciudad=${encodeURIComponent(lead.ciudad || '')}`
             : `https://revendr-9add8.web.app/demo/${lead.rubro}/${propuestaId}`
-        const propuestaData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_propuesta: propuestaUrl, producto_url: campaign.producto_url_demo || null, fecha_creacion: new Date() }
+        const propuestaData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_propuesta: propuestaUrl, producto_url: campaign.producto_url_demo || null, precio: productPrice, fecha_creacion: new Date() }
         await db.collection('propuestas').doc(propuestaId).set(propuestaData)
         await db.collection('leads').doc(leadDoc.id).update({ estado_proceso: 'propuesta_generada', url_propuesta: propuestaData.url_propuesta, propuesta_id: propuestaId, fecha_generacion_propuesta: new Date(), fecha_actualizacion: new Date() })
         processed++

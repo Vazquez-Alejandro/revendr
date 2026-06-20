@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useParams, useSearchParams } from 'react-router-dom'
 import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
-import { Loader2, MessageCircle, ArrowRight, Shield, Star, MapPin, Globe } from 'lucide-react'
+import { Loader2, MessageCircle, ArrowRight, Shield, Star, MapPin, Globe, CreditCard } from 'lucide-react'
 
 const API_BASE = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
 
@@ -17,9 +17,32 @@ export default function DemoProductLanding() {
   const startTimeRef = useRef(Date.now())
   const hasTrackedView = useRef(false)
 
+  const [paying, setPaying] = useState(false)
+
+  const handleMPPayment = async (amount, title) => {
+    setPaying(true)
+    try {
+      const res = await fetch(`${API_BASE}/mercadopago/create-preference`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, title, leadId, propuestaId: id, email: '' }),
+      }).then(r => r.json())
+      if (res.success && res.data?.init_point) {
+        window.location.href = res.data.init_point
+      } else {
+        alert('Error al crear el pago. Intenta de nuevo.')
+      }
+    } catch (e) {
+      console.error(e)
+      alert('Error de conexión. Intenta de nuevo.')
+    } finally {
+      setPaying(false)
+    }
+  }
+
   const negocio = searchParams.get('negocio') || demo?.nombre_negocio || 'Tu negocio'
   const telefono = searchParams.get('telefono') || demo?.telefono_whatsapp || ''
-  const leadId = searchParams.get('leadId') || ''
+  const leadId = searchParams.get('leadId') || demo?.lead_id || ''
 
   const trackEngagement = (eventType, data = {}) => {
     fetch(`${API_BASE}/landing/engagement`, {
@@ -167,6 +190,16 @@ export default function DemoProductLanding() {
             )}
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              {demo.precio && (
+                <button
+                  onClick={() => handleMPPayment(demo.precio, `Propuesta - ${negocio}`)}
+                  disabled={paying}
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl transition-all shadow-lg shadow-sky-600/20 disabled:opacity-50"
+                >
+                  <CreditCard className="w-5 h-5" />
+                  {paying ? 'Redirigiendo...' : `Pagar $${demo.precio}`}
+                </button>
+              )}
               {telefono && (
                 <a
                   href={whatsappUrl}

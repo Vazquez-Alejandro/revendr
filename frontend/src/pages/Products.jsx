@@ -52,6 +52,7 @@ export default function Products() {
     url_producto: '',
     mensaje_whatsapp: '',
     nicho: '',
+    precio: '',
   })
 
   useEffect(() => {
@@ -91,6 +92,7 @@ export default function Products() {
       landing_descripcion: '',
       landing_color: '#6366f1',
       landing_cta: 'Empezar gratis',
+      precio: '',
     })
     setEditingId(null)
   }
@@ -143,6 +145,7 @@ export default function Products() {
       landing_descripcion: product.landing_descripcion || '',
       landing_color: product.landing_color || '#6366f1',
       landing_cta: product.landing_cta || 'Empezar gratis',
+      precio: product.precio || '',
     })
     setEditingId(product.id)
     setShowModal(true)
@@ -248,6 +251,12 @@ export default function Products() {
                 <p className="text-sm text-dark-300 mb-3 line-clamp-2">
                   {product.descripcion}
                 </p>
+              )}
+
+              {product.precio && (
+                <div className="text-lg font-bold text-emerald-400 mb-3">
+                  ${product.precio}
+                </div>
               )}
 
               <div className="space-y-2 mb-4">
@@ -409,6 +418,29 @@ export default function Products() {
                 />
                 <p className="text-xs text-dark-500 mt-1">
                   {locale === 'es' ? 'Variables:' : 'Variables:'} {'{nombre_negocio}'}, {'{url_propuesta}'}, {'{rubro}'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Precio (opcional)' : 'Price (optional)'}
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-dark-400 text-sm">$</span>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={formData.precio}
+                    onChange={(e) => setFormData({ ...formData, precio: e.target.value })}
+                    className="input-field pl-7"
+                    placeholder="15000"
+                  />
+                </div>
+                <p className="text-xs text-dark-500 mt-1">
+                  {locale === 'es'
+                    ? 'Si cargás un precio, aparecerá un botón de pago en la landing del lead'
+                    : 'If you set a price, a payment button will appear on the lead landing page'}
                 </p>
               </div>
 

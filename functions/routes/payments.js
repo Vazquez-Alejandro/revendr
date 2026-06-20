@@ -157,7 +157,13 @@ app.get('/mercadopago/config', async (req, res) => {
 app.post('/mercadopago/create-preference', async (req, res) => {
   if (!MP_ACCESS_TOKEN) return res.status(503).json({ success: false, error: { message: 'Mercado Pago no configurado', code: 'MP_NOT_CONFIGURED' } })
   try {
-    const { plan, email, userId } = req.body
+    const { plan, email, userId, title, amount, description, leadId, propuestaId } = req.body
+    if (amount) {
+      const response = await axios.post('https://api.mercadopago.com/checkout/preferences',
+        { items: [{ title: title || 'Servicio', unit_price: parseFloat(amount), quantity: 1, currency_id: 'ARS' }], payer: { email }, metadata: { leadId, propuestaId, userId }, back_urls: { success: 'https://revendr-9add8.web.app/?payment=success', failure: 'https://revendr-9add8.web.app/?payment=failed', pending: 'https://revendr-9add8.web.app/?payment=pending' }, auto_return: 'approved', notification_url: 'https://us-central1-revendr-9add8.cloudfunctions.net/api/mercadopago/webhook' },
+        { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' } })
+      return res.json({ success: true, data: { init_point: response.data.init_point, id: response.data.id } })
+    }
     const plans = { starter: { title: 'Revendr Starter', price: 29 }, growth: { title: 'Revendr Growth', price: 79 }, enterprise: { title: 'Revendr Enterprise', price: 199 } }
     const selectedPlan = plans[plan]
     if (!selectedPlan) return res.status(400).json({ success: false, error: { message: 'Invalid plan' } })
@@ -175,8 +181,20 @@ app.post('/mercadopago/webhook', async (req, res) => {
     if (type === 'payment' && data?.id) {
       const response = await axios.get(`https://api.mercadopago.com/v1/payments/${data.id}`, { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}` } })
       const payment = response.data
-      if (payment.status === 'approved' && payment.metadata?.userId) {
-        await db.collection('usuarios_admin').doc(payment.metadata.userId).update({ plan: payment.metadata.plan || 'starter', activo: true, mp_payment_id: data.id, fecha_pago: new Date() }, { merge: true })
+      if (payment.status === 'approved') {
+        if (payment.metadata?.userId && !payment.metadata?.leadId) {
+          await db.collection('usuarios_admin').doc(payment.metadata.userId).update({ plan: payment.metadata.plan || 'starter', activo: true, mp_payment_id: data.id, fecha_pago: new Date() }, { merge: true })
+        }
+        if (payment.metadata?.leadId) {
+          const leadRef = db.collection('leads').doc(payment.metadata.leadId)
+          const leadDoc = await leadRef.get()
+          if (leadDoc.exists) {
+            await leadRef.update({ estado_proceso: 'cliente_activo', mp_payment_id: data.id, fecha_pago: new Date(), monto_pagado: payment.transaction_amount, fecha_actualizacion: new Date() })
+          }
+          if (payment.metadata?.propuestaId) {
+            await db.collection('propuestas').doc(payment.metadata.propuestaId).update({ pagada: true, fecha_pago: new Date(), monto_pagado: payment.transaction_amount }, { merge: true })
+          }
+        }
       }
     }
     res.json({ received: true })
