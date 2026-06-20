@@ -411,8 +411,24 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
       const lead = leadDoc.data()
       if (!lead.url_propuesta) { skipped++; continue }
       if (lead.email) {
-        const subject = `Tu propuesta personalizada - ${lead.nombre_negocio}`
-        const html = `<p>Hola,</p><p>Tu propuesta personalizada está lista:</p><p><a href="${lead.url_propuesta}">Ver propuesta</a></p><p>Saludos,<br/>Revendr</p>`
+        const subject = `Nueva propuesta digital para ${lead.nombre_negocio}`
+        const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;">
+<div style="text-align:center;margin-bottom:24px;">
+<img src="https://revendr-9add8.web.app/logo.png" alt="Revendr" style="height:32px;" onerror="this.style.display='none'"/>
+</div>
+<h2 style="color:#1e293b;margin:0 0 8px 0;">Hola,</h2>
+<p style="color:#475569;line-height:1.6;margin:0 0 16px 0;">Generamos una propuesta digital personalizada para <strong>${lead.nombre_negocio}</strong>. Incluye la informaci&oacute;n de tu negocio, rese&ntilde;as de Google y un diseño moderno listo para compartir con tus clientes.</p>
+<div style="background:#f8fafc;border-radius:8px;padding:16px;margin:16px 0;border-left:4px solid #6366f1;">
+<p style="margin:0 0 4px 0;color:#64748b;font-size:14px;"><strong>¿Qué incluye?</strong></p>
+<p style="margin:0;color:#475569;font-size:14px;">✅ Landing page con rese&ntilde;as reales de Google<br/>✅ Enlace para compartir en WhatsApp y redes<br/>✅ Dise&ntilde;o adaptado a tu rubro</p>
+</div>
+<div style="text-align:center;margin:24px 0;">
+<a href="${lead.url_propuesta}" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:16px;">Ver mi propuesta</a>
+</div>
+<p style="color:#94a3b8;font-size:13px;line-height:1.5;text-align:center;margin:16px 0 0 0;">Si ten&eacute;s dudas o quer&eacute;s personalizar algo, respond&eacute; a este correo.</p>
+<hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 16px 0;"/>
+<p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">© 2026 Revendr &middot; Plataforma de crecimiento para tu negocio</p>
+</div>`
         try {
           await sendSimpleEmail(lead.email, subject, html)
           sent++
