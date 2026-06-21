@@ -123,9 +123,16 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
     let productPrice = null
+    let productGa4Id = null
+    let productFbPixelId = null
     if (campaign.producto_id) {
       const prodDoc = await db.collection('productos').doc(campaign.producto_id).get()
-      if (prodDoc.exists) productPrice = prodDoc.data().precio || null
+      if (prodDoc.exists) {
+        const prodData = prodDoc.data()
+        productPrice = prodData.precio || null
+        productGa4Id = prodData.ga4_id || null
+        productFbPixelId = prodData.fb_pixel_id || null
+      }
     }
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'scraped').limit(parseInt(limitParam)).get()
     let processed = 0
@@ -139,7 +146,7 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
           : campaign.producto_url_demo
             ? `${campaign.producto_url_demo}?negocio=${encodeURIComponent(lead.nombre_negocio)}&ciudad=${encodeURIComponent(lead.ciudad || '')}`
             : `https://revendr-9add8.web.app/demo/${lead.rubro}/${propuestaId}`
-        const propuestaData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_propuesta: propuestaUrl, producto_url: campaign.producto_url_demo || null, precio: productPrice, fecha_creacion: new Date() }
+        const propuestaData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_propuesta: propuestaUrl, producto_url: campaign.producto_url_demo || null, precio: productPrice, ga4_id: productGa4Id, fb_pixel_id: productFbPixelId, fecha_creacion: new Date() }
         await db.collection('propuestas').doc(propuestaId).set(propuestaData)
         await db.collection('leads').doc(leadDoc.id).update({ estado_proceso: 'propuesta_generada', url_propuesta: propuestaData.url_propuesta, propuesta_id: propuestaId, fecha_generacion_propuesta: new Date(), fecha_actualizacion: new Date() })
         processed++
@@ -416,6 +423,13 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
       const lead = leadDoc.data()
       if (!lead.url_propuesta) { skipped++; continue }
       if (lead.email) {
+        const utmParamsEmail = new URLSearchParams({
+          utm_source: 'email',
+          utm_medium: 'email',
+          utm_campaign: campaignId,
+          utm_content: lead.nombre_negocio
+        }).toString()
+        const proposalUrlWithUtm = `${lead.url_propuesta}${lead.url_propuesta.includes('?') ? '&' : '?'}${utmParamsEmail}`
         const subject = `Nueva propuesta digital para ${lead.nombre_negocio}`
         const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;">
 <div style="text-align:center;margin-bottom:24px;">
@@ -428,7 +442,7 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
 <p style="margin:0;color:#475569;font-size:14px;">✅ Landing page con rese&ntilde;as reales de Google<br/>✅ Envio automatizado por WhatsApp y email<br/>✅ Dise&ntilde;o adaptado a tu rubro</p>
 </div>
 <div style="text-align:center;margin:24px 0;">
-<a href="${lead.url_propuesta}" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:16px;">Ver mi propuesta</a>
+<a href="${proposalUrlWithUtm}" style="display:inline-block;background:#6366f1;color:#ffffff;text-decoration:none;padding:14px 32px;border-radius:8px;font-weight:bold;font-size:16px;">Ver mi propuesta</a>
 </div>
 <p style="color:#94a3b8;font-size:13px;line-height:1.5;text-align:center;margin:16px 0 0 0;">Si ten&eacute;s dudas o quer&eacute;s personalizar algo, respond&eacute; a este correo.</p>
 <hr style="border:none;border-top:1px solid #e2e8f0;margin:24px 0 16px 0;"/>
@@ -446,7 +460,14 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
       } else {
         whatsappFallback++
         if (lead.telefono_whatsapp) {
-          whatsappLinks.push({ nombre: lead.nombre_negocio, link: `https://wa.me/${lead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent('Hola, te comparto tu propuesta: ' + lead.url_propuesta)}` })
+          const utmParamsWa = new URLSearchParams({
+            utm_source: 'telegram_fallback',
+            utm_medium: 'whatsapp',
+            utm_campaign: campaignId,
+            utm_content: lead.nombre_negocio
+          }).toString()
+          const waUrlWithUtm = `${lead.url_propuesta}${lead.url_propuesta.includes('?') ? '&' : '?'}${utmParamsWa}`
+          whatsappLinks.push({ nombre: lead.nombre_negocio, link: `https://wa.me/${lead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent('Hola, te comparto tu propuesta: ' + waUrlWithUtm)}` })
         }
       }
     }

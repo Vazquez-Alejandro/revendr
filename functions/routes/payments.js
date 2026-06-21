@@ -1,5 +1,5 @@
-const { admin, db, axios, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, MP_ACCESS_TOKEN, emailTransporter, STRIPE_PRICES, PLAN_LIMITS } = require('../config')
-const { sendTransactionalEmail, processApifyResults } = require('../helpers')
+const { admin, db, axios, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, MP_ACCESS_TOKEN, emailTransporter, STRIPE_PRICES, PLAN_LIMITS, TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, ADMIN_EMAIL } = require('../config')
+const { sendTransactionalEmail, processApifyResults, sendTelegramMessage, sendSimpleEmail } = require('../helpers')
 
 module.exports = function(app) {
 
@@ -188,11 +188,24 @@ app.post('/mercadopago/webhook', async (req, res) => {
         if (payment.metadata?.leadId) {
           const leadRef = db.collection('leads').doc(payment.metadata.leadId)
           const leadDoc = await leadRef.get()
+          let leadData = null
           if (leadDoc.exists) {
+            leadData = leadDoc.data()
             await leadRef.update({ estado_proceso: 'cliente_activo', mp_payment_id: data.id, fecha_pago: new Date(), monto_pagado: payment.transaction_amount, fecha_actualizacion: new Date() })
           }
           if (payment.metadata?.propuestaId) {
             await db.collection('propuestas').doc(payment.metadata.propuestaId).update({ pagada: true, fecha_pago: new Date(), monto_pagado: payment.transaction_amount }, { merge: true })
+          }
+          if (leadData) {
+            const negocio = leadData.nombre_negocio || 'Negocio'
+            const monto = payment.transaction_amount
+            const msg = `💰 <b>¡Nuevo pago recibido!</b>\n\n<b>Negocio:</b> ${negocio}\n<b>Monto:</b> $${monto.toLocaleString('es-AR')} ARS\n<b>Lead ID:</b> ${payment.metadata.leadId}\n<b>Propuesta:</b> ${payment.metadata.propuestaId || 'N/A'}`
+            if (TELEGRAM_BOT_TOKEN && ADMIN_TELEGRAM_CHAT_ID) {
+              await sendTelegramMessage(ADMIN_TELEGRAM_CHAT_ID, msg)
+            }
+            if (ADMIN_EMAIL) {
+              await sendSimpleEmail(ADMIN_EMAIL, `💰 Nuevo pago: ${negocio} - $${monto.toLocaleString('es-AR')}`, `<p>${msg.replace(/\n/g, '<br>')}</p>`)
+            }
           }
         }
       }

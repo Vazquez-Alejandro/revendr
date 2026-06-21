@@ -68,6 +68,33 @@ export default function DemoProductLanding() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [id])
 
+  const injectTrackingScripts = (ga4Id, fbPixelId) => {
+    if (ga4Id && !document.querySelector(`script[data-ga4="${ga4Id}"]`)) {
+      const ga4Script = document.createElement('script')
+      ga4Script.async = true
+      ga4Script.src = `https://www.googletagmanager.com/gtag/js?id=${ga4Id}`
+      ga4Script.setAttribute('data-ga4', ga4Id)
+      document.head.appendChild(ga4Script)
+      window.dataLayer = window.dataLayer || []
+      window.gtag = function gtag() { dataLayer.push(arguments) }
+      window.gtag('js', new Date())
+      window.gtag('config', ga4Id)
+    }
+    if (fbPixelId && !document.querySelector(`script[data-fbpixel="${fbPixelId}"]`)) {
+      !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+      window.fbq('init', fbPixelId)
+      window.fbq('track', 'PageView')
+      const fbScript = document.querySelector(`script[src*="fbevents.js"]`)
+      if (fbScript) fbScript.setAttribute('data-fbpixel', fbPixelId)
+    }
+  }
+
+  useEffect(() => {
+    const ga4Id = demo?.ga4_id || product?.ga4_id
+    const fbPixelId = demo?.fb_pixel_id || product?.fb_pixel_id
+    if (ga4Id || fbPixelId) injectTrackingScripts(ga4Id, fbPixelId)
+  }, [demo, product])
+
   const loadContent = async () => {
     try {
       const productRef = doc(db, 'productos', id)
@@ -131,8 +158,14 @@ export default function DemoProductLanding() {
   }
 
   if (demo) {
+    const utmParams = new URLSearchParams({
+      utm_source: 'revendr',
+      utm_medium: 'whatsapp',
+      utm_campaign: demo.propuesta_id || id,
+      utm_content: negocio
+    }).toString()
     const whatsappUrl = telefono
-      ? `https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${negocio}, vi tu propuesta en Revendr y me interesa.`)}`
+      ? `https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${negocio}, vi tu propuesta en Revendr y me interesa.`)}&${utmParams}`
       : '#'
 
     const rating = demo.calificacion || demo.datos_personalizados?.rating
@@ -226,9 +259,15 @@ export default function DemoProductLanding() {
     )
   }
 
+  const utmParamsProduct = new URLSearchParams({
+    utm_source: 'revendr',
+    utm_medium: 'whatsapp',
+    utm_campaign: productId || 'producto',
+    utm_content: negocio
+  }).toString()
   const whatsappUrl = `https://wa.me/${telefono.replace(/\D/g, '')}?text=${encodeURIComponent(
     `Hola, me interesa ${product.nombre} para mi negocio.`
-  )}`
+  )}&${utmParamsProduct}`
   const productUrl = product.url_producto || product.url_demo
 
   return (

@@ -203,10 +203,19 @@ async function sendEmail(to, subject, html) {
   }
 }
 
-function generateEmailTemplate(lead, product, messageType = 'initial') {
+function generateEmailTemplate(lead, product, messageType = 'initial', campaignId = null) {
   const negocio = lead.nombre_negocio || 'tu negocio'
   const rubro = lead.rubro || 'tu industria'
-  const propuestaUrl = lead.url_propuesta || ''
+  let propuestaUrl = lead.url_propuesta || ''
+  if (campaignId && propuestaUrl) {
+    const utmParams = new URLSearchParams({
+      utm_source: 'email',
+      utm_medium: 'email_sequence',
+      utm_campaign: campaignId,
+      utm_content: negocio
+    }).toString()
+    propuestaUrl = `${propuestaUrl}${propuestaUrl.includes('?') ? '&' : '?'}${utmParams}`
+  }
   const templates = {
     initial: { subject: `Propuesta personalizada para ${negocio}`, body: `
       <h1 style="color:#6366f1">Hola ${negocio}</h1>

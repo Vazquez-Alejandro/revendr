@@ -53,6 +53,8 @@ export default function Products() {
     mensaje_whatsapp: '',
     nicho: '',
     precio: '',
+    ga4_id: '',
+    fb_pixel_id: '',
   })
 
   useEffect(() => {
@@ -93,6 +95,8 @@ export default function Products() {
       landing_color: '#6366f1',
       landing_cta: 'Empezar gratis',
       precio: '',
+      ga4_id: '',
+      fb_pixel_id: '',
     })
     setEditingId(null)
   }
@@ -146,6 +150,8 @@ export default function Products() {
       landing_color: product.landing_color || '#6366f1',
       landing_cta: product.landing_cta || 'Empezar gratis',
       precio: product.precio || '',
+      ga4_id: product.ga4_id || '',
+      fb_pixel_id: product.fb_pixel_id || '',
     })
     setEditingId(product.id)
     setShowModal(true)
@@ -442,6 +448,39 @@ export default function Products() {
                     ? 'Si cargás un precio, aparecerá un botón de pago en la landing del lead'
                     : 'If you set a price, a payment button will appear on the lead landing page'}
                 </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    GA4 Measurement ID (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.ga4_id}
+                    onChange={(e) => setFormData({ ...formData, ga4_id: e.target.value })}
+                    className="input-field"
+                    placeholder="G-XXXXXXXXXX"
+                  />
+                  <p className="text-xs text-dark-500 mt-1">
+                    {locale === 'es' ? 'ID de medición de Google Analytics 4' : 'Google Analytics 4 Measurement ID'}
+                  </p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-dark-300 mb-2">
+                    Meta Pixel ID (opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.fb_pixel_id}
+                    onChange={(e) => setFormData({ ...formData, fb_pixel_id: e.target.value })}
+                    className="input-field"
+                    placeholder="123456789012345"
+                  />
+                  <p className="text-xs text-dark-500 mt-1">
+                    {locale === 'es' ? 'ID de píxel de Facebook/Meta' : 'Facebook/Meta Pixel ID'}
+                  </p>
+                </div>
               </div>
 
               {/* Landing Configuration */}

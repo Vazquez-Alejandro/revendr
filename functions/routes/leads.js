@@ -89,7 +89,7 @@ app.post('/leads/:leadId/send-email', async (req, res) => {
     let product = null
     if (req.body.productId) { const prodDoc = await db.collection('productos').doc(req.body.productId).get(); if (prodDoc.exists) product = prodDoc.data() }
     const messageType = req.body.messageType || 'initial'
-    const { subject, html } = generateEmailTemplate(lead, product, messageType)
+    const { subject, html } = generateEmailTemplate(lead, product, messageType, lead.id_campania)
     const result = await sendEmail(lead.email, subject, html)
     if (result.sent) {
       await db.collection('leads').doc(req.params.leadId).update({ ultimo_email_enviado: messageType, fecha_ultimo_email: new Date(), fecha_actualizacion: new Date() })
