@@ -2,20 +2,35 @@ const functions = require('firebase-functions')
 const admin = require('firebase-admin')
 const express = require('express')
 const cors = require('cors')
+const rateLimit = require('express-rate-limit')
 
-admin.initializeApp()
+const { PUBLIC_PATHS, FIREBASE_APP_URL } = require('./config')
+
+if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
 
 const app = express()
-app.use(cors({ origin: true }))
+const allowedOrigins = [FIREBASE_APP_URL, 'https://revendr-9add8.web.app', 'http://localhost:3000', 'http://localhost:5173']
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
+    cb(null, true)
+  },
+}))
+
+const generalLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, message: { success: false, error: { message: 'Too many requests' } } })
+app.use(generalLimiter)
+
+const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { success: false, error: { message: 'Too many requests' } } })
+
+app.use('/webhook/stripe', webhookLimiter)
+app.use('/mercadopago/webhook', webhookLimiter)
 
 app.use(express.json({
   verify: (req, res, buf) => {
     req.rawBody = buf
   }
 }))
-
-const { PUBLIC_PATHS } = require('./config')
 
 app.use((req, res, next) => {
   const isPublic = PUBLIC_PATHS.some(p => req.path.startsWith(p) || req.originalUrl.startsWith(p))
