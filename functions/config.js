@@ -17,6 +17,8 @@ const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY
+const FIREBASE_APP_URL = process.env.FIREBASE_APP_URL || 'https://revendr-9add8.web.app'
+const FIREBASE_API_URL = process.env.FIREBASE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
 
 const nodemailer = GMAIL_USER && GMAIL_APP_PASSWORD ? require('nodemailer') : null
 const emailTransporter = nodemailer ? nodemailer.createTransport({
@@ -83,6 +85,7 @@ module.exports = {
   STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET,
   RESEND_API_KEY, GMAIL_USER, GMAIL_APP_PASSWORD,
   MP_ACCESS_TOKEN, TELEGRAM_BOT_TOKEN, GOOGLE_PLACES_API_KEY,
+  FIREBASE_APP_URL, FIREBASE_API_URL,
   emailTransporter,
   APIFY_ACTORS, RUBRO_SEARCH_TERMS,
   isBusinessHours, isCampaignExpired, PUBLIC_PATHS,

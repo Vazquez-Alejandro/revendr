@@ -1,236 +1,7 @@
-const { admin, db, axios, APIFY_TOKEN, WHATSAPP_TOKEN, PHONE_NUMBER_ID, GOOGLE_PLACES_API_KEY, APIFY_ACTORS, RUBRO_SEARCH_TERMS, isBusinessHours, isCampaignExpired, STRIPE_SECRET_KEY, emailTransporter, GMAIL_USER, RESEND_API_KEY } = require('../config')
-const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, autoScoreLead, pollApifyRun, generatePersonalizedMessage, sendEmail, generateEmailTemplate, SEQUENCE_RULES, sendSimpleEmail, sendTelegramMessage } = require('../helpers')
+const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, FIREBASE_APP_URL, isBusinessHours, isCampaignExpired } = require('../../config')
+const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, generatePersonalizedMessage, sendEmail, generateEmailTemplate, SEQUENCE_RULES, sendSimpleEmail, sendTelegramMessage } = require('../../helpers')
 
 module.exports = function(app) {
-
-app.get('/campaigns', async (req, res) => {
-  try {
-    const snapshot = await db.collection('campanias')
-      .where('user_id', '==', req.user.uid)
-      .orderBy('fecha_creacion', 'desc')
-      .limit(50)
-      .get()
-    const campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-    res.json({ success: true, data: campaigns })
-  } catch (error) {
-    console.error('Error fetching campaigns:', error)
-    res.status(500).json({ success: false, error: { message: error.message } })
-  }
-})
-
-app.post('/campaigns', async (req, res) => {
-  try {
-    const { nombre, rubro_objetivo, mensaje_template, ciudad } = req.body
-    if (!nombre || !rubro_objetivo) {
-      return res.status(400).json({ success: false, error: { message: 'Nombre y rubro requeridos' } })
-    }
-    const docRef = await db.collection('campanias').add({
-      nombre, rubro_objetivo, ciudad: ciudad || '', mensaje_template: mensaje_template || '',
-      user_id: req.user.uid, estado: 'activa', fecha_inicio: new Date(), fecha_creacion: new Date(),
-      leads_count: 0, propuestas_generadas: 0, mensajes_enviados: 0,
-    })
-    res.status(201).json({ success: true, data: { id: docRef.id } })
-  } catch (error) {
-    console.error('Error creating campaign:', error)
-    res.status(500).json({ success: false, error: { message: error.message } })
-  }
-})
-
-app.patch('/campaigns/:id/status', async (req, res) => {
-  try {
-    const { estado } = req.body
-    await db.collection('campanias').doc(req.params.id).update({ estado, fecha_actualizacion: new Date() })
-    res.json({ success: true })
-  } catch (error) {
-    console.error('Error updating campaign:', error)
-    res.status(500).json({ success: false, error: { message: error.message } })
-  }
-})
-
-app.post('/campaigns/:campaignId/scrape-google', async (req, res) => {
-  try {
-    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
-    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
-    const campaign = campaignDoc.data()
-    const { ciudad, rubro_objetivo } = campaign
-    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''}`.trim()
-    if (!GOOGLE_PLACES_API_KEY) return res.status(500).json({ success: false, error: { message: 'Google Places API key not configured. Set GOOGLE_PLACES_API_KEY in .env' } })
-    await db.collection('campanias').doc(req.params.campaignId).update({ scraping_status: 'running', scraping_started_at: new Date() })
-    const searchRes = await axios.post('https://places.googleapis.com/v1/places:searchText',
-      { textQuery: searchTerm, pageSize: 20, languageCode: 'es' },
-      { headers: { 'X-Goog-Api-Key': GOOGLE_PLACES_API_KEY, 'X-Goog-FieldMask': 'places.id,places.displayName,places.formattedAddress,places.internationalPhoneNumber,places.googleMapsUri,places.rating,places.userRatingCount,places.websiteUri,places.regularOpeningHours,places.priceLevel', 'Content-Type': 'application/json' } }
-    )
-    const places = searchRes.data.places || []
-    let saved = 0
-    for (const place of places) {
-      const phone = place.internationalPhoneNumber || ''
-      const phoneClean = phone.replace(/\D/g, '')
-      if (!phoneClean || phoneClean.length < 8) continue
-      const leadData = {
-        id_campania: req.params.campaignId, user_id: req.user?.uid || '',
-        nombre_negocio: place.displayName?.text || 'Sin nombre',
-        telefono_whatsapp: phoneClean.startsWith('54') ? `+${phoneClean}` : `+54${phoneClean}`,
-        email: '', rubro: rubro_objetivo || 'general', ciudad: ciudad || '',
-        direccion: place.formattedAddress || '', url_origen: place.googleMapsUri || '',
-        url_google_maps: place.googleMapsUri || '', calificacion: place.rating || null,
-        reviews_count: place.userRatingCount || 0, total_reviews: place.userRatingCount || 0,
-        datos_personalizados: { logo: '', horarios: place.regularOpeningHours?.weekdayDescriptions || [], website: place.websiteUri || '' },
-        estado_proceso: 'scraped', fecha_creacion: new Date(),
-      }
-      const score = calculateLeadScore(leadData)
-      leadData.lead_score = score
-      leadData.temperatura = getTemperature(score)
-      leadData.score_label = getScoreLabel(score).label
-      leadData.qualifies_for_messaging = score >= 30
-      await db.collection('leads').add(leadData)
-      saved++
-    }
-    await db.collection('campanias').doc(req.params.campaignId).update({ scraping_status: 'completed', scraping_completed_at: new Date(), leads_count: admin.firestore.FieldValue.increment(saved) })
-    if (req.user?.uid && saved > 0) createNotification({ userId: req.user.uid, type: 'new_lead', title: `${saved} ${saved === 1 ? 'nuevo lead' : 'nuevos leads'} encontrados`, body: `Google Places completado para ${campaign.nombre || 'la campaña'}`, link: `/dashboard/leads` })
-    res.json({ success: true, data: { saved, status: 'completed' } })
-  } catch (error) {
-    console.error('Error in Google Places scrape:', error.message)
-    if (error.response) console.error('Google API response:', error.response.status, JSON.stringify(error.response.data))
-    await db.collection('campanias').doc(req.params.campaignId).update({ scraping_status: 'error', scraping_error: error.message, scraping_completed_at: new Date() })
-    res.status(500).json({ success: false, error: { message: error.message } })
-  }
-})
-
-app.post('/campaigns/:campaignId/scrape', async (req, res) => {
-  try {
-    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
-    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
-    const campaign = campaignDoc.data()
-    const { ciudad, rubro_objetivo } = campaign
-    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''}`.trim()
-    if (!APIFY_TOKEN) return res.status(500).json({ success: false, error: { message: 'Apify token not configured' } })
-    await db.collection('campanias').doc(req.params.campaignId).update({ scraping_status: 'running', scraping_started_at: new Date() })
-    const runResponse = await axios.post(`https://api.apify.com/v2/acts/${APIFY_ACTORS.google_maps}/runs`, { searchStringsArray: [searchTerm], maxCrawledPlacesPerSearch: 50, language: 'es' }, { params: { token: APIFY_TOKEN } })
-    const runId = runResponse.data.data.id
-    res.json({ success: true, data: { runId, status: 'running' } })
-    pollApifyRun(runId, req.params.campaignId, rubro_objetivo, req.user?.uid).catch(err => console.error('Background scraping error:', err))
-  } catch (error) {
-    console.error('Error starting scrape:', error)
-    res.status(500).json({ success: false, error: { message: error.message } })
-  }
-})
-
-app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
-  try {
-    const campaignId = req.params.campaignId
-    const { limit: limitParam = 10 } = req.body
-    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
-    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
-    const campaign = campaignDoc.data()
-    let productPrice = null
-    let productGa4Id = null
-    let productFbPixelId = null
-    if (campaign.producto_id) {
-      const prodDoc = await db.collection('productos').doc(campaign.producto_id).get()
-      if (prodDoc.exists) {
-        const prodData = prodDoc.data()
-        productPrice = prodData.precio || null
-        productGa4Id = prodData.ga4_id || null
-        productFbPixelId = prodData.fb_pixel_id || null
-      }
-    }
-    const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'scraped').limit(parseInt(limitParam)).get()
-    let processed = 0
-    const results = []
-    for (const leadDoc of leadsSnapshot.docs) {
-      try {
-        const lead = leadDoc.data()
-        const propuestaId = `propuesta-${lead.rubro}-${leadDoc.id}`
-        const propuestaUrl = campaign.producto_id
-          ? `https://revendr-9add8.web.app/demo/producto/${campaign.producto_id}?negocio=${encodeURIComponent(lead.nombre_negocio)}&telefono=${encodeURIComponent(lead.telefono_whatsapp || '')}`
-          : campaign.producto_url_demo
-            ? `${campaign.producto_url_demo}?negocio=${encodeURIComponent(lead.nombre_negocio)}&ciudad=${encodeURIComponent(lead.ciudad || '')}`
-            : `https://revendr-9add8.web.app/demo/${lead.rubro}/${propuestaId}`
-        const propuestaData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_propuesta: propuestaUrl, producto_url: campaign.producto_url_demo || null, precio: productPrice, ga4_id: productGa4Id, fb_pixel_id: productFbPixelId, fecha_creacion: new Date() }
-        await db.collection('propuestas').doc(propuestaId).set(propuestaData)
-        await db.collection('leads').doc(leadDoc.id).update({ estado_proceso: 'propuesta_generada', url_propuesta: propuestaData.url_propuesta, propuesta_id: propuestaId, fecha_generacion_propuesta: new Date(), fecha_actualizacion: new Date() })
-        processed++
-        results.push({ leadId: leadDoc.id, propuestaUrl: propuestaData.url_propuesta })
-      } catch (err) { console.error(`Error generating propuesta for lead ${leadDoc.id}:`, err.message) }
-    }
-    if (processed > 0) {
-      await db.collection('campanias').doc(campaignId).update({ propuestas_generadas: admin.firestore.FieldValue.increment(processed) })
-      createNotification({ userId: req.user?.uid, type: 'propuesta_generated', title: `${processed} ${processed === 1 ? 'propuesta generada' : 'propuestas generadas'}`, body: 'Procesamiento masivo completado para la campaña', link: `/dashboard/leads` })
-    }
-    res.json({ success: true, data: { processed, results } })
-  } catch (error) {
-    console.error('Error batch generating propuestas:', error)
-    res.status(500).json({ success: false, error: { message: error.message } })
-  }
-})
-
-app.post('/campaigns/scheduled-scrape', async (req, res) => {
-  try {
-    const { schedule } = req.body
-    if (!schedule || !['daily', 'weekly', 'monthly'].includes(schedule)) return res.status(400).json({ success: false, error: { message: 'schedule must be daily, weekly, or monthly' } })
-    const activeCampaigns = await db.collection('campanias').where('estado', '==', 'activa').where('auto_scrape', '==', true).get()
-    let queued = 0
-    for (const doc of activeCampaigns.docs) {
-      const campaign = doc.data()
-      const shouldRun = shouldRunSchedule(campaign.last_auto_scrape, schedule)
-      if (shouldRun) {
-        await db.collection('campanias').doc(doc.id).update({ scraping_status: 'scheduled', last_auto_scrape: new Date() })
-        queued++
-      }
-    }
-    res.json({ success: true, data: { queued, total: activeCampaigns.size } })
-  } catch (error) {
-    console.error('Error scheduling scrape:', error)
-    res.status(500).json({ success: false, error: { message: error.message } })
-  }
-})
-
-app.post('/campaigns/:campaignId/set-schedule', async (req, res) => {
-  try {
-    const { auto_scrape, scrape_schedule } = req.body
-    await db.collection('campanias').doc(req.params.campaignId).update({ auto_scrape: auto_scrape || false, scrape_schedule: scrape_schedule || 'weekly', fecha_actualizacion: new Date() })
-    res.json({ success: true })
-  } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
-})
-
-function shouldRunSchedule(lastRun, schedule) {
-  if (!lastRun) return true
-  const now = new Date()
-  const last = lastRun.toDate ? lastRun.toDate() : new Date(lastRun)
-  const diffHours = (now - last) / (1000 * 60 * 60)
-  if (schedule === 'daily' && diffHours >= 24) return true
-  if (schedule === 'weekly' && diffHours >= 168) return true
-  if (schedule === 'monthly' && diffHours >= 720) return true
-  return false
-}
-
-app.post('/campaigns/:campaignId/revenue', async (req, res) => {
-  try {
-    const { leadId, amount, currency, notes } = req.body
-    if (!leadId || !amount) return res.status(400).json({ success: false, error: { message: 'leadId and amount required' } })
-    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
-    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
-    await db.collection('revenue').add({ campaign_id: req.params.campaignId, lead_id: leadId, amount: parseFloat(amount), currency: currency || 'USD', notes: notes || '', fecha_creacion: new Date() })
-    await db.collection('campanias').doc(req.params.campaignId).update({ total_revenue: admin.firestore.FieldValue.increment(parseFloat(amount)), total_clients: admin.firestore.FieldValue.increment(1) })
-    await db.collection('leads').doc(leadId).update({ estado_proceso: 'cliente_activo', revenue_amount: parseFloat(amount), fecha_pago: new Date() })
-    res.json({ success: true })
-  } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
-})
-
-app.get('/campaigns/:campaignId/roi', async (req, res) => {
-  try {
-    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
-    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
-    const campaign = campaignDoc.data()
-    const revenueSnapshot = await db.collection('revenue').where('campaign_id', '==', req.params.campaignId).get()
-    let totalRevenue = 0, totalClients = 0
-    const revenueByLead = []
-    revenueSnapshot.docs.forEach(doc => { const rev = doc.data(); totalRevenue += rev.amount; totalClients++; revenueByLead.push({ lead_id: rev.lead_id, amount: rev.amount, date: rev.fecha_creacion }) })
-    const estimatedCost = (campaign.mensajes_enviados || 0) * 0.01
-    const roi = estimatedCost > 0 ? ((totalRevenue - estimatedCost) / estimatedCost * 100).toFixed(1) : totalRevenue > 0 ? '∞' : 0
-    res.json({ success: true, data: { totalRevenue, totalClients, estimatedCost: estimatedCost.toFixed(2), roi, revenueByLead, leadsCount: campaign.leads_count || 0, conversionRate: campaign.leads_count > 0 ? ((totalClients / campaign.leads_count) * 100).toFixed(1) : 0 } })
-  } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
-})
 
 app.post('/campaigns/:campaignId/generate-messages', async (req, res) => {
   try {
@@ -253,15 +24,6 @@ app.post('/campaigns/:campaignId/generate-messages', async (req, res) => {
       generated++
     }
     res.json({ success: true, data: { generated, skipped, total: leadsSnapshot.size } })
-  } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
-})
-
-app.post('/campaigns/:campaignId/followups', async (req, res) => {
-  try {
-    const { followups } = req.body
-    if (!followups || !Array.isArray(followups)) return res.status(400).json({ success: false, error: { message: 'followups array required' } })
-    await db.collection('campanias').doc(req.params.campaignId).update({ followups, fecha_actualizacion: new Date() })
-    res.json({ success: true })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
@@ -433,7 +195,7 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
         const subject = `Nueva propuesta digital para ${lead.nombre_negocio}`
         const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#ffffff;border-radius:12px;border:1px solid #e2e8f0;">
 <div style="text-align:center;margin-bottom:24px;">
-<img src="https://revendr-9add8.web.app/logo.png" alt="Revendr" style="height:32px;" onerror="this.style.display='none'"/>
+<img src="${FIREBASE_APP_URL}/logo.png" alt="Revendr" style="height:32px;" onerror="this.style.display='none'"/>
 </div>
 <h2 style="color:#1e293b;margin:0 0 8px 0;">Hola,</h2>
 <p style="color:#475569;line-height:1.6;margin:0 0 16px 0;">Generamos una propuesta digital personalizada para <strong>${lead.nombre_negocio}</strong>. Incluye rese&ntilde;as de Google, datos de tu negocio y un diseño moderno que pod&eacute;s enviar al instante por WhatsApp o email a tus clientes.</p>
@@ -449,7 +211,7 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
 <div style="background:#f1f5f9;border-radius:8px;padding:16px;margin:16px 0;text-align:center;">
 <p style="margin:0 0 6px 0;color:#475569;font-size:13px;font-weight:bold;">¿Qu&eacute; es Revendr?</p>
 <p style="margin:0 0 10px 0;color:#64748b;font-size:13px;line-height:1.5;">Revendr automatiza la generaci&oacute;n de propuestas digitales y el env&iacute;o de mensajes por WhatsApp y email para potenciar tu negocio. Sin esfuerzo manual.</p>
-<a href="https://revendr-9add8.web.app/" style="color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;">Conoc&eacute; m&aacute;s sobre Revendr →</a>
+<a href="${FIREBASE_APP_URL}/" style="color:#6366f1;font-size:13px;font-weight:600;text-decoration:none;">Conoc&eacute; m&aacute;s sobre Revendr →</a>
 </div>
 <p style="color:#94a3b8;font-size:12px;text-align:center;margin:0;">© 2026 Revendr &middot; Plataforma de crecimiento para tu negocio</p>
 </div>`

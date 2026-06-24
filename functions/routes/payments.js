@@ -1,4 +1,4 @@
-const { admin, db, axios, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, MP_ACCESS_TOKEN, emailTransporter, STRIPE_PRICES, PLAN_LIMITS, TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, ADMIN_EMAIL } = require('../config')
+const { admin, db, axios, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, MP_ACCESS_TOKEN, emailTransporter, STRIPE_PRICES, PLAN_LIMITS, TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, ADMIN_EMAIL, FIREBASE_APP_URL, FIREBASE_API_URL } = require('../config')
 const { sendTransactionalEmail, processApifyResults, sendTelegramMessage, sendSimpleEmail } = require('../helpers')
 
 module.exports = function(app) {
@@ -79,7 +79,7 @@ app.post('/create-checkout-session', async (req, res) => {
     const billingCycle = billing === 'annual' ? 'annual' : 'monthly'
     const finalPriceId = priceId || priceMap?.[billingCycle]
     if (!finalPriceId) return res.status(400).json({ success: false, error: { message: 'Invalid plan or priceId required' } })
-    const session = await stripe.checkout.sessions.create({ mode: 'subscription', payment_method_types: ['card'], line_items: [{ price: finalPriceId, quantity: 1 }], success_url: `https://revendr-9add8.web.app/dashboard?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `https://revendr-9add8.web.app/pricing`, metadata: { leadId: leadId || '', plan: plan || 'growth', userId: userId || '' } })
+    const session = await stripe.checkout.sessions.create({ mode: 'subscription', payment_method_types: ['card'], line_items: [{ price: finalPriceId, quantity: 1 }], success_url: `${FIREBASE_APP_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`, cancel_url: `${FIREBASE_APP_URL}/pricing`, metadata: { leadId: leadId || '', plan: plan || 'growth', userId: userId || '' } })
     res.json({ url: session.url, sessionId: session.id })
   } catch (error) {
     console.error('Error creating checkout session:', error.message)
@@ -160,7 +160,7 @@ app.post('/mercadopago/create-preference', async (req, res) => {
     const { plan, email, userId, title, amount, description, leadId, propuestaId } = req.body
     if (amount) {
       const response = await axios.post('https://api.mercadopago.com/checkout/preferences',
-        { items: [{ title: title || 'Servicio', unit_price: parseFloat(amount), quantity: 1, currency_id: 'ARS' }], payer: { email }, metadata: { leadId, propuestaId, userId }, back_urls: { success: 'https://revendr-9add8.web.app/?payment=success', failure: 'https://revendr-9add8.web.app/?payment=failed', pending: 'https://revendr-9add8.web.app/?payment=pending' }, auto_return: 'approved', notification_url: 'https://us-central1-revendr-9add8.cloudfunctions.net/api/mercadopago/webhook' },
+        { items: [{ title: title || 'Servicio', unit_price: parseFloat(amount), quantity: 1, currency_id: 'ARS' }], payer: { email }, metadata: { leadId, propuestaId, userId }, back_urls: { success: `${FIREBASE_APP_URL}/?payment=success`, failure: `${FIREBASE_APP_URL}/?payment=failed`, pending: `${FIREBASE_APP_URL}/?payment=pending` }, auto_return: 'approved', notification_url: `${FIREBASE_API_URL}/mercadopago/webhook` },
         { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' } })
       return res.json({ success: true, data: { init_point: response.data.init_point, id: response.data.id } })
     }
@@ -168,7 +168,7 @@ app.post('/mercadopago/create-preference', async (req, res) => {
     const selectedPlan = plans[plan]
     if (!selectedPlan) return res.status(400).json({ success: false, error: { message: 'Invalid plan' } })
     const response = await axios.post('https://api.mercadopago.com/checkout/preferences',
-      { items: [{ title: selectedPlan.title, unit_price: selectedPlan.price, quantity: 1, currency_id: 'USD' }], payer: { email }, metadata: { plan, userId }, back_urls: { success: 'https://revendr-9add8.web.app/dashboard?payment=success', failure: 'https://revendr-9add8.web.app/pricing?payment=failure', pending: 'https://revendr-9add8.web.app/dashboard?payment=pending' }, auto_return: 'approved' },
+      { items: [{ title: selectedPlan.title, unit_price: selectedPlan.price, quantity: 1, currency_id: 'USD' }], payer: { email }, metadata: { plan, userId }, back_urls: { success: `${FIREBASE_APP_URL}/dashboard?payment=success`, failure: `${FIREBASE_APP_URL}/pricing?payment=failure`, pending: `${FIREBASE_APP_URL}/dashboard?payment=pending` }, auto_return: 'approved' },
       { headers: { 'Authorization': `Bearer ${MP_ACCESS_TOKEN}`, 'Content-Type': 'application/json' } })
     res.json({ success: true, data: { init_point: response.data.init_point, id: response.data.id } })
   } catch (error) { console.error('MP error:', error.response?.data || error.message); res.status(500).json({ success: false, error: { message: error.message } }) }

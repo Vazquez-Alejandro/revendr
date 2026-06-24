@@ -1,4 +1,4 @@
-const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, emailTransporter, GMAIL_USER } = require('../config')
+const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, emailTransporter, GMAIL_USER, FIREBASE_APP_URL } = require('../config')
 const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, autoScoreLead, generatePersonalizedMessage, sendEmail, generateEmailTemplate } = require('../helpers')
 
 module.exports = function(app) {
@@ -46,7 +46,7 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
       telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8,
       logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '',
       horarios: lead.datos_personalizados?.horarios || [],
-      url_propuesta: `https://revendr-9add8.web.app/demo/${lead.rubro}/${propuestaId}`, fecha_creacion: new Date(),
+      url_propuesta: `${FIREBASE_APP_URL}/demo/${lead.rubro}/${propuestaId}`, fecha_creacion: new Date(),
     }
     await db.collection('propuestas').doc(propuestaId).set(propuestaData)
     await db.collection('leads').doc(req.params.leadId).update({
