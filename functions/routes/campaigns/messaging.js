@@ -1,4 +1,4 @@
-const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, FIREBASE_APP_URL, isBusinessHours, isCampaignExpired } = require('../../config')
+const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, FIREBASE_APP_URL, ADMIN_TELEGRAM_CHAT_ID, isBusinessHours, isCampaignExpired } = require('../../config')
 const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, generatePersonalizedMessage, sendEmail, generateEmailTemplate, SEQUENCE_RULES, sendSimpleEmail, sendTelegramMessage } = require('../../helpers')
 
 module.exports = function(app) {
@@ -233,8 +233,8 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
         }
       }
     }
-    if (whatsappLinks.length > 0) {
-      await sendTelegramMessage(`📬 Leads sin email (${whatsappLinks.length}):\n\n${whatsappLinks.slice(0, 10).map(w => `${w.nombre}: ${w.link}`).join('\n')}${whatsappLinks.length > 10 ? `\n...y ${whatsappLinks.length - 10} más` : ''}`)
+    if (whatsappLinks.length > 0 && ADMIN_TELEGRAM_CHAT_ID) {
+      await sendTelegramMessage(ADMIN_TELEGRAM_CHAT_ID, `📬 Leads sin email (${whatsappLinks.length}):\n\n${whatsappLinks.slice(0, 10).map(w => `${w.nombre}: ${w.link}`).join('\n')}${whatsappLinks.length > 10 ? `\n...y ${whatsappLinks.length - 10} más` : ''}`)
     }
     res.json({ success: true, data: { sent, whatsapp_fallback: whatsappFallback, skipped, hasWhatsappLinks: whatsappLinks.length > 0 } })
   } catch (error) {

@@ -1,4 +1,4 @@
-const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, emailTransporter, GMAIL_USER, FIREBASE_APP_URL } = require('../config')
+const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, FIREBASE_APP_URL } = require('../config')
 const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, autoScoreLead, generatePersonalizedMessage, sendEmail, generateEmailTemplate } = require('../helpers')
 
 module.exports = function(app) {

@@ -1,12 +1,16 @@
 const { admin, db, axios, STRIPE_SECRET_KEY, STRIPE_WEBHOOK_SECRET, MP_ACCESS_TOKEN, emailTransporter, STRIPE_PRICES, PLAN_LIMITS, TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_CHAT_ID, ADMIN_EMAIL, FIREBASE_APP_URL, FIREBASE_API_URL } = require('../config')
 const { sendTransactionalEmail, processApifyResults, sendTelegramMessage, sendSimpleEmail } = require('../helpers')
 
+const stripe = STRIPE_SECRET_KEY ? require('stripe')(STRIPE_SECRET_KEY) : null
+
 module.exports = function(app) {
 
 app.post('/webhooks/apify', async (req, res) => {
   try {
     const { defaultDatasetId, campaignId, rubro } = req.body
-    await processApifyResults(defaultDatasetId, campaignId, rubro || 'general')
+    const campaignDoc = campaignId ? await db.collection('campanias').doc(campaignId).get() : null
+    const userId = campaignDoc?.exists ? campaignDoc.data().user_id : null
+    await processApifyResults(defaultDatasetId, campaignId, rubro || 'general', userId)
     res.json({ success: true })
   } catch (error) {
     console.error('Error processing Apify webhook:', error)
@@ -16,10 +20,10 @@ app.post('/webhooks/apify', async (req, res) => {
 
 app.post('/webhook/stripe', async (req, res) => {
   try {
-    const stripe = require('stripe')(STRIPE_SECRET_KEY)
+    if (!stripe) return res.status(503).json({ error: 'Stripe not configured' })
     const sig = req.headers['stripe-signature']
     let event
-    try { event = stripe.webhooks.constructEvent(req.rawBody || req.body, sig, STRIPE_WEBHOOK_SECRET) }
+    try { event = stripe.webhooks.constructEvent(req.rawBody, sig, STRIPE_WEBHOOK_SECRET) }
     catch (err) { return res.status(400).json({ error: err.message }) }
 
     if (event.type === 'checkout.session.completed') {
@@ -42,7 +46,6 @@ app.post('/webhook/stripe', async (req, res) => {
     }
     if (event.type === 'customer.subscription.updated') {
       const subscription = event.data.object
-      const stripe = require('stripe')(STRIPE_SECRET_KEY)
       const customer = await stripe.customers.retrieve(subscription.customer)
       if (customer.email) {
         try { const user = await admin.auth().getUserByEmail(customer.email); await db.collection('usuarios_admin').doc(user.uid).update({ stripe_subscription_status: subscription.status, fecha_actualizacion: new Date() }) }
@@ -52,14 +55,13 @@ app.post('/webhook/stripe', async (req, res) => {
     if (event.type === 'invoice.payment_failed') {
       const invoice = event.data.object
       const email = invoice.customer_email || invoice.customer_details?.email
-      if (email && emailTransporter) await sendTransactionalEmail(email, 'payment_failed').catch(() => {})
+      if (email && emailTransporter) await sendTransactionalEmail(email, 'payment_failed').catch(err => console.error('Error sending payment_failed email:', err.message))
     }
     if (event.type === 'customer.subscription.deleted') {
       const subscription = event.data.object
-      const stripe = require('stripe')(STRIPE_SECRET_KEY)
       const customer = await stripe.customers.retrieve(subscription.customer)
       if (customer.email) {
-        try { const user = await admin.auth().getUserByEmail(customer.email); await db.collection('usuarios_admin').doc(user.uid).update({ plan: 'inactive', activo: false, stripe_subscription_status: 'canceled', fecha_desactivacion: new Date() }); if (emailTransporter) await sendTransactionalEmail(customer.email, 'subscription_cancelled').catch(() => {}) }
+        try { const user = await admin.auth().getUserByEmail(customer.email); await db.collection('usuarios_admin').doc(user.uid).update({ plan: 'inactive', activo: false, stripe_subscription_status: 'canceled', fecha_desactivacion: new Date() }); if (emailTransporter) await sendTransactionalEmail(customer.email, 'subscription_cancelled').catch(err => console.error('Error sending subscription_cancelled email:', err.message)) }
         catch (err) { console.error('Error deactivating user:', err.message) }
       }
     }
@@ -73,8 +75,7 @@ app.post('/webhook/stripe', async (req, res) => {
 app.post('/create-checkout-session', async (req, res) => {
   try {
     const { priceId, leadId, plan, userId, billing } = req.body
-    if (!STRIPE_SECRET_KEY) return res.status(503).json({ success: false, error: { message: 'Stripe not configured' } })
-    const stripe = require('stripe')(STRIPE_SECRET_KEY)
+    if (!stripe) return res.status(503).json({ success: false, error: { message: 'Stripe not configured' } })
     const priceMap = STRIPE_PRICES[plan || 'growth']
     const billingCycle = billing === 'annual' ? 'annual' : 'monthly'
     const finalPriceId = priceId || priceMap?.[billingCycle]
@@ -107,18 +108,17 @@ app.post('/subscription/change', async (req, res) => {
   try {
     const { userId, newPlan, billing } = req.body
     if (!userId || !newPlan) return res.status(400).json({ success: false, error: { message: 'userId and newPlan required' } })
-    if (!STRIPE_SECRET_KEY) { await db.collection('usuarios').doc(userId).update({ plan: newPlan, billing: billing || 'monthly', plan_limits: PLAN_LIMITS[newPlan], fecha_actualizacion: new Date() }); return res.json({ success: true, data: { plan: newPlan, message: 'Plan updated (no Stripe)' } }) }
+    if (!stripe) { await db.collection('usuarios').doc(userId).update({ plan: newPlan, billing: billing || 'monthly', plan_limits: PLAN_LIMITS[newPlan], fecha_actualizacion: new Date() }); return res.json({ success: true, data: { plan: newPlan, message: 'Plan updated (no Stripe)' } }) }
     const userDoc = await db.collection('usuarios').doc(userId).get()
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
     const userData = userDoc.data()
-    if (userData.stripe_subscription_id) {
-      const stripe = require('stripe')(STRIPE_SECRET_KEY)
+    if (userData.stripe_subscription_id && stripe) {
       const priceMap = STRIPE_PRICES[newPlan]
       const newPriceId = priceMap?.[(billing || userData.billing || 'monthly') === 'annual' ? 'annual' : 'monthly']
       if (newPriceId) await stripe.subscriptions.update(userData.stripe_subscription_id, { items: [{ price: newPriceId }], proration_behavior: 'create_prorations' })
     }
     await db.collection('usuarios').doc(userId).update({ plan: newPlan, billing: billing || 'monthly', plan_limits: PLAN_LIMITS[newPlan], fecha_actualizacion: new Date() })
-    if (emailTransporter && userData.email) { const names = { starter: 'Starter', growth: 'Growth', enterprise: 'Enterprise' }; await sendTransactionalEmail(userData.email, 'plan_change', { newPlan: names[newPlan] || newPlan }).catch(() => {}) }
+    if (emailTransporter && userData.email) { const names = { starter: 'Starter', growth: 'Growth', enterprise: 'Enterprise' }; await sendTransactionalEmail(userData.email, 'plan_change', { newPlan: names[newPlan] || newPlan }).catch(err => console.error('Error sending plan_change email:', err.message)) }
     res.json({ success: true, data: { plan: newPlan } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
@@ -130,7 +130,7 @@ app.post('/subscription/cancel', async (req, res) => {
     const userDoc = await db.collection('usuarios').doc(userId).get()
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
     const userData = userDoc.data()
-    if (STRIPE_SECRET_KEY && userData.stripe_subscription_id) { const stripe = require('stripe')(STRIPE_SECRET_KEY); await stripe.subscriptions.update(userData.stripe_subscription_id, { cancel_at_period_end: true }) }
+    if (stripe && userData.stripe_subscription_id) { await stripe.subscriptions.update(userData.stripe_subscription_id, { cancel_at_period_end: true }) }
     await db.collection('usuarios').doc(userId).update({ cancel_at_period_end: true, fecha_actualizacion: new Date() })
     res.json({ success: true, data: { message: 'Subscription will cancel at period end' } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
@@ -143,7 +143,7 @@ app.post('/subscription/reactivate', async (req, res) => {
     const userDoc = await db.collection('usuarios').doc(userId).get()
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
     const userData = userDoc.data()
-    if (STRIPE_SECRET_KEY && userData.stripe_subscription_id) { const stripe = require('stripe')(STRIPE_SECRET_KEY); await stripe.subscriptions.update(userData.stripe_subscription_id, { cancel_at_period_end: false }) }
+    if (stripe && userData.stripe_subscription_id) { await stripe.subscriptions.update(userData.stripe_subscription_id, { cancel_at_period_end: false }) }
     await db.collection('usuarios').doc(userId).update({ cancel_at_period_end: false, fecha_actualizacion: new Date() })
     res.json({ success: true, data: { message: 'Subscription reactivated' } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
