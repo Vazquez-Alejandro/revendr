@@ -111,10 +111,9 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
     if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
     if (!lead.url_propuesta) return res.status(400).json({ success: false, error: { message: 'Lead has no proposal URL. Generate proposal first.' } })
     const customMessage = req.body.customMessage
-    const message = customMessage
-      ? customMessage.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_propuesta}/g, lead.url_propuesta).replace(/{rubro}/g, lead.rubro)
-      : `Hola ${lead.nombre_negocio}, te propuse algo especial para tu ${lead.rubro}.\n\nMirá tu propuesta personalizada: ${lead.url_propuesta}\n\n¿Te gustaría que hablemos?`
-    const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'text', text: { body: message } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
+    const leadName = lead.nombre_negocio || lead.nombre || 'negocio'
+    const proposalUrl = lead.url_propuesta || `${FIREBASE_APP_URL}/demo/${lead.rubro || 'general'}/${req.params.leadId}`
+    const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'template', template: { name: 'prospeccion', language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: leadName }, { type: 'text', text: proposalUrl }] }] } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
     await db.collection('leads').doc(req.params.leadId).update({ estado_proceso: 'mensaje_enviado', whatsapp_message_id: response.data.messages?.[0]?.id, fecha_envio_whatsapp: new Date(), fecha_actualizacion: new Date() })
     if (lead.id_campania) await db.collection('campanias').doc(lead.id_campania).update({ mensajes_enviados: admin.firestore.FieldValue.increment(1) })
     createNotification({ userId: req.user?.uid, type: 'message_sent', title: 'WhatsApp enviado', body: `Mensaje enviado a ${lead.nombre_negocio || 'lead'}`, link: `/dashboard/crm` })

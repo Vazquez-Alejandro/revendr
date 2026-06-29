@@ -270,7 +270,7 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
           message = messageTemplate.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_propuesta}/g, lead.url_propuesta).replace(/{rubro}/g, lead.rubro)
         }
         await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_MESSAGES + Math.floor(Math.random() * 20000)))
-        const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'text', text: { body: message } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
+        const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'template', template: { name: 'prospeccion', language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: lead.nombre_negocio || 'negocio' }, { type: 'text', text: lead.url_propuesta || '' }] }] } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
         await leadDoc.ref.update({ estado_proceso: 'mensaje_enviado', whatsapp_message_id: response.data.messages?.[0]?.id, fecha_envio_whatsapp: new Date(), fecha_actualizacion: new Date(), lead_score_at_send: score })
         sent++
       } catch (err) { console.error('Error sending to lead:', err.response?.data || err.message); failed++ }
