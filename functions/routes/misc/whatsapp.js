@@ -1,5 +1,6 @@
 const { db, axios, getWhatsAppConfig, checkPlanLimit } = require('../../config')
 const whatsappService = require('../../services/whatsapp')
+const warmup = require('../../services/warmup')
 
 module.exports = function(app) {
 
@@ -12,6 +13,9 @@ app.get('/whatsapp/config', async (req, res) => {
     if (provider === 'baileys' || req.body?.forceBaileys) {
       baileysStatus = await whatsappService.getBaileysStatus(req.user.uid)
     }
+
+    const warmupStatus = await warmup.canSendToday(req.user.uid, limitCheck.plan)
+    const quality = await warmup.getQualityScore(req.user.uid)
 
     res.json({
       success: true,
@@ -29,6 +33,17 @@ app.get('/whatsapp/config', async (req, res) => {
         },
         rateLimits: limitCheck.rateLimits || null,
         hourRemaining: limitCheck.hourRemaining,
+        warmup: {
+          day: warmupStatus.warmupDay,
+          maxToday: warmupStatus.maxToday,
+          dailyCount: warmupStatus.dailyCount,
+          totalDays: warmupStatus.totalWarmupDays,
+          isWarmingUp: warmupStatus.warmupDay <= warmupStatus.totalWarmupDays,
+        },
+        quality: {
+          score: quality.score,
+          level: quality.level,
+        },
       }
     })
   } catch (error) {
@@ -157,6 +172,30 @@ app.post('/whatsapp/send-template', async (req, res) => {
     const response = await axios.post(`https://graph.facebook.com/v18.0/${whatsappConfig.phoneId}/messages`, { messaging_product: 'whatsapp', to: to.replace(/\D/g, ''), type: 'template', template: { name: templateName, language: { code: languageCode || 'es' }, ...(components.length > 0 && { components }) } }, { headers: { 'Authorization': `Bearer ${whatsappConfig.token}`, 'Content-Type': 'application/json' } })
     res.json({ success: true, data: { messageId: response.data.messages?.[0]?.id } })
   } catch (error) { console.error('WhatsApp template error:', error.response?.data || error.message); res.status(500).json({ success: false, error: { message: error.response?.data?.error?.message || error.message } }) }
+})
+
+app.get('/whatsapp/engagement', async (req, res) => {
+  try {
+    const { getLeadEngagementStatus } = require('../../services/engagement')
+    const status = await getLeadEngagementStatus(req.user.uid)
+    res.json({ success: true, data: status })
+  } catch (error) {
+    console.error('Error getting engagement status:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whatsapp/check-reengagement', async (req, res) => {
+  try {
+    const { leads } = req.body
+    if (!leads || !Array.isArray(leads)) return res.status(400).json({ success: false, error: { message: 'leads array required' } })
+    const { checkReengagement } = require('../../services/engagement')
+    const reengagements = await checkReengagement(req.user.uid, leads)
+    res.json({ success: true, data: reengagements })
+  } catch (error) {
+    console.error('Error checking re-engagement:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
 })
 
 }

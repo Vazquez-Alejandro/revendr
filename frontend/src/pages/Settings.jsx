@@ -281,6 +281,61 @@ export default function Settings() {
                         </div>
                       </div>
                     )}
+
+                    {/* Warm-up Progress */}
+                    {whatsappStatus.warmup && whatsappStatus.warmup.isWarmingUp && (
+                      <div className="pt-2 border-t border-dark-700/50">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-amber-400 font-medium">🔥 {locale === 'es' ? 'Calentamiento' : 'Warm-up'}</span>
+                          <span className="text-dark-300">{locale === 'es' ? `Día ${whatsappStatus.warmup.day}/${whatsappStatus.warmup.totalDays}` : `Day ${whatsappStatus.warmup.day}/${whatsappStatus.warmup.totalDays}`}</span>
+                        </div>
+                        <div className="w-full bg-dark-800 rounded-full h-1.5 mb-1">
+                          <div
+                            className="h-1.5 rounded-full bg-amber-500"
+                            style={{ width: `${(whatsappStatus.warmup.day / whatsappStatus.warmup.totalDays) * 100}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-dark-400">
+                          {locale === 'es'
+                            ? `Hoy podés enviar hasta ${whatsappStatus.warmup.maxToday} mensajes (${whatsappStatus.warmup.dailyCount} enviados)`
+                            : `Today you can send up to ${whatsappStatus.warmup.maxToday} messages (${whatsappStatus.warmup.dailyCount} sent)`}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Quality Score */}
+                    {whatsappStatus.quality && (
+                      <div className="pt-2 border-t border-dark-700/50">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <span className="text-dark-400">{locale === 'es' ? 'Calidad' : 'Quality'}</span>
+                          <span className={`font-medium ${
+                            whatsappStatus.quality.level === 'excellent' ? 'text-emerald-400' :
+                            whatsappStatus.quality.level === 'good' ? 'text-emerald-400' :
+                            whatsappStatus.quality.level === 'fair' ? 'text-amber-400' :
+                            'text-red-400'
+                          }`}>
+                            {whatsappStatus.quality.score}%
+                          </span>
+                        </div>
+                        <div className="w-full bg-dark-800 rounded-full h-1.5">
+                          <div
+                            className={`h-1.5 rounded-full ${
+                              whatsappStatus.quality.score >= 80 ? 'bg-emerald-500' :
+                              whatsappStatus.quality.score >= 60 ? 'bg-amber-500' :
+                              'bg-red-500'
+                            }`}
+                            style={{ width: `${whatsappStatus.quality.score}%` }}
+                          />
+                        </div>
+                        {whatsappStatus.quality.score < 60 && (
+                          <p className="text-xs text-amber-400 mt-1">
+                            {locale === 'es'
+                              ? '⚠️ Tu calidad baja porque poca gente te responde. Personalizá más tus mensajes.'
+                              : '⚠️ Your quality is low because few people respond. Personalize your messages more.'}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="pt-2 border-t border-dark-700/50">
                       <button
                         onClick={() => {
