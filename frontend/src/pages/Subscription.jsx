@@ -17,9 +17,9 @@ import toast from 'react-hot-toast'
 import { useConfirm } from '../hooks/useConfirm'
 
 const PLANS = [
-  { id: 'starter', name: 'Starter', price: 49, icon: Zap, limits: { leads: 100, rubros: 1, propuestas: 50, messages: 1000 } },
-  { id: 'growth', name: 'Growth', price: 149, icon: Building2, popular: true, limits: { leads: 1000, rubros: 3, propuestas: 500, messages: 10000 } },
-  { id: 'enterprise', name: 'Enterprise', price: 399, icon: Sparkles, limits: { leads: -1, rubros: -1, propuestas: -1, messages: -1 } },
+  { id: 'starter', name: 'Starter', price: 29, icon: Zap, limits: { leads: 100, rubros: 1, propuestas: 50, messages: 900 } },
+  { id: 'growth', name: 'Growth', price: 79, icon: Building2, popular: true, limits: { leads: 1000, rubros: 3, propuestas: 500, messages: 3000 } },
+  { id: 'enterprise', name: 'Enterprise', price: 199, icon: Sparkles, limits: { leads: -1, rubros: -1, propuestas: -1, messages: -1 } },
 ]
 
 const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
@@ -70,7 +70,7 @@ export default function Subscription() {
       const res = await fetch(`${API}/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ plan: planId, userId: user.uid }),
+        body: JSON.stringify({ plan: planId, userId: user.uid, email: user.email }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
