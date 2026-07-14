@@ -5,22 +5,16 @@ import { doc, updateDoc } from 'firebase/firestore'
 import { db } from '../config/firebase'
 import { auth } from '../config/firebase'
 import { 
-  Key, 
   CreditCard, 
   Bell, 
   Shield, 
-  Save, 
   Loader2, 
-  AlertCircle,
   ExternalLink,
-  Copy,
-  Globe,
-  Palette,
   Smartphone,
   Wifi,
   WifiOff,
   Check,
-  X
+  MessageSquare,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -45,13 +39,6 @@ export default function Settings() {
   const [activeTab, setActiveTab] = useState('api')
   const [saving, setSaving] = useState(false)
   const [notifSaving, setNotifSaving] = useState(false)
-  const [apiKeys, setApiKeys] = useState({
-    apify: '',
-    stripe_secret: '',
-    stripe_webhook: '',
-    whatsapp_token: '',
-    whatsapp_phone_id: '',
-  })
   const [notifPrefs, setNotifPrefs] = useState(DEFAULT_NOTIF_PREFS)
   const [whatsappStatus, setWhatsappStatus] = useState({ configured: false, status: 'not_configured', messages: { used: 0, limit: 0, remaining: 0, plan: 'starter' } })
   const [whatsappConnecting, setWhatsappConnecting] = useState(false)
@@ -65,9 +52,6 @@ export default function Settings() {
   const [showMetaGuide, setShowMetaGuide] = useState(false)
 
   useEffect(() => {
-    if (adminData?.api_keys) {
-      setApiKeys(adminData.api_keys)
-    }
     if (adminData?.notif_prefs) {
       setNotifPrefs({ ...DEFAULT_NOTIF_PREFS, ...adminData.notif_prefs })
     }
@@ -196,34 +180,11 @@ export default function Settings() {
     }
   }, [])
 
-  const handleSaveApiKeys = async () => {
-    setSaving(true)
-    try {
-      await updateDoc(doc(db, 'usuarios_admin', user.uid), {
-        api_keys: apiKeys,
-        fecha_actualizacion: new Date(),
-      })
-      toast.success(locale === 'es' ? 'API keys guardadas correctamente' : 'API keys saved successfully')
-    } catch (error) {
-      console.error('Error saving API keys:', error)
-      toast.error(locale === 'es' ? 'Error al guardar las API keys' : 'Error saving API keys')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text)
-    toast.success(locale === 'es' ? 'Copiado al portapapeles' : 'Copied to clipboard')
-  }
-
   const tabs = [
-    { id: 'api', label: t('apiKeysTab'), icon: Key },
+    { id: 'whatsapp', label: 'WhatsApp', icon: MessageSquare },
     { id: 'billing', label: t('billingTab'), icon: CreditCard },
     { id: 'notifications', label: t('notificationsTab'), icon: Bell },
     { id: 'security', label: t('securityTab'), icon: Shield },
-    { id: 'whitelabel', label: locale === 'es' ? 'White-Label' : 'White-Label', icon: Palette },
-    { id: 'integrations', label: locale === 'es' ? 'Integraciones' : 'Integrations', icon: Globe },
   ]
 
   return (
@@ -256,79 +217,9 @@ export default function Settings() {
 
         {/* Content */}
         <div className="flex-1">
-          {activeTab === 'api' && (
+          {activeTab === 'whatsapp' && (
             <div className="card space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-dark-100">{t('apiKeysTab')}</h2>
-                <div className="flex items-center gap-2 text-xs text-dark-400">
-                  <AlertCircle className="w-4 h-4" />
-                  {t('keysEncrypted')}
-                </div>
-              </div>
-
-              {/* Apify */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-dark-300">
-                  <div className="w-8 h-8 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                    <span className="text-sm">🔍</span>
-                  </div>
-                  Apify API Key
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="password"
-                    value={apiKeys.apify}
-                    onChange={(e) => setApiKeys({ ...apiKeys, apify: e.target.value })}
-                    className="input-field flex-1"
-                    placeholder="apify_api_xxxxx"
-                  />
-                  <button
-                    onClick={() => copyToClipboard(apiKeys.apify)}
-                    className="btn-secondary px-3"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-                </div>
-                <p className="text-xs text-dark-500">
-                  {t('forScraping')}{' '}
-                  <a href="https://console.apify.com/account/integrations" target="_blank" rel="noopener" className="text-brand-400 hover:text-brand-300">
-                    {t('obtainKey')} <ExternalLink className="w-3 h-3 inline" />
-                  </a>
-                </p>
-              </div>
-
-              {/* Stripe */}
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-dark-300">
-                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                    <span className="text-sm">💳</span>
-                  </div>
-                  Stripe Secret Key
-                </label>
-                <input
-                  type="password"
-                  value={apiKeys.stripe_secret}
-                  onChange={(e) => setApiKeys({ ...apiKeys, stripe_secret: e.target.value })}
-                  className="input-field"
-                  placeholder="sk_live_xxxxx"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center gap-2 text-sm font-medium text-dark-300">
-                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 flex items-center justify-center">
-                    <span className="text-sm">🔗</span>
-                  </div>
-                  Stripe Webhook Secret
-                </label>
-                <input
-                  type="password"
-                  value={apiKeys.stripe_webhook}
-                  onChange={(e) => setApiKeys({ ...apiKeys, stripe_webhook: e.target.value })}
-                  className="input-field"
-                  placeholder="whsec_xxxxx"
-                />
-              </div>
+              <h2 className="text-lg font-semibold text-dark-100">WhatsApp</h2>
 
               {/* WhatsApp */}
               <div className="space-y-4">
@@ -587,21 +478,6 @@ export default function Settings() {
                     )}
                   </div>
                 )}
-              </div>
-
-              <div className="flex justify-end pt-4 border-t border-dark-700">
-                <button
-                  onClick={handleSaveApiKeys}
-                  disabled={saving}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  {saving ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Save className="w-4 h-4" />
-                  )}
-                  {t('saveApiKeys')}
-                </button>
               </div>
             </div>
           )}
