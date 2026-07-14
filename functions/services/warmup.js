@@ -75,29 +75,30 @@ async function incrementDailyUsage(userId) {
 async function getQualityScore(userId) {
   const userDoc = await db.collection('usuarios').doc(userId).get()
   const data = userDoc.data() || {}
-  const config = data.whatsapp_config || {}
 
   const messagesSent = data.usage?.messages || 0
-  const responsesReceived = config.responses_received || 0
+  const landingViews = data.usage?.landing_views || 0
+  const conversions = data.usage?.conversions || 0
 
   if (messagesSent === 0) return { score: 100, level: 'excellent' }
 
-  const responseRate = responsesReceived / messagesSent
+  const viewRate = landingViews / messagesSent
+  const conversionRate = conversions / messagesSent
 
-  if (responseRate >= 0.3) return { score: 100, level: 'excellent' }
-  if (responseRate >= 0.2) return { score: 80, level: 'good' }
-  if (responseRate >= 0.1) return { score: 60, level: 'fair' }
-  if (responseRate >= 0.05) return { score: 40, level: 'poor' }
-  return { score: 20, level: 'critical' }
+  if (conversionRate >= 0.01) return { score: 100, level: 'excellent' }
+  if (viewRate >= 0.05) return { score: 90, level: 'excellent' }
+  if (viewRate >= 0.03) return { score: 75, level: 'good' }
+  if (viewRate >= 0.01) return { score: 50, level: 'fair' }
+  return { score: 30, level: 'low' }
 }
 
 async function shouldPauseSending(userId) {
   const quality = await getQualityScore(userId)
-  if (quality.level === 'critical') {
-    return { pause: true, reason: 'Quality score critical. Pause sending and improve message quality.' }
+  if (quality.score <= 20) {
+    return { pause: true, reason: 'Calidad muy baja. Poca gente entra a tu link. Revisá el mensaje y la propuesta.' }
   }
-  if (quality.level === 'poor') {
-    return { pause: false, warning: 'Quality score low. Consider personalizing messages more.' }
+  if (quality.score <= 40) {
+    return { pause: false, warning: 'Calidad baja. Personalizá más tus mensajes para mejorar el engagement.' }
   }
   return { pause: false }
 }

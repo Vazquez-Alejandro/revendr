@@ -330,8 +330,8 @@ export default function Settings() {
                         {whatsappStatus.quality.score < 60 && (
                           <p className="text-xs text-amber-400 mt-1">
                             {locale === 'es'
-                              ? '⚠️ Tu calidad baja porque poca gente te responde. Personalizá más tus mensajes.'
-                              : '⚠️ Your quality is low because few people respond. Personalize your messages more.'}
+                              ? '⚠️ Poca gente entra a tu link. Revisá que el mensaje sea atractivo y la propuesta sea clara.'
+                              : '⚠️ Few people visit your link. Check that your message is attractive and the proposal is clear.'}
                           </p>
                         )}
                       </div>
