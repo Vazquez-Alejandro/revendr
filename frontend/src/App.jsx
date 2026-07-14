@@ -35,6 +35,7 @@ import Subscription from './pages/Subscription'
 import ClientDashboard from './pages/ClientDashboard'
 import TeamManagement from './pages/TeamManagement'
 import AcceptInvite from './pages/public/AcceptInvite'
+import WhatsAppInbox from './pages/WhatsAppInbox'
 
 function App() {
   return (
@@ -80,6 +81,7 @@ function App() {
           <Route path="campanias" element={<Campaigns />} />
           <Route path="leads" element={<Leads />} />
           <Route path="crm" element={<CRM />} />
+          <Route path="whatsapp" element={<WhatsAppInbox />} />
           <Route path="portal" element={<OwnerPortal />} />
           <Route path="contenido" element={<ContentGenerator />} />
           <Route path="subscription" element={<Subscription />} />

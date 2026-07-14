@@ -37,8 +37,9 @@ export default function Subscription() {
   const [changing, setChanging] = useState(false)
   const [subscribing, setSubscribing] = useState(false)
   const { confirm, ConfirmDialog } = useConfirm()
+  const [whatsappStatus, setWhatsappStatus] = useState({ configured: false, status: 'not_configured' })
 
-  useEffect(() => { loadSubscription() }, [])
+  useEffect(() => { loadSubscription(); loadWhatsAppStatus() }, [])
 
   const loadSubscription = async () => {
     if (!user) return
@@ -50,6 +51,16 @@ export default function Subscription() {
       console.error(e)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadWhatsAppStatus = async () => {
+    try {
+      const res = await fetch(`${API}/whatsapp/config`, { headers: await getAuthHeaders() })
+      const data = await res.json()
+      if (data.success) setWhatsappStatus(data.data)
+    } catch (e) {
+      console.error('Error loading WhatsApp status:', e)
     }
   }
 
@@ -177,6 +188,30 @@ export default function Subscription() {
                     ? `Te quedan ${sub.trialDaysRemaining} día${sub.trialDaysRemaining !== 1 ? 's' : ''} de prueba gratuita.`
                     : `You have ${sub.trialDaysRemaining} day${sub.trialDaysRemaining !== 1 ? 's' : ''} left in your free trial.`)}
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Connection Status */}
+      {!whatsappStatus.configured && (
+        <div className="card border border-amber-500/30 bg-amber-500/5">
+          <div className="flex items-start gap-3">
+            <div className="p-2 rounded-lg bg-amber-500/10">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-amber-300">
+                {locale === 'es' ? 'WhatsApp no conectado' : 'WhatsApp not connected'}
+              </p>
+              <p className="text-sm mt-1 text-dark-400">
+                {locale === 'es'
+                  ? 'Para enviar mensajes, conectá tu WhatsApp Business en Settings > API Keys.'
+                  : 'To send messages, connect your WhatsApp Business in Settings > API Keys.'}
+              </p>
+              <a href="/dashboard/settings" className="text-sm text-brand-400 hover:text-brand-300 mt-2 inline-block">
+                {locale === 'es' ? 'Ir a Settings →' : 'Go to Settings →'}
+              </a>
             </div>
           </div>
         </div>

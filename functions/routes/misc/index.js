@@ -7,5 +7,6 @@ module.exports = function(app) {
   require('./content')(app)
   require('./social')(app)
   require('./whatsapp')(app)
+  require('./whatsapp-webhook')(app)
   require('./apikeys')(app)
 }

@@ -19,7 +19,7 @@ function CustomTooltip({ active, payload, label }) {
       <p className="text-dark-200 font-medium mb-1">{label}</p>
       {payload.map((p, i) => (
         <p key={i} style={{ color: p.color }} className="text-xs">
-          {p.name}: {p.value.toLocaleString()}
+          {p.name}: {(p.value ?? 0).toLocaleString()}
         </p>
       ))}
     </div>
@@ -106,7 +106,7 @@ export default function ClientDashboard() {
                 <item.icon className={`w-5 h-5 ${item.color}`} />
               </div>
               <div>
-                <div className="text-xl font-bold text-dark-100">{item.value.toLocaleString()}</div>
+                <div className="text-xl font-bold text-dark-100">{(item.value ?? 0).toLocaleString()}</div>
                 <div className="text-xs text-dark-400">{item.label}</div>
                 {item.sub && <div className="text-xs text-dark-500">{item.sub}</div>}
               </div>
@@ -201,7 +201,7 @@ export default function ClientDashboard() {
             {conversionData.map((entry, i) => (
               <div key={i} className="flex items-center gap-1.5 text-xs text-dark-400">
                 <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
-                {entry.name}: {entry.value.toLocaleString()}
+                {entry.name}: {(entry.value ?? 0).toLocaleString()}
               </div>
             ))}
           </div>
@@ -242,7 +242,7 @@ export default function ClientDashboard() {
               <div key={item.key}>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-dark-200">{item.label}</span>
-                  <span className="text-dark-400">{item.used.toLocaleString()} / {item.limit === -1 ? '∞' : item.limit.toLocaleString()}{item.limit !== -1 && ` (${pct}%)`}</span>
+                  <span className="text-dark-400">{(item.used ?? 0).toLocaleString()} / {item.limit === -1 ? '∞' : (item.limit ?? 0).toLocaleString()}{item.limit !== -1 && ` (${pct}%)`}</span>
                 </div>
                 {item.limit !== -1 && (
                   <div className="w-full bg-dark-800 rounded-full h-2">

@@ -1,4 +1,4 @@
-const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, FIREBASE_APP_URL, ADMIN_TELEGRAM_CHAT_ID, isBusinessHours, isCampaignExpired } = require('../../config')
+const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, FIREBASE_APP_URL, ADMIN_TELEGRAM_CHAT_ID, isBusinessHours, isCampaignExpired, getWhatsAppConfig, checkPlanLimit, incrementUsage } = require('../../config')
 const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, generatePersonalizedMessage, sendEmail, generateEmailTemplate, SEQUENCE_RULES, sendSimpleEmail, sendTelegramMessage } = require('../../helpers')
 
 module.exports = function(app) {
@@ -33,7 +33,8 @@ app.post('/campaigns/:campaignId/process-followups', async (req, res) => {
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
     if (!campaign.followups || campaign.followups.length === 0) return res.json({ success: true, data: { sent: 0, message: 'No followups configured' } })
-    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
+    const whatsappConfig = await getWhatsAppConfig(req.user.uid)
+    if (!whatsappConfig.configured) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured for this user' } })
     if (isCampaignExpired(campaign)) return res.status(400).json({ success: false, error: { message: 'Campaign expired' } })
     if (!isBusinessHours()) return res.status(400).json({ success: false, error: { message: 'Outside business hours' } })
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', req.params.campaignId).where('estado_proceso', '==', 'mensaje_enviado').get()
@@ -48,7 +49,7 @@ app.post('/campaigns/:campaignId/process-followups', async (req, res) => {
         if (lead[followupKey]) continue
         const message = followup.message.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_propuesta}/g, lead.url_propuesta).replace(/{rubro}/g, lead.rubro)
         try {
-          await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'text', text: { body: message } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
+          await axios.post(`https://graph.facebook.com/v18.0/${whatsappConfig.phoneId}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'text', text: { body: message } }, { headers: { 'Authorization': `Bearer ${whatsappConfig.token}`, 'Content-Type': 'application/json' } })
           await db.collection('leads').doc(leadDoc.id).update({ [followupKey]: true, fecha_ultimo_followup: new Date(), fecha_actualizacion: new Date() })
           await new Promise(resolve => setTimeout(resolve, Math.floor(Math.random() * 60000) + 30000))
           sent++
@@ -250,14 +251,19 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
-    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
+    const whatsappConfig = await getWhatsAppConfig(req.user.uid)
+    if (!whatsappConfig.configured) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured for this user. Go to Settings > API Keys to connect your WhatsApp.' } })
+    const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
+    if (!limitCheck.allowed) return res.status(403).json({ success: false, error: { message: `Message limit reached for your ${limitCheck.plan} plan (${limitCheck.limit}/month). Upgrade your plan to send more messages.`, code: 'PLAN_LIMIT_REACHED', usage: limitCheck.usage, limit: limitCheck.limit, plan: limitCheck.plan } })
     if (isCampaignExpired(campaign)) return res.status(400).json({ success: false, error: { message: 'Campaign has expired' } })
     if (!isBusinessHours()) return res.status(400).json({ success: false, error: { message: 'Outside business hours (Mon-Fri 9-18hs)' } })
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'propuesta_generada').get()
     let sent = 0, failed = 0, skippedLowScore = 0
     const DELAY_BETWEEN_MESSAGES = 45000, MAX_PER_BATCH = 10, BATCH_PAUSE = 180000
     const leadsWithScore = leadsSnapshot.docs.map(doc => ({ ref: doc, data: doc.data(), score: calculateLeadScore(doc.data()) })).sort((a, b) => b.score - a.score)
-    const toSend = leadsWithScore.slice(0, parseInt(limitParam))
+    const maxToSend = Math.min(parseInt(limitParam), limitCheck.remaining === -1 ? parseInt(limitParam) : limitCheck.remaining)
+    const toSend = leadsWithScore.slice(0, maxToSend)
+    const delayMs = (limitCheck.rateLimits?.minDelaySeconds || 60) * 1000
     for (let i = 0; i < toSend.length; i++) {
       if (i > 0 && i % MAX_PER_BATCH === 0) await new Promise(resolve => setTimeout(resolve, BATCH_PAUSE))
       try {
@@ -269,14 +275,15 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
           const messageTemplate = campaign.producto_mensaje || campaign.mensaje_template || 'Hola {nombre_negocio}, te propuse algo especial para tu {rubro}.\n\nMirá tu propuesta: {url_propuesta}'
           message = messageTemplate.replace(/{nombre_negocio}/g, lead.nombre_negocio).replace(/{url_propuesta}/g, lead.url_propuesta).replace(/{rubro}/g, lead.rubro)
         }
-        await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_MESSAGES + Math.floor(Math.random() * 20000)))
-        const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'template', template: { name: 'prospeccion', language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: lead.nombre_negocio || 'negocio' }, { type: 'text', text: lead.url_propuesta || '' }] }] } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
+        await new Promise(resolve => setTimeout(resolve, delayMs + Math.floor(Math.random() * 15000)))
+        const response = await axios.post(`https://graph.facebook.com/v18.0/${whatsappConfig.phoneId}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'template', template: { name: 'prospeccion', language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: lead.nombre_negocio || 'negocio' }, { type: 'text', text: lead.url_propuesta || '' }] }] } }, { headers: { 'Authorization': `Bearer ${whatsappConfig.token}`, 'Content-Type': 'application/json' } })
         await leadDoc.ref.update({ estado_proceso: 'mensaje_enviado', whatsapp_message_id: response.data.messages?.[0]?.id, fecha_envio_whatsapp: new Date(), fecha_actualizacion: new Date(), lead_score_at_send: score })
+        await incrementUsage(req.user.uid, 'messages', 1)
         sent++
       } catch (err) { console.error('Error sending to lead:', err.response?.data || err.message); failed++ }
     }
     if (sent > 0) await db.collection('campanias').doc(campaignId).update({ mensajes_enviados: admin.firestore.FieldValue.increment(sent) })
-    res.json({ success: true, data: { sent, failed, skippedLowScore, total: leadsSnapshot.size } })
+    res.json({ success: true, data: { sent, failed, skippedLowScore, total: leadsSnapshot.size, messagesRemaining: limitCheck.remaining === -1 ? 'unlimited' : limitCheck.remaining - sent } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 

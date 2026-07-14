@@ -1,4 +1,4 @@
-const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, FIREBASE_APP_URL } = require('../config')
+const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, FIREBASE_APP_URL, getWhatsAppConfig, checkPlanLimit, incrementUsage } = require('../config')
 const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, autoScoreLead, generatePersonalizedMessage, sendEmail, generateEmailTemplate } = require('../helpers')
 
 module.exports = function(app) {
@@ -108,16 +108,27 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
-    if (!WHATSAPP_TOKEN || !PHONE_NUMBER_ID) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured' } })
+    const whatsappConfig = await getWhatsAppConfig(req.user.uid)
+    if (!whatsappConfig.configured) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured. Go to Settings > API Keys to connect your WhatsApp.' } })
+    const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
+    if (!limitCheck.allowed) {
+      const errorMsg = limitCheck.reason === 'hourly_limit'
+        ? `Hourly message limit reached (${limitCheck.rateLimits?.perHour}/hour). Wait before sending more.`
+        : limitCheck.reason === 'min_delay'
+          ? `Wait ${limitCheck.retryAfterSeconds}s before sending another message.`
+          : `Message limit reached for your ${limitCheck.plan} plan (${limitCheck.limit}/month). Upgrade your plan to send more messages.`
+      return res.status(403).json({ success: false, error: { message: errorMsg, code: limitCheck.reason || 'PLAN_LIMIT_REACHED', retryAfterSeconds: limitCheck.retryAfterSeconds } })
+    }
     if (!lead.url_propuesta) return res.status(400).json({ success: false, error: { message: 'Lead has no proposal URL. Generate proposal first.' } })
     const customMessage = req.body.customMessage
     const leadName = lead.nombre_negocio || lead.nombre || 'negocio'
     const proposalUrl = lead.url_propuesta || `${FIREBASE_APP_URL}/demo/${lead.rubro || 'general'}/${req.params.leadId}`
-    const response = await axios.post(`https://graph.facebook.com/v18.0/${PHONE_NUMBER_ID}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'template', template: { name: 'prospeccion', language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: leadName }, { type: 'text', text: proposalUrl }] }] } }, { headers: { 'Authorization': `Bearer ${WHATSAPP_TOKEN}`, 'Content-Type': 'application/json' } })
+    const response = await axios.post(`https://graph.facebook.com/v18.0/${whatsappConfig.phoneId}/messages`, { messaging_product: 'whatsapp', to: lead.telefono_whatsapp.replace(/\D/g, ''), type: 'template', template: { name: 'prospeccion', language: { code: 'es' }, components: [{ type: 'body', parameters: [{ type: 'text', text: leadName }, { type: 'text', text: proposalUrl }] }] } }, { headers: { 'Authorization': `Bearer ${whatsappConfig.token}`, 'Content-Type': 'application/json' } })
     await db.collection('leads').doc(req.params.leadId).update({ estado_proceso: 'mensaje_enviado', whatsapp_message_id: response.data.messages?.[0]?.id, fecha_envio_whatsapp: new Date(), fecha_actualizacion: new Date() })
+    await incrementUsage(req.user.uid, 'messages', 1)
     if (lead.id_campania) await db.collection('campanias').doc(lead.id_campania).update({ mensajes_enviados: admin.firestore.FieldValue.increment(1) })
     createNotification({ userId: req.user?.uid, type: 'message_sent', title: 'WhatsApp enviado', body: `Mensaje enviado a ${lead.nombre_negocio || 'lead'}`, link: `/dashboard/crm` })
-    res.json({ success: true, data: { messageId: response.data.messages?.[0]?.id } })
+    res.json({ success: true, data: { messageId: response.data.messages?.[0]?.id, messagesRemaining: limitCheck.remaining === -1 ? 'unlimited' : limitCheck.remaining - 1 } })
   } catch (error) {
     console.error('Error sending WhatsApp:', error.response?.data || error.message)
     res.status(500).json({ success: false, error: { message: error.response?.data?.error?.message || error.message } })

@@ -15,6 +15,7 @@ import {
   CreditCard,
   Shield,
   UserCog,
+  MessageSquare,
 } from 'lucide-react'
 import clsx from 'clsx'
 
@@ -29,6 +30,7 @@ export function Sidebar() {
     { name: t('campaigns'), href: '/dashboard/campanias', icon: Megaphone },
     { name: t('leads'), href: '/dashboard/leads', icon: Users },
     { name: 'CRM', href: '/dashboard/crm', icon: GitBranch },
+    { name: locale === 'es' ? 'WhatsApp' : 'WhatsApp', href: '/dashboard/whatsapp', icon: MessageSquare },
     { name: locale === 'es' ? 'Contenido' : 'Content', href: '/dashboard/contenido', icon: Sparkles },
     { name: locale === 'es' ? 'Equipo' : 'Team', href: '/dashboard/team', icon: Users },
     { name: locale === 'es' ? 'Suscripción' : 'Subscription', href: '/dashboard/subscription', icon: CreditCard },
