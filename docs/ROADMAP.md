@@ -1,8 +1,8 @@
 # Roadmap - Revendr SaaS Engine
 
-## Estado Actual: WhatsApp + Pagos Implementados ✅
+## Estado Actual: WhatsApp + Pagos + Anti-Ban Implementados ✅
 
-Revendr ahora es una plataforma para **vender productos SaaS** mediante prospección automatizada con WhatsApp dual-mode.
+Revendr ahora es una plataforma para **vender productos SaaS** mediante prospección automatizada con WhatsApp dual-mode y sistema anti-ban completo.
 
 ## ✅ Completado
 
@@ -28,6 +28,7 @@ Revendr ahora es una plataforma para **vender productos SaaS** mediante prospecc
 - [x] Export CSV de leads
 - [x] CRM Pipeline con drag-and-drop
 - [x] Settings simplificado (WhatsApp, Billing, Notifications, Security)
+- [x] Code splitting con lazy loading
 
 ### WhatsApp
 - [x] Baileys provider — conexión QR, sin costo por mensaje
@@ -36,6 +37,14 @@ Revendr ahora es una plataforma para **vender productos SaaS** mediante prospecc
 - [x] Quality score basado en landing page visits/conversions
 - [x] Safe mode rate limits (Starter: 8/hr, Growth: 15/hr, Enterprise: 30/hr)
 - [x] Desconexión con aviso claro al usuario
+- [x] Delay aleatorio entre mensajes (30-90 segundos)
+- [x] Solo enviar en horario laboral (9am-8pm)
+- [x] Pausar envíos si quality score < 40%
+- [x] Preview de mensaje antes de enviar
+- [x] Historial de mensajes con stats
+- [x] Seguimiento automático (3 intentos, 3 días entre ellos, bloqueo 40 días)
+- [x] Re-engagement automático (cuando lead vuelve después de ser ignorado)
+- [x] Alertas de re-engagement en Dashboard
 
 ### Pagos
 - [x] LemonSqueezy integrado (reemplazó Stripe)
@@ -47,6 +56,10 @@ Revendr ahora es una plataforma para **vender productos SaaS** mediante prospecc
 ### Engagement
 - [x] Categorización de leads: engaged/viewed/ignored/converted/pending
 - [x] Detección de re-engagement (leads que reaparecen)
+- [x] Filtros de engagement en Leads page
+
+### Testing
+- [x] Smoke tests (12 tests): config, warmup, engagement, followup, reengagement, message-log, lemonsqueezy, ai-message
 
 ---
 
@@ -57,17 +70,12 @@ Revendr ahora es una plataforma para **vender productos SaaS** mediante prospecc
 - [ ] **Probar Baileys end-to-end** — Escanear QR, enviar mensaje, verificar warm-up
 
 ### IMPORTANTE
-- [ ] **Filtros de engagement en Leads** — Filtrar por estado: engaged, viewed, ignored, converted
-- [ ] **Alertas de re-engagement** — Notificar cuando un lead contactado vuelve a aparecer
 - [ ] **Video tutorial Meta API** — Guiar al usuario paso a paso (outsourcing pendiente)
-- [ ] **Preview de mensaje** — Botón para ver qué recibe el lead antes de enviar
-- [ ] **Segundo mensaje** — Follow-up automático si no responden en 48h
-- [ ] **Cola de mensajes** — Ver mensajes pendientes y enviados
-- [ ] **Pausar/Reanudar envíos** — Control fino del envío
+- [ ] **Pausar/Reanudar envíos** — Control fino del envío (botón manual)
+- [ ] **Pool de números** — Distribuir envíos entre varios números (opcional, para usuarios avanzados)
 
 ### TÉCNICO
-- [ ] **Optimizar bundle** — Code splitting, lazy loading (~1MB actual)
-- [ ] **Tests** — Mínimo: auth, checkout, API endpoints
+- [ ] **Tests de integración** — Probar endpoints con requests reales
 - [ ] **Revisión de seguridad** — OWASP checklist
 - [ ] **Dominio propio** — Comprar revendr.app
 
@@ -78,24 +86,104 @@ Revendr ahora es una plataforma para **vender productos SaaS** mediante prospecc
 
 ---
 
-## 📋 Lo que tiene que hacer el usuario
+## 🧪 Lo que tenés que probar (TESTEO MANUAL)
 
-### Para cobrar
-1. [ ] Ir a LemonSqueezy → Settings → Billing
-2. [ ] Conectar cuenta de Stripe
-3. [ ] Activar la tienda
+### 1. Flujo completo de registro y onboarding
+- [ ] Ir a https://revendr-9add8.web.app
+- [ ] Click en "Comenzar gratis"
+- [ ] Completar registro con email y contraseña
+- [ ] Completar onboarding (nombre, rubro, etc.)
+- [ ] Verificar que aparece el dashboard
 
-### Para Meta WhatsApp (opcional)
-1. [ ] Crear cuenta en Meta Business Manager
-2. [ ] Obtener Phone Number ID y WhatsApp Token
-3. [ ] Pegar en .env: WHATSAPP_TOKEN, WHATSAPP_PHONE_ID
-4. [ ] Conectar en Settings → WhatsApp → Meta API
+### 2. Productos
+- [ ] Ir a Dashboard → Productos
+- [ ] Crear un producto nuevo (nombre, descripción, precio)
+- [ ] Editar el producto
+- [ ] Eliminar el producto
+- [ ] Verificar que aparece en la lista
 
-### Para Baileys (gratis, recomendado)
-1. [ ] Ir a Settings → WhatsApp
-2. [ ] Seleccionar "Baileys (Gratis)"
-3. [ ] Escanear el QR con WhatsApp del teléfono
-4. [ ] ¡Listo para enviar!
+### 3. Landing Page
+- [ ] Ir a Dashboard → Productos → Ver landing
+- [ ] Personalizar título, color, CTA
+- [ ] Guardar cambios
+- [ ] Abrir la URL de la landing en otro navegador
+- [ ] Verificar que se ve correcta
+
+### 4. Leads
+- [ ] Ir a Dashboard → Leads
+- [ ] Crear un lead manual (nombre, teléfono, email)
+- [ ] Editar el lead
+- [ ] Verificar que aparece en el pipeline
+- [ ] Filtrar por estado de engagement
+- [ ] Hacer click en un lead y ver el detalle
+
+### 5. WhatsApp Preview
+- [ ] Ir a un lead con teléfono
+- [ ] Click en "WhatsApp"
+- [ ] Ver el modal de preview
+- [ ] Escribir un mensaje
+- [ ] Click en "Ver cómo se ve en WhatsApp"
+- [ ] Verificar que el preview se ve correcto
+
+### 6. AI Message Generator
+- [ ] Ir a un lead con teléfono
+- [ ] Click en "Generar con IA"
+- [ ] Escribir contexto del producto
+- [ ] Click en "Generar"
+- [ ] Verificar que aparece un mensaje sugerido
+
+### 7. Message History
+- [ ] Ir a Settings → WhatsApp
+- [ ] Verificar que aparece "Historial de mensajes"
+- [ ] Verificar que muestra stats (total, enviados, fallidos)
+
+### 8. Follow-up System
+- [ ] Verificar que los leads tienen estado de follow-up
+- [ ] Verificar que el endpoint /whatsapp/followup/leads funciona
+- [ ] Verificar que el endpoint /whatsapp/followup/:leadId funciona
+
+### 9. CRM Pipeline
+- [ ] Ir a Dashboard → CRM
+- [ ] Arrastrar un lead de una columna a otra
+- [ ] Verificar que se guarda el cambio
+- [ ] Click en un lead para ver detalles
+
+### 10. Campañas
+- [ ] Ir a Dashboard → Campañas
+- [ ] Crear una campaña nueva
+- [ ] Asociarla a un producto
+- [ ] Verificar que aparece en la lista
+
+### 11. Subscription
+- [ ] Ir a Dashboard → Subscription
+- [ ] Verificar que aparecen los 3 planes
+- [ ] Verificar que el toggle mensual/anual funciona
+- [ ] Verificar que los precios se actualizan correctamente
+
+### 12. Settings
+- [ ] Ir a Dashboard → Settings
+- [ ] Verificar que WhatsApp tab muestra estado
+- [ ] Verificar que Billing tab muestra planes
+- [ ] Verificar que Notifications tab funciona
+- [ ] Verificar que Security tab permite cambiar contraseña
+
+### 13. Anti-Ban Checks
+- [ ] Verificar que el delay aleatorio funciona (30-90s)
+- [ ] Verificar que solo se puede enviar en horario laboral (9am-8pm)
+- [ ] Verificar que se pausa si quality score < 40%
+
+### 14. Páginas públicas
+- [ ] Ir a https://revendr-9add8.web.app (Landing)
+- [ ] Ir a /pricing
+- [ ] Ir a /help
+- [ ] Ir a /privacy
+- [ ] Ir a /terms
+- [ ] Verificar que todas se ven correctas
+
+### 15. Responsive
+- [ ] Abrir la app en el celular
+- [ ] Navegar por las diferentes secciones
+- [ ] Verificar que se ve bien en mobile
 
 ---
 
@@ -111,3 +199,4 @@ Revendr ahora es una plataforma para **vender productos SaaS** mediante prospecc
 | LemonSqueezy | Pagos (Merchant of Record) | 5% + $0.50/txn |
 | Baileys | WhatsApp gratis | $0/msg (riesgo de ban) |
 | Meta Cloud API | WhatsApp oficial | ~$0.05/msg marketing |
+| Gemini AI | Generación de mensajes | Gratis (15 req/min) |
