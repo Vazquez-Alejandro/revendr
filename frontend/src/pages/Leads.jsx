@@ -75,6 +75,28 @@ const ESTADOS_LABELS_EN = {
   cliente_activo: 'Active Client',
 }
 
+const ENGAGEMENT_LEVELS = {
+  engaged: { labelEs: 'Interesado', labelEn: 'Engaged', color: 'bg-blue-500/20 text-blue-400', icon: '🔥' },
+  viewed: { labelEs: 'Vio Landing', labelEn: 'Viewed Landing', color: 'bg-amber-500/20 text-amber-400', icon: '👁️' },
+  ignored: { labelEs: 'Ignoró', labelEn: 'Ignored', color: 'bg-red-500/20 text-red-400', icon: '—' },
+  converted: { labelEs: 'Convirtió', labelEn: 'Converted', color: 'bg-emerald-500/20 text-emerald-400', icon: '✅' },
+  pending: { labelEs: 'Pendiente', labelEn: 'Pending', color: 'bg-dark-700 text-dark-400', icon: '⏳' },
+}
+
+function getEngagement(lead) {
+  if (lead.estado_proceso === 'cliente_activo') return 'converted'
+  const hasClicked = (lead.cta_clicks || 0) > 0
+  const hasOpened = (lead.landing_views || 0) > 0
+  const hasTimeOnPage = (lead.tiempo_total_landing || 0) > 30
+  if (hasClicked || (hasOpened && hasTimeOnPage)) return 'engaged'
+  if (hasOpened) return 'viewed'
+  if (lead.fecha_envio_whatsapp) {
+    const daysSince = Math.floor((Date.now() - lead.fecha_envio_whatsapp.toDate().getTime()) / (1000 * 60 * 60 * 24))
+    if (daysSince > 3 && (lead.mensajes_leidos || 0) === 0 && (lead.respuestas_whatsapp || 0) === 0) return 'ignored'
+  }
+  return 'pending'
+}
+
 const PAGE_SIZE = 20
 
 export default function Leads() {
@@ -86,6 +108,7 @@ export default function Leads() {
   const [filterEstado, setFilterEstado] = useState('todos')
   const [filterCampania, setFilterCampania] = useState('todas')
   const [filterScore, setFilterScore] = useState('todos')
+  const [filterEngagement, setFilterEngagement] = useState('todos')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedLead, setSelectedLead] = useState(null)
   const [importing, setImporting] = useState(false)
@@ -199,6 +222,11 @@ export default function Leads() {
       if (filterScore === 'regular' && (score < 40 || score >= 60)) return false
       if (filterScore === 'low' && (score < 20 || score >= 40)) return false
       if (filterScore === 'veryLow' && score >= 20) return false
+    }
+
+    if (filterEngagement !== 'todos') {
+      const eng = getEngagement(lead)
+      if (eng !== filterEngagement) return false
     }
 
     return true
@@ -473,6 +501,18 @@ export default function Leads() {
             <option value="low">{locale === 'es' ? 'Bajo (20-39)' : 'Low (20-39)'}</option>
             <option value="veryLow">{locale === 'es' ? 'Muy Bajo (<20)' : 'Very Low (<20)'}</option>
           </select>
+          <select
+            value={filterEngagement}
+            onChange={(e) => setFilterEngagement(e.target.value)}
+            className="select-field w-full md:w-48"
+          >
+            <option value="todos">{locale === 'es' ? 'Engagement' : 'Engagement'}</option>
+            <option value="engaged">{locale === 'es' ? '🔥 Interesados' : '🔥 Engaged'}</option>
+            <option value="viewed">{locale === 'es' ? '👁️ Vieron Landing' : '👁️ Viewed Landing'}</option>
+            <option value="ignored">{locale === 'es' ? '— Ignoraron' : '— Ignored'}</option>
+            <option value="pending">{locale === 'es' ? '⏳ Pendientes' : '⏳ Pending'}</option>
+            <option value="converted">{locale === 'es' ? '✅ Convirtieron' : '✅ Converted'}</option>
+          </select>
           <div className="flex border border-dark-700 rounded-lg overflow-hidden">
             <button
               onClick={() => setSortMode('date')}
@@ -560,6 +600,9 @@ export default function Leads() {
                       {locale === 'es' ? 'Score' : 'Score'}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
+                      {locale === 'es' ? 'Engagement' : 'Engagement'}
+                    </th>
+                    <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
                       {locale === 'es' ? 'Link' : 'Link'}
                     </th>
                     <th className="text-left py-3 px-4 text-xs font-medium text-dark-400 uppercase tracking-wider">
@@ -621,6 +664,17 @@ export default function Leads() {
                         }`}>
                           {lead.lead_score || 0}
                         </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        {(() => {
+                          const eng = getEngagement(lead)
+                          const info = ENGAGEMENT_LEVELS[eng]
+                          return (
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${info.color}`}>
+                              {info.icon} {locale === 'es' ? info.labelEs : info.labelEn}
+                            </span>
+                          )
+                        })()}
                       </td>
                       <td className="py-3 px-4">
                         {lead.url_propuesta ? (

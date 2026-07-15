@@ -185,6 +185,64 @@ app.get('/whatsapp/engagement', async (req, res) => {
   }
 })
 
+app.get('/whatsapp/eligible-leads', async (req, res) => {
+  try {
+    const { getEligibleLeadsForSending } = require('../../services/engagement')
+    const leads = await getEligibleLeadsForSending(req.user.uid)
+    res.json({ success: true, data: leads })
+  } catch (error) {
+    console.error('Error getting eligible leads:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whatsapp/send-bulk', async (req, res) => {
+  try {
+    const { message } = req.body
+    if (!message) return res.status(400).json({ success: false, error: { message: 'message required' } })
+
+    const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
+    if (!limitCheck.allowed) return res.status(403).json({ success: false, error: { message: `Monthly limit reached (${limitCheck.limit}). Upgrade your plan.`, code: 'PLAN_LIMIT_REACHED' } })
+
+    const { getEligibleLeadsForSending } = require('../../services/engagement')
+    const eligible = await getEligibleLeadsForSending(req.user.uid)
+
+    const warmup = require('../../services/warmup')
+    const warmupStatus = await warmup.canSendToday(req.user.uid, limitCheck.plan)
+    const remaining = warmupStatus.maxToday - warmupStatus.dailyCount
+
+    const toSend = eligible.slice(0, Math.min(remaining, limitCheck.remaining))
+
+    if (toSend.length === 0) {
+      return res.json({ success: true, data: { sent: 0, skipped: 0, reason: 'No eligible leads or daily limit reached' } })
+    }
+
+    let sent = 0
+    let failed = 0
+    const results = []
+
+    for (const lead of toSend) {
+      try {
+        await whatsappService.sendMessage(req.user.uid, lead.telefono_whatsapp, message)
+        await db.collection('leads').doc(lead.id).update({ fecha_envio_whatsapp: new Date(), estado_proceso: 'mensaje_enviado' })
+        await incrementUsage(req.user.uid, 'messages', 1)
+        await warmup.incrementDailyUsage(req.user.uid)
+        sent++
+        results.push({ leadId: lead.id, status: 'sent' })
+        await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000))
+      } catch (err) {
+        failed++
+        results.push({ leadId: lead.id, status: 'failed', error: err.message })
+      }
+    }
+
+    res.json({ success: true, data: { sent, failed, total: toSend.length, results } })
+  } catch (error) {
+    console.error('Bulk send error:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 app.post('/whatsapp/check-reengagement', async (req, res) => {
   try {
     const { leads } = req.body

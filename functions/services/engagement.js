@@ -101,4 +101,44 @@ async function checkReengagement(userId, newLeads) {
   return reengagements
 }
 
-module.exports = { getLeadEngagementStatus, checkReengagement, categorizeEngagement }
+async function getEligibleLeadsForSending(userId) {
+  const leadsSnapshot = await db.collection('leads')
+    .where('user_id', '==', userId)
+    .get()
+
+  const eligible = []
+  for (const doc of leadsSnapshot.docs) {
+    const lead = doc.data()
+    const engagement = categorizeEngagement(lead)
+    const hasPhone = lead.telefono_whatsapp && lead.telefono_whatsapp.length >= 8
+    const notSent = !lead.fecha_envio_whatsapp
+    const wasIgnored = engagement.level === 'ignored'
+    const wasViewed = engagement.level === 'viewed' || engagement.level === 'engaged'
+
+    if (hasPhone && (notSent || wasViewed || wasIgnored)) {
+      eligible.push({
+        id: doc.id,
+        nombre_negocio: lead.nombre_negocio,
+        telefono_whatsapp: lead.telefono_whatsapp,
+        email: lead.email,
+        rubro: lead.rubro,
+        engagement,
+        lead_score: lead.lead_score || 0,
+        landing_views: lead.landing_views || 0,
+        cta_clicks: lead.cta_clicks || 0,
+      })
+    }
+  }
+
+  eligible.sort((a, b) => {
+    const priority = { engaged: 0, viewed: 1, ignored: 2, pending: 3, converted: 4 }
+    const pa = priority[a.engagement.level] ?? 3
+    const pb = priority[b.engagement.level] ?? 3
+    if (pa !== pb) return pa - pb
+    return (b.landing_views || 0) - (a.landing_views || 0)
+  })
+
+  return eligible
+}
+
+module.exports = { getLeadEngagementStatus, checkReengagement, categorizeEngagement, getEligibleLeadsForSending }
