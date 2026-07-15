@@ -6,14 +6,15 @@ module.exports = function(app) {
 
 app.post('/create-checkout-session', async (req, res) => {
   try {
-    const { plan, email, userId } = req.body
+    const { plan, email, userId, billing } = req.body
     if (!plan || !email) return res.status(400).json({ success: false, error: { message: 'plan and email required' } })
 
-    const checkout = await lemonsqueezy.createCheckout(plan, email, userId, { plan })
+    const checkout = await lemonsqueezy.createCheckout(plan, email, userId, { plan, billing: billing || 'monthly' })
 
     await db.collection('checkout_sessions').add({
       checkout_id: checkout.checkoutId,
       plan,
+      billing: billing || 'monthly',
       email,
       user_id: userId,
       status: 'pending',

@@ -5,9 +5,18 @@ const LEMONSQUEEZY_STORE_ID = process.env.LEMONSQUEEZY_STORE_ID
 const LEMONSQUEEZY_API_URL = 'https://api.lemonsqueezy.com/v1'
 
 const VARIANT_IDS = {
-  starter: process.env.LEMONSQUEEZY_VARIANT_STARTER || '1908831',
-  growth: process.env.LEMONSQUEEZY_VARIANT_GROWTH || '1908832',
-  enterprise: process.env.LEMONSQUEEZY_VARIANT_ENTERPRISE || '1908834',
+  starter: {
+    monthly: process.env.LEMONSQUEEZY_VARIANT_STARTER_MONTHLY || '1909651',
+    annual: process.env.LEMONSQUEEZY_VARIANT_STARTER_ANNUAL || '1908831',
+  },
+  growth: {
+    monthly: process.env.LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY || '1909680',
+    annual: process.env.LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL || '1908832',
+  },
+  enterprise: {
+    monthly: process.env.LEMONSQUEEZY_VARIANT_ENTERPRISE_MONTHLY || '1909684',
+    annual: process.env.LEMONSQUEEZY_VARIANT_ENTERPRISE_ANNUAL || '1908834',
+  },
 }
 
 const PLAN_NAMES = {
@@ -31,8 +40,9 @@ function getHeaders() {
 }
 
 async function createCheckout(plan, email, userId, metadata = {}) {
-  const variantId = VARIANT_IDS[plan]
-  if (!variantId) throw new Error('Invalid plan')
+  const billing = metadata.billing || 'monthly'
+  const variantId = VARIANT_IDS[plan]?.[billing]
+  if (!variantId) throw new Error('Invalid plan or billing period')
 
   const response = await axios.post(
     `${LEMONSQUEEZY_API_URL}/checkouts`,
@@ -115,6 +125,7 @@ async function handleWebhook(event) {
       const email = attributes.user_email
       const plan = attributes.metadata?.plan
       const userId = attributes.metadata?.user_id
+      const billing = attributes.metadata?.billing || 'monthly'
 
       if (email && plan) {
         try {
@@ -124,7 +135,7 @@ async function handleWebhook(event) {
           if (uid) {
             const updates = {
               plan,
-              billing: 'monthly',
+              billing,
               plan_limits: require('../config').PLAN_LIMITS[plan] || require('../config').PLAN_LIMITS.starter,
               lemonsqueezy_subscription_id: event.data?.id,
               lemonsqueezy_customer_email: email,

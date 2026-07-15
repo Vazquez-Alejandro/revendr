@@ -7,6 +7,7 @@ const plans = [
     key: 'starter',
     name: 'Starter',
     price: 29,
+    annualPrice: 278.40,
     description: 'Para empezar a revender',
     features: [
       '100 leads/mes',
@@ -22,6 +23,7 @@ const plans = [
     key: 'growth',
     name: 'Growth',
     price: 79,
+    annualPrice: 758.40,
     description: 'Para escalar rápido',
     features: [
       '1,000 leads/mes',
@@ -38,6 +40,7 @@ const plans = [
     key: 'enterprise',
     name: 'Enterprise',
     price: 199,
+    annualPrice: 1910.40,
     description: 'Para operaciones grandes',
     features: [
       'Leads ilimitados',
@@ -124,9 +127,14 @@ export default function Pricing() {
 
               <div className="text-center mb-6">
                 <span className="text-4xl font-bold text-dark-50">
-                  ${annual ? Math.round(plan.price * 0.8) : plan.price}
+                  ${annual ? (plan.annualPrice / 12).toFixed(2) : plan.price}
                 </span>
                 <span className="text-dark-400 text-sm">/mes</span>
+                {annual && (
+                  <div className="text-xs text-dark-400 mt-1">
+                    ${plan.annualPrice}/año
+                  </div>
+                )}
               </div>
 
               <ul className="space-y-3 mb-8 flex-1">

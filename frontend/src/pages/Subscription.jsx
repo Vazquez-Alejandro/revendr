@@ -17,9 +17,9 @@ import toast from 'react-hot-toast'
 import { useConfirm } from '../hooks/useConfirm'
 
 const PLANS = [
-  { id: 'starter', name: 'Starter', price: 29, icon: Zap, limits: { leads: 100, rubros: 1, propuestas: 50, messages: 900 } },
-  { id: 'growth', name: 'Growth', price: 79, icon: Building2, popular: true, limits: { leads: 1000, rubros: 3, propuestas: 500, messages: 3000 } },
-  { id: 'enterprise', name: 'Enterprise', price: 199, icon: Sparkles, limits: { leads: -1, rubros: -1, propuestas: -1, messages: -1 } },
+  { id: 'starter', name: 'Starter', price: 29, annualPrice: 278.40, icon: Zap, limits: { leads: 100, rubros: 1, propuestas: 50, messages: 900 } },
+  { id: 'growth', name: 'Growth', price: 79, annualPrice: 758.40, icon: Building2, popular: true, limits: { leads: 1000, rubros: 3, propuestas: 500, messages: 3000 } },
+  { id: 'enterprise', name: 'Enterprise', price: 199, annualPrice: 1910.40, icon: Sparkles, limits: { leads: -1, rubros: -1, propuestas: -1, messages: -1 } },
 ]
 
 const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
@@ -38,6 +38,7 @@ export default function Subscription() {
   const [subscribing, setSubscribing] = useState(false)
   const { confirm, ConfirmDialog } = useConfirm()
   const [whatsappStatus, setWhatsappStatus] = useState({ configured: false, status: 'not_configured' })
+  const [billing, setBilling] = useState('monthly')
 
   useEffect(() => { loadSubscription(); loadWhatsAppStatus() }, [])
 
@@ -70,7 +71,7 @@ export default function Subscription() {
       const res = await fetch(`${API}/create-checkout-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ plan: planId, userId: user.uid, email: user.email }),
+        body: JSON.stringify({ plan: planId, userId: user.uid, email: user.email, billing }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
@@ -273,10 +274,36 @@ export default function Subscription() {
                 ? 'Elegí un plan para suscribirte con tarjeta de crédito:'
                 : 'Choose a plan to subscribe with credit card:'}
             </p>
+            {/* Billing Toggle */}
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <button
+                onClick={() => setBilling('monthly')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  billing === 'monthly'
+                    ? 'bg-brand-600 text-white'
+                    : 'bg-dark-800 text-dark-400 hover:text-dark-200'
+                }`}
+              >
+                {locale === 'es' ? 'Mensual' : 'Monthly'}
+              </button>
+              <button
+                onClick={() => setBilling('annual')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  billing === 'annual'
+                    ? 'bg-brand-600 text-white'
+                    : 'bg-dark-800 text-dark-400 hover:text-dark-200'
+                }`}
+              >
+                {locale === 'es' ? 'Anual' : 'Annual'}
+                <span className="ml-1 text-xs text-emerald-400">-20%</span>
+              </button>
+            </div>
             <div className="grid md:grid-cols-3 gap-3">
               {PLANS.map(plan => {
                 const Icon = plan.icon
                 const isCurrent = sub.plan === plan.id
+                const displayPrice = billing === 'annual' ? plan.annualPrice : plan.price
+                const monthlyPrice = billing === 'annual' ? (plan.annualPrice / 12).toFixed(2) : plan.price
                 return (
                   <div
                     key={plan.id}
@@ -291,8 +318,13 @@ export default function Subscription() {
                       <Icon className="w-8 h-8 mx-auto mb-2 text-dark-400" />
                       <h3 className="text-lg font-bold text-dark-100">{plan.name}</h3>
                       <div className="text-2xl font-bold text-dark-50 mt-2">
-                        ${plan.price}<span className="text-sm text-dark-400">/mes</span>
+                        ${monthlyPrice}<span className="text-sm text-dark-400">/mes</span>
                       </div>
+                      {billing === 'annual' && (
+                        <div className="text-xs text-dark-400 mt-1">
+                          ${displayPrice}/año {locale === 'es' ? '(ahorrás 20%)' : '(save 20%)'}
+                        </div>
+                      )}
                     </div>
                     <ul className="space-y-2 mb-4 text-sm text-dark-300">
                       {Object.entries(plan.limits).map(([key, val]) => (
