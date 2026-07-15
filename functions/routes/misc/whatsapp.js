@@ -473,4 +473,106 @@ app.post('/whatsapp/reengagement/send', async (req, res) => {
   }
 })
 
+app.post('/whatsapp/import-csv', async (req, res) => {
+  try {
+    const { csvText, productId } = req.body
+    if (!csvText) return res.status(400).json({ success: false, error: { message: 'csvText required' } })
+
+    const { importLeadsFromCSV, parseCSV } = require('../../services/csv-import')
+    const leads = parseCSV(csvText)
+
+    if (leads.length === 0) {
+      return res.status(400).json({ success: false, error: { message: 'No valid leads found in CSV' } })
+    }
+
+    const results = await importLeadsFromCSV(req.user.uid, leads, productId)
+    res.json({ success: true, data: results })
+  } catch (error) {
+    console.error('Error importing CSV:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whatsapp/blacklist', async (req, res) => {
+  try {
+    const { phone, reason } = req.body
+    if (!phone) return res.status(400).json({ success: false, error: { message: 'phone required' } })
+
+    const { addToBlacklist } = require('../../services/blacklist')
+    const result = await addToBlacklist(req.user.uid, phone, reason)
+    if (!result.success) return res.status(400).json({ success: false, error: { message: result.error } })
+
+    res.json({ success: true, data: { blacklisted: true } })
+  } catch (error) {
+    console.error('Error adding to blacklist:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.delete('/whatsapp/blacklist/:phone', async (req, res) => {
+  try {
+    const { removeFromBlacklist } = require('../../services/blacklist')
+    const result = await removeFromBlacklist(req.user.uid, req.params.phone)
+    if (!result.success) return res.status(400).json({ success: false, error: { message: result.error } })
+
+    res.json({ success: true, data: { removed: true } })
+  } catch (error) {
+    console.error('Error removing from blacklist:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/blacklist', async (req, res) => {
+  try {
+    const { getBlacklist } = require('../../services/blacklist')
+    const blacklist = await getBlacklist(req.user.uid)
+    res.json({ success: true, data: blacklist })
+  } catch (error) {
+    console.error('Error getting blacklist:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whatsapp/schedule', async (req, res) => {
+  try {
+    const { leadId, phone, message, scheduledFor, campaignId } = req.body
+    if (!phone || !message || !scheduledFor) {
+      return res.status(400).json({ success: false, error: { message: 'phone, message, and scheduledFor required' } })
+    }
+
+    const { scheduleMessage } = require('../../services/scheduled-messages')
+    const result = await scheduleMessage(req.user.uid, { leadId, phone, message, scheduledFor, campaignId })
+    if (!result.success) return res.status(400).json({ success: false, error: { message: result.error } })
+
+    res.json({ success: true, data: { id: result.id, scheduled: true } })
+  } catch (error) {
+    console.error('Error scheduling message:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/schedule', async (req, res) => {
+  try {
+    const { getScheduledMessages } = require('../../services/scheduled-messages')
+    const messages = await getScheduledMessages(req.user.uid)
+    res.json({ success: true, data: messages })
+  } catch (error) {
+    console.error('Error getting scheduled messages:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.delete('/whatsapp/schedule/:id', async (req, res) => {
+  try {
+    const { cancelScheduledMessage } = require('../../services/scheduled-messages')
+    const result = await cancelScheduledMessage(req.user.uid, req.params.id)
+    if (!result.success) return res.status(400).json({ success: false, error: { message: result.error } })
+
+    res.json({ success: true, data: { cancelled: true } })
+  } catch (error) {
+    console.error('Error cancelling scheduled message:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 }

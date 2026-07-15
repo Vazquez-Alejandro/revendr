@@ -141,6 +141,40 @@ async function runTests() {
     assertEqual(reengagement.REENGAGEMENT_CONFIG.hoursAfterVisit, 24, 'Hours after visit should be 24')
   })
 
+  // CSV import tests
+  test('csv-import.js loads correctly', () => {
+    const csv = require('../functions/services/csv-import')
+    assert(typeof csv.importLeadsFromCSV === 'function', 'importLeadsFromCSV should exist')
+    assert(typeof csv.parseCSV === 'function', 'parseCSV should exist')
+  })
+
+  test('CSV parsing works', () => {
+    const { parseCSV } = require('../functions/services/csv-import')
+    const csv = 'nombre,telefono,email\nPizzería Juan,5491155551234,juan@test.com\nResto Maria,5491155554321,maria@test.com'
+    const leads = parseCSV(csv)
+    assertEqual(leads.length, 2, 'Should parse 2 leads')
+    assertEqual(leads[0].nombre_negocio, 'Pizzería Juan', 'First lead name should match')
+    assertEqual(leads[0].telefono_whatsapp, '5491155551234', 'First lead phone should match')
+  })
+
+  // Blacklist tests
+  test('blacklist.js loads correctly', () => {
+    const blacklist = require('../functions/services/blacklist')
+    assert(typeof blacklist.addToBlacklist === 'function', 'addToBlacklist should exist')
+    assert(typeof blacklist.removeFromBlacklist === 'function', 'removeFromBlacklist should exist')
+    assert(typeof blacklist.getBlacklist === 'function', 'getBlacklist should exist')
+    assert(typeof blacklist.isBlacklisted === 'function', 'isBlacklisted should exist')
+  })
+
+  // Scheduled messages tests
+  test('scheduled-messages.js loads correctly', () => {
+    const scheduled = require('../functions/services/scheduled-messages')
+    assert(typeof scheduled.scheduleMessage === 'function', 'scheduleMessage should exist')
+    assert(typeof scheduled.cancelScheduledMessage === 'function', 'cancelScheduledMessage should exist')
+    assert(typeof scheduled.getScheduledMessages === 'function', 'getScheduledMessages should exist')
+    assert(typeof scheduled.getPendingScheduledMessages === 'function', 'getPendingScheduledMessages should exist')
+  })
+
   // Run all tests
   for (const t of tests) {
     try {
