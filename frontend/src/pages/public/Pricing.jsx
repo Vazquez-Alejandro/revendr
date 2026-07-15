@@ -126,14 +126,26 @@ export default function Pricing() {
               </div>
 
               <div className="text-center mb-6">
-                <span className="text-4xl font-bold text-dark-50">
-                  ${annual ? (plan.annualPrice / 12).toFixed(2) : plan.price}
-                </span>
-                <span className="text-dark-400 text-sm">/mes</span>
-                {annual && (
-                  <div className="text-xs text-dark-400 mt-1">
-                    ${plan.annualPrice}/año
-                  </div>
+                {annual ? (
+                  <>
+                    <span className="text-4xl font-bold text-dark-50">
+                      ${plan.annualPrice}
+                    </span>
+                    <span className="text-dark-400 text-sm">/año</span>
+                    <div className="text-xs text-emerald-400 mt-1 font-medium">
+                      Ahorras 20%
+                    </div>
+                    <div className="text-xs text-dark-400 mt-0.5">
+                      ${plan.price}/mes equivalente
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <span className="text-4xl font-bold text-dark-50">
+                      ${plan.price}
+                    </span>
+                    <span className="text-dark-400 text-sm">/mes</span>
+                  </>
                 )}
               </div>
 

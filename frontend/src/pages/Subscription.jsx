@@ -302,8 +302,6 @@ export default function Subscription() {
               {PLANS.map(plan => {
                 const Icon = plan.icon
                 const isCurrent = sub.plan === plan.id
-                const displayPrice = billing === 'annual' ? plan.annualPrice : plan.price
-                const monthlyPrice = billing === 'annual' ? (plan.annualPrice / 12).toFixed(2) : plan.price
                 return (
                   <div
                     key={plan.id}
@@ -317,12 +315,21 @@ export default function Subscription() {
                     <div className="text-center mb-4">
                       <Icon className="w-8 h-8 mx-auto mb-2 text-dark-400" />
                       <h3 className="text-lg font-bold text-dark-100">{plan.name}</h3>
-                      <div className="text-2xl font-bold text-dark-50 mt-2">
-                        ${monthlyPrice}<span className="text-sm text-dark-400">/mes</span>
-                      </div>
-                      {billing === 'annual' && (
-                        <div className="text-xs text-dark-400 mt-1">
-                          ${displayPrice}/año {locale === 'es' ? '(ahorrás 20%)' : '(save 20%)'}
+                      {billing === 'annual' ? (
+                        <div className="mt-2">
+                          <div className="text-2xl font-bold text-dark-50">
+                            ${plan.annualPrice}<span className="text-sm text-dark-400">/año</span>
+                          </div>
+                          <div className="text-xs text-emerald-400 font-medium">
+                            Ahorras 20%
+                          </div>
+                          <div className="text-xs text-dark-400">
+                            ${plan.price}/mes equivalente
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-2xl font-bold text-dark-50 mt-2">
+                          ${plan.price}<span className="text-sm text-dark-400">/mes</span>
                         </div>
                       )}
                     </div>
