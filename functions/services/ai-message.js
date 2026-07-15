@@ -1,9 +1,9 @@
 const { db } = require('../config')
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY
 
 async function generatePersonalizedMessage(lead, context = {}) {
-  if (!OPENAI_API_KEY) {
+  if (!GEMINI_API_KEY) {
     return generateFallbackMessage(lead, context)
   }
 
@@ -19,8 +19,6 @@ async function generatePersonalizedMessage(lead, context = {}) {
   }
 
   const productContext = context.productContext || 'una herramienta digital para hacer crecer tu negocio'
-  const tone = context.tone || 'amigable y directo'
-  const language = context.language || 'es'
 
   const prompt = `Sos una persona real que le escribe por WhatsApp a un negocio local. NO sos un bot. Escribís como escribiría una persona normal: con errores tipográficos ocasionales, abreviaciones, sin ser demasiado formal.
 
@@ -53,26 +51,28 @@ EJEMPLOS DE BUENOS MENSAJES:
 Generá SOLO el mensaje, sin comillas, sin explicaciones.`
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.9,
-        max_tokens: 200,
-      }),
-    })
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.9,
+            maxOutputTokens: 150,
+          },
+        }),
+      }
+    )
 
     const data = await response.json()
-    if (data.choices?.[0]?.message?.content) {
-      return data.choices[0].message.content.trim()
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+    if (text) {
+      return text.trim().replace(/^["']|["']$/g, '')
     }
   } catch (error) {
-    console.error('AI message generation error:', error.message)
+    console.error('Gemini message generation error:', error.message)
   }
 
   return generateFallbackMessage(lead, context)
@@ -80,7 +80,6 @@ Generá SOLO el mensaje, sin comillas, sin explicaciones.`
 
 function generateFallbackMessage(lead, context = {}) {
   const nombre = lead.nombre_negocio || 'tu negocio'
-  const rubro = lead.rubro || 'negocio'
   const hasWeb = lead.datos_personalizados?.website
 
   const templates = [
@@ -97,7 +96,7 @@ async function generateBulkMessages(leads, context = {}) {
   for (const lead of leads) {
     const message = await generatePersonalizedMessage(lead, context)
     results.push({ leadId: lead.id, message })
-    await new Promise(r => setTimeout(r, 500))
+    await new Promise(r => setTimeout(r, 300))
   }
   return results
 }
