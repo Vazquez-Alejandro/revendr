@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { useAuth } from '../contexts/AuthContext'
+import { auth } from '../config/firebase'
 import {
   Users,
   Phone,
@@ -16,6 +18,13 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useConfirm } from '../hooks/useConfirm'
+
+const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+
+const getAuthHeaders = async () => {
+  const token = await auth.currentUser?.getIdToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 
 const STAGES = [
   { id: 'nuevo', label: 'Nuevo', color: 'bg-blue-500', lightColor: 'bg-blue-500/10 text-blue-400' },
@@ -51,7 +60,8 @@ export default function CRM() {
     setLoading(true)
     try {
       const result = await fetch(
-        'https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/pipeline'
+        `${API}/crm/pipeline`,
+        { headers: await getAuthHeaders() }
       ).then(r => r.json())
       if (result.success) {
         setPipeline(result.data.pipeline)
@@ -66,7 +76,8 @@ export default function CRM() {
   const loadTimeline = async (leadId) => {
     try {
       const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/leads/${leadId}/timeline`
+        `${API}/crm/leads/${leadId}/timeline`,
+        { headers: await getAuthHeaders() }
       ).then(r => r.json())
       if (result.success) {
         setTimeline(result.data)
@@ -79,10 +90,10 @@ export default function CRM() {
   const moveLead = async (leadId, newStage) => {
     try {
       await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/leads/${leadId}/stage`,
+        `${API}/crm/leads/${leadId}/stage`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
           body: JSON.stringify({ stage: newStage }),
         }
       )
@@ -101,10 +112,10 @@ export default function CRM() {
     const description = type === 'note' ? newNote : `${type === 'call' ? 'Llamada' : 'Reunión'} registrada`
     try {
       await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/leads/${selectedLead.id}/activity`,
+        `${API}/crm/leads/${selectedLead.id}/activity`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
           body: JSON.stringify({ type, description }),
         }
       )
@@ -137,10 +148,10 @@ export default function CRM() {
   const updateEvent = async (eventId, newDescription) => {
     try {
       await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/events/${eventId}`,
+        `${API}/crm/events/${eventId}`,
         {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
           body: JSON.stringify({ description: newDescription }),
         }
       )
@@ -156,8 +167,8 @@ export default function CRM() {
     if (!(await confirm(locale === 'es' ? '¿Eliminar este evento?' : 'Delete this event?', 'Eliminar'))) return
     try {
       await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/events/${eventId}`,
-        { method: 'DELETE' }
+        `${API}/crm/events/${eventId}`,
+        { method: 'DELETE', headers: await getAuthHeaders() }
       )
       await loadTimeline(selectedLead.id)
     } catch (error) {
@@ -177,10 +188,10 @@ export default function CRM() {
     const gCalUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(desc)}&dates=${startIso}/${endIso}`
     try {
       await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/crm/leads/${selectedLead.id}/activity`,
+        `${API}/crm/leads/${selectedLead.id}/activity`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
           body: JSON.stringify({ type: 'meeting', description: desc, value: gCalUrl }),
         }
       )
