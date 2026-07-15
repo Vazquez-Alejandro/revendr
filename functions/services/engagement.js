@@ -142,3 +142,64 @@ async function getEligibleLeadsForSending(userId) {
 }
 
 module.exports = { getLeadEngagementStatus, checkReengagement, categorizeEngagement, getEligibleLeadsForSending }
+
+async function getReengagedLeads(userId, { hoursSinceLastCheck = 24 } = {}) {
+  try {
+    const leadsSnapshot = await db.collection('leads')
+      .where('user_id', '==', userId)
+      .get()
+
+    const reengaged = []
+    const now = new Date()
+    const cutoff = new Date(now.getTime() - hoursSinceLastCheck * 60 * 60 * 1000)
+
+    for (const doc of leadsSnapshot.docs) {
+      const lead = doc.data()
+      const engagement = categorizeEngagement(lead)
+
+      if (engagement.level === 'engaged' || engagement.level === 'viewed') {
+        const lastCheck = lead.last_reengagement_check?.toDate?.() || lead.fecha_creacion?.toDate?.()
+        if (!lastCheck || lastCheck < cutoff) {
+          const prevLevel = lead.previous_engagement_level || 'ignored'
+          if (prevLevel === 'ignored') {
+            reengaged.push({
+              id: doc.id,
+              nombre_negocio: lead.nombre_negocio,
+              telefono_whatsapp: lead.telefono_whatsapp,
+              engagement,
+              score_change: (lead.lead_score || 0) - (lead.previous_lead_score || 0),
+            })
+          }
+        }
+      }
+    }
+
+    return reengaged
+  } catch (error) {
+    console.error('Error checking re-engaged leads:', error.message)
+    return []
+  }
+}
+
+async function markEngagementChecked(userId) {
+  try {
+    const leadsSnapshot = await db.collection('leads')
+      .where('user_id', '==', userId)
+      .get()
+
+    const batch = db.batch()
+    for (const doc of leadsSnapshot.docs) {
+      const lead = doc.data()
+      batch.update(doc.ref, {
+        previous_engagement_level: categorizeEngagement(lead).level,
+        previous_lead_score: lead.lead_score || 0,
+        last_reengagement_check: new Date(),
+      })
+    }
+    await batch.commit()
+  } catch (error) {
+    console.error('Error marking engagement checked:', error.message)
+  }
+}
+
+module.exports = { getLeadEngagementStatus, checkReengagement, categorizeEngagement, getEligibleLeadsForSending, getReengagedLeads, markEngagementChecked }

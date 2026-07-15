@@ -17,6 +17,7 @@ import {
   MessageSquare,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import MessageHistory from '../components/MessageHistory'
 
 const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
 
@@ -533,6 +534,14 @@ export default function Settings() {
                     )}
                   </div>
                 )}
+              </div>
+
+              {/* Message History */}
+              <div className="pt-4 border-t border-dark-700">
+                <h3 className="text-sm font-medium text-dark-300 mb-3">
+                  {locale === 'es' ? 'Historial de mensajes' : 'Message History'}
+                </h3>
+                <MessageHistory />
               </div>
             </div>
           )}

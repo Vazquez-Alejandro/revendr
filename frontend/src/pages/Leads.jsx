@@ -42,6 +42,7 @@ import {
 import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
 import AIMessageGenerator from '../components/AIMessageGenerator'
+import WhatsAppPreview from '../components/WhatsAppPreview'
 
 const RUBROS = [
   { value: 'todos', labelEs: 'Rubros', labelEn: 'Niche' },
@@ -129,6 +130,7 @@ export default function Leads() {
   const [emailInput, setEmailInput] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showAIGenerator, setShowAIGenerator] = useState(false)
+  const [showWhatsAppPreview, setShowWhatsAppPreview] = useState(false)
   const [createForm, setCreateForm] = useState({
     nombre_negocio: '',
     telefono_whatsapp: '',
@@ -1104,15 +1106,13 @@ export default function Leads() {
                     {locale === 'es' ? 'Enviar por' : 'Send via'}
                   </label>
                   <div className="flex gap-2">
-                    <a
-                      href={`https://wa.me/${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_propuesta || ''}`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      onClick={() => setShowWhatsAppPreview(true)}
                       className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-sm font-medium hover:bg-emerald-500/20 transition-all"
                     >
                       <MessageCircle className="w-4 h-4" />
                       WhatsApp
-                    </a>
+                    </button>
                     <a
                       href={`https://t.me/+${selectedLead.telefono_whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent(`Hola ${selectedLead.nombre_negocio}, mirá tu propuesta: ${selectedLead.url_propuesta || ''}`)}`}
                       target="_blank"
@@ -1131,6 +1131,20 @@ export default function Leads() {
                     {locale === 'es' ? 'Generar con IA' : 'Generate with AI'}
                   </button>
                 </div>
+              )}
+
+              {showWhatsAppPreview && selectedLead && (
+                <WhatsAppPreview
+                  lead={selectedLead}
+                  onSend={async (phone, message) => {
+                    await fetch(`${API}/whatsapp/send-text`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+                      body: JSON.stringify({ to: phone, message }),
+                    })
+                  }}
+                  onClose={() => setShowWhatsAppPreview(false)}
+                />
               )}
 
               {showAIGenerator && selectedLead && (

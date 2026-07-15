@@ -2,15 +2,8 @@ import { useEffect, useState } from 'react'
 import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore'
 import { db, auth } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
-import { 
-  Megaphone, 
-  Users, 
-  TrendingUp, 
-  MessageCircle,
-  Package,
-  ArrowUpRight,
-  ArrowDownRight,
-} from 'lucide-react'
+import { Megaphone, Users, TrendingUp, MessageCircle, Package, ArrowUpRight, ArrowDownRight } from 'lucide-react'
+import ReengagementAlert from '../components/ReengagementAlert'
 import {
   AreaChart,
   Area,
@@ -257,6 +250,8 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-dark-50">{t('dashboard')}</h1>
         <p className="text-dark-400 mt-1">{locale === 'es' ? 'Vista general de tu plataforma SaaS' : 'Overview of your SaaS platform'}</p>
       </div>
+
+      <ReengagementAlert />
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (

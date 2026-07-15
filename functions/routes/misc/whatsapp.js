@@ -1,6 +1,7 @@
 const { db, axios, getWhatsAppConfig, checkPlanLimit } = require('../../config')
 const whatsappService = require('../../services/whatsapp')
 const warmup = require('../../services/warmup')
+const { logMessage, getMessageHistory, getMessageStats } = require('../../services/message-log')
 
 module.exports = function(app) {
 
@@ -145,7 +146,7 @@ app.post('/whatsapp/disconnect', async (req, res) => {
 
 app.post('/whatsapp/send-text', async (req, res) => {
   try {
-    const { to, message } = req.body
+    const { to, message, leadId, campaignId } = req.body
     if (!to || !message) return res.status(400).json({ success: false, error: { message: 'to and message required' } })
 
     const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
@@ -153,9 +154,30 @@ app.post('/whatsapp/send-text', async (req, res) => {
 
     const result = await whatsappService.sendMessage(req.user.uid, to, message)
     await require('../../config').incrementUsage(req.user.uid, 'messages', 1)
+
+    await logMessage({
+      userId: req.user.uid,
+      leadId: leadId || null,
+      channel: 'whatsapp',
+      message,
+      status: 'sent',
+      recipient: to,
+      campaignId: campaignId || null,
+    })
+
     res.json({ success: true, data: result })
   } catch (error) {
     console.error('WhatsApp send error:', error)
+
+    await logMessage({
+      userId: req.user.uid,
+      leadId: req.body?.leadId || null,
+      channel: 'whatsapp',
+      message: req.body?.message || '',
+      status: 'failed',
+      recipient: req.body?.to || '',
+    }).catch(() => {})
+
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })
@@ -283,6 +305,149 @@ app.post('/whatsapp/generate-message', async (req, res) => {
     res.status(400).json({ success: false, error: { message: 'leadId or leadIds required' } })
   } catch (error) {
     console.error('Error generating message:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/messages', async (req, res) => {
+  try {
+    const { leadId, channel, limit } = req.query
+    const messages = await getMessageHistory(req.user.uid, {
+      leadId,
+      channel,
+      limit: parseInt(limit) || 50,
+    })
+    res.json({ success: true, data: messages })
+  } catch (error) {
+    console.error('Error getting messages:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/messages/stats', async (req, res) => {
+  try {
+    const stats = await getMessageStats(req.user.uid)
+    res.json({ success: true, data: stats })
+  } catch (error) {
+    console.error('Error getting message stats:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/reengaged', async (req, res) => {
+  try {
+    const { getReengagedLeads, markEngagementChecked } = require('../../services/engagement')
+    const reengaged = await getReengagedLeads(req.user.uid)
+    await markEngagementChecked(req.user.uid)
+    res.json({ success: true, data: reengaged })
+  } catch (error) {
+    console.error('Error checking re-engaged leads:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/followup/leads', async (req, res) => {
+  try {
+    const { getLeadsNeedingFollowup } = require('../../services/followup')
+    const leads = await getLeadsNeedingFollowup(req.user.uid)
+    res.json({ success: true, data: leads })
+  } catch (error) {
+    console.error('Error getting followup leads:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/followup/:leadId', async (req, res) => {
+  try {
+    const { getFollowupStatus } = require('../../services/followup')
+    const status = await getFollowupStatus(req.user.uid, req.params.leadId)
+    if (!status) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    res.json({ success: true, data: status })
+  } catch (error) {
+    console.error('Error getting followup status:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whatsapp/followup/send', async (req, res) => {
+  try {
+    const { leadId, message } = req.body
+    if (!leadId || !message) return res.status(400).json({ success: false, error: { message: 'leadId and message required' } })
+
+    const { recordFollowupAttempt } = require('../../services/followup')
+    const { logMessage } = require('../../services/message-log')
+
+    const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
+    if (!limitCheck.allowed) return res.status(403).json({ success: false, error: { message: 'Message limit reached', code: 'PLAN_LIMIT_REACHED' } })
+
+    const leadDoc = await db.collection('leads').doc(leadId).get()
+    if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Access denied' } })
+
+    await whatsappService.sendMessage(req.user.uid, lead.telefono_whatsapp, message)
+    await require('../../config').incrementUsage(req.user.uid, 'messages', 1)
+    await recordFollowupAttempt(req.user.uid, leadId)
+
+    await logMessage({
+      userId: req.user.uid,
+      leadId,
+      channel: 'whatsapp',
+      message,
+      status: 'sent',
+      recipient: lead.telefono_whatsapp,
+    })
+
+    res.json({ success: true, data: { sent: true } })
+  } catch (error) {
+    console.error('Error sending followup:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/reengagement/triggers', async (req, res) => {
+  try {
+    const { checkAndTriggerReengagement } = require('../../services/reengagement')
+    const triggers = await checkAndTriggerReengagement(req.user.uid)
+    res.json({ success: true, data: triggers })
+  } catch (error) {
+    console.error('Error checking re-engagement triggers:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whatsapp/reengagement/send', async (req, res) => {
+  try {
+    const { leadId, message } = req.body
+    if (!leadId || !message) return res.status(400).json({ success: false, error: { message: 'leadId and message required' } })
+
+    const { markReengagementSent } = require('../../services/reengagement')
+    const { logMessage } = require('../../services/message-log')
+
+    const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
+    if (!limitCheck.allowed) return res.status(403).json({ success: false, error: { message: 'Message limit reached', code: 'PLAN_LIMIT_REACHED' } })
+
+    const leadDoc = await db.collection('leads').doc(leadId).get()
+    if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Access denied' } })
+
+    await whatsappService.sendMessage(req.user.uid, lead.telefono_whatsapp, message)
+    await require('../../config').incrementUsage(req.user.uid, 'messages', 1)
+    await markReengagementSent(req.user.uid, leadId)
+
+    await logMessage({
+      userId: req.user.uid,
+      leadId,
+      channel: 'whatsapp',
+      message,
+      status: 'sent',
+      recipient: lead.telefono_whatsapp,
+    })
+
+    res.json({ success: true, data: { sent: true } })
+  } catch (error) {
+    console.error('Error sending re-engagement:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })

@@ -1,166 +1,228 @@
-# Revendr - SaaS Engine para Revender Aplicaciones
+# Revendr - Motor de Automatización SaaS B2B
 
-Plataforma automatizada de prospección y venta de productos SaaS. Busca leads, genera landing pages personalizadas y envía mensajes de WhatsApp automáticamente.
+Plataforma de automatización de prospección con WhatsApp, CRM, landing pages, campañas y sistema de calidad.
 
-**Deploy:** https://revendr-9add8.web.app  
-**Backend API:** https://us-central1-revendr-9add8.cloudfunctions.net/api
+## Features Principales
 
-## Stack
+### 🚀 Sistema de Prospección
+- **Landing pages automáticas** por lead con tracking de visitas y conversiones
+- **Propuestas personalizadas** generadas por IA (Gemini)
+- **Lead scoring** basado en engagement (visitas, clics, tiempo en página)
+- **Engagement tracking** categoriza leads como: Engaged, Viewed, Ignored, Pending, Converted
 
-### Frontend
-| Servicio | Uso |
-|---|---|
-| [React 18](https://react.dev) + [Vite](https://vitejs.dev) | Framework UI y bundler |
-| [Tailwind CSS](https://tailwindcss.com) | Estilos |
-| [Recharts](https://recharts.org) | Gráficos del dashboard |
-| [React Router](https://reactrouter.com) | Rutas SPA |
-| [React Hot Toast](https://react-hot-toast.com) | Notificaciones |
-| [Lucide React](https://lucide.dev) | Iconos |
-| [Firebase Auth](https://firebase.google.com/docs/auth) | Autenticación |
+### 💬 WhatsApp Integration
+- **Doble modo:** Baileys (gratis, QR) y Meta Cloud API (oficial, ~$0.05/msg)
+- **Preview de mensaje** con vista estilo WhatsApp antes de enviar
+- **Historial de mensajes** con stats por canal (WhatsApp/Email)
+- **Cola de mensajes** con estado (enviado/fallido)
+- **Anti-ban warm-up** progresivo (5 días, 10→30 msg/día)
+- **Quality score** basado en visitas y conversiones del landing
 
-### Backend
-| Servicio | Uso |
-|---|---|
-| [Firebase Cloud Functions](https://firebase.google.com/docs/functions) | API REST (Node.js 20) |
-| [Firebase Firestore](https://firebase.google.com/docs/firestore) | Base de datos NoSQL |
-| [Firebase Hosting](https://firebase.google.com/docs/hosting) | Hosting estático + SSL |
-| [Apify](https://apify.com) | Scraping de Google Maps |
-| [Axios](https://axios-http.com) | HTTP client |
+### 🔄 Follow-up Automático
+- **3 intentos automáticos** (mensaje inicial + 2 follow-ups)
+- **Días entre intentos:** 3 días
+- **Bloqueo después de 3 intentos:** 40 días sin respuesta
+- **Desbloqueo automático** después del período de bloqueo
+- **Mensajes personalizados** con nombre del negocio y URL
 
-### Servicios Externos
-| Servicio | Uso | Plan |
-|---|---|---|
-| [Stripe](https://stripe.com) | Pagos, suscripciones, webhooks | Test mode |
-| [WhatsApp Business API](https://developers.facebook.com/docs/whatsapp/) | Envío de mensajes | Pendiente configurar |
-| [Vercel](https://vercel.com) | Deploy de apps cliente (Inmoxil, TurnosOnline) | Free tier |
+### 🎯 Re-engagement Automático
+- **Detección de leads** que volvieron a visitar después de ser ignorados
+- **Mensaje automático** 24 horas después de la visita
+- **Un solo intento** por lead para no ser spam
+- **Filtrado inteligente** solo leads que estaban en estado "ignored"
 
-### Apps Cliente (productos que se revenden)
-| App | Descripción | Deploy |
-|---|---|---|
-| [Inmoxil](https://inmoxil.vercel.app) | SaaS para inmobiliarias (scraping, flyers, facturación) | Vercel |
-| [TurnosOnline](https://turnos-online.vercel.app) | Sistema de turnos para negocios | Vercel |
+### 📊 Dashboard & Analytics
+- **Métricas en tiempo real:** leads, campañas, mensajes, revenue
+- **Gráficos de tendencia** con Recharts
+- **Alertas de re-engagement** cuando leads vuelven
+- **Estadísticas de mensajes** por canal y estado
+
+### 🏢 CRM Multi-tenant
+- **Pipeline Kanban** con drag & drop
+- **Filtros por:** estado, propietario, fecha, score
+- **Límite por etapa:** 50 leads/stage
+- **Ownership verification** en todas las operaciones
+- **Landing page por lead** con URL única
+
+### 📧 Email Marketing
+- **Límites por plan:** Starter (500/mo), Growth (2000/mo), Enterprise (ilimitado)
+- **Rate limits:** 20-100 emails/hora según plan
+- **Tracking de envíos** con estado enviado/fallido
+
+### 🎨 UI/UX
+- **Dark mode** profesional
+- **Responsive** mobile-first
+- **Code splitting** con lazy loading (chunks de 5-50kB)
+- **Toasts** para feedback de usuario
+- **Error boundaries** para manejo de errores
+
+## Planes y Precios
+
+| Plan | Mensajes/mo | Emails/mo | Precio Mensual | Precio Anual |
+|------|-------------|-----------|----------------|--------------|
+| Starter | 900 | 500 | $29 USD | $23.20 USD/mo |
+| Growth | 3,000 | 2,000 | $79 USD | $63.20 USD/mo |
+| Enterprise | Ilimitado | Ilimitado | $199 USD | $159.20 USD/mo |
+
+**Descuento anual:** 20% (10 meses por 12)
 
 ## Arquitectura
 
+### Backend (Firebase Functions)
 ```
-Revendr (Plataforma)
-├── Mis Productos → El usuario registra qué vende
-│   ├── Nombre, descripción, URLs
-│   ├── Configuración de landing (título, color, CTA)
-│   └── Mensaje de WhatsApp personalizado
-│
-├── Campañas → Se vinculan a un producto
-│   ├── Scraping de Google Maps (Apify)
-│   ├── Generación de landing personalizada por lead
-│   └── Envío de WhatsApp con link a landing
-│
-├── Leads → Base de datos de negocios contactados
-│   ├── Scraped → Propuesta Generada → Mensaje Enviado → Interesado → Cliente
-│   └── Export CSV
-│
-└── Dashboard → Métricas en tiempo real
-    ├── Leads por día, propuestas, envíos
-    └── Gráficos interactivos
-```
-
-## Flujo de Uso
-
-1. **Crear producto** → Registrar Inmoxil/TurnosOnline con su URL y mensaje
-2. **Crear campaña** → Elegir producto, nicho y ciudad
-3. **Scraping** → Revendr busca negocios en Google Maps
-4. **Landing** → Se genera una landing personalizada por lead
-5. **WhatsApp** → Se envía el link de la landing al lead
-6. **Conversión** → El lead ve la landing y contacta al vendedor
-
-## Variables de Entorno
-
-### Frontend (`frontend/.env`)
-```
-VITE_FIREBASE_API_KEY=...
-VITE_FIREBASE_AUTH_DOMAIN=...
-VITE_FIREBASE_PROJECT_ID=...
-VITE_API_URL=https://us-central1-revendr-9add8.cloudfunctions.net/api
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_...
+functions/
+├── config.js              # Plan limits, rate limits, email limits
+├── routes/
+│   ├── misc/
+│   │   ├── whatsapp.js    # WhatsApp endpoints + followup + reengagement
+│   │   ├── crm.js         # CRM CRUD con ownership verification
+│   │   └── payments.js    # LemonSqueezy integration
+│   └── campaigns/
+│       └── messaging.js   # Campaign messaging con email limits
+└── services/
+    ├── whatsapp.js        # Service abstraction (Baileys/Meta)
+    ├── whatsapp-baileys.js # Baileys provider (QR, session)
+    ├── whatsapp-meta.js   # Meta Cloud API provider
+    ├── warmup.js          # Anti-ban warm-up system
+    ├── engagement.js      # Lead engagement categorization
+    ├── followup.js        # Follow-up automation
+    ├── reengagement.js    # Re-engagement automation
+    ├── message-log.js     # Message history tracking
+    ├── ai-message.js      # Gemini AI message generation
+    └── lemonsqueezy.js    # Payment processing
 ```
 
-### Backend (`functions/.env`)
+### Frontend (React + Vite)
 ```
-APIFY_TOKEN=apify_api_...
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-STRIPE_PUBLISHABLE_KEY=pk_test_...
-WHATSAPP_TOKEN=...          # Pendiente
-PHONE_NUMBER_ID=...         # Pendiente
+frontend/src/
+├── App.jsx               # Lazy-loaded routes
+├── pages/
+│   ├── Dashboard.jsx     # Main dashboard with metrics
+│   ├── Leads.jsx         # Lead management + engagement filters
+│   ├── CRM.jsx           # Kanban pipeline
+│   ├── Campaigns.jsx     # Campaign management
+│   ├── Settings.jsx      # WhatsApp config + message history
+│   └── Subscription.jsx  # Billing with monthly/annual toggle
+├── components/
+│   ├── WhatsAppPreview.jsx    # Message preview before send
+│   ├── MessageHistory.jsx     # Message history + stats
+│   ├── ReengagementAlert.jsx  # Re-engagement notifications
+│   └── AIMessageGenerator.jsx # AI message generation
 ```
 
-## Inicio Rápido
+## Endpoints API
+
+### WhatsApp
+- `GET /whatsapp/config` - Configuración y estado
+- `POST /whatsapp/connect` - Conectar WhatsApp
+- `POST /whatsapp/send-text` - Enviar mensaje
+- `GET /whatsapp/messages` - Historial de mensajes
+- `GET /whatsapp/messages/stats` - Estadísticas
+- `GET /whatsapp/followup/leads` - Leads que necesitan follow-up
+- `GET /whatsapp/followup/:leadId` - Estado de follow-up
+- `POST /whatsapp/followup/send` - Enviar follow-up
+- `GET /whatsapp/reengagement/triggers` - Leads para re-engagement
+- `POST /whatsapp/reengagement/send` - Enviar re-engagement
+- `GET /whatsapp/reengaged` - Leads re-engaged
+
+### CRM
+- `GET /crm/leads` - Leads con filtros
+- `POST /crm/leads` - Crear lead
+- `PUT /crm/leads/:id` - Actualizar lead
+- `DELETE /crm/leads/:id` - Eliminar lead
+- `GET /crm/events` - Eventos del pipeline
+- `POST /crm/events` - Crear evento
+
+### Payments
+- `POST /payments/checkout` - Crear checkout LemonSqueezy
+- `GET /payments/subscription/:uid` - Estado de suscripción
+- `POST /payments/webhook` - Webhook de LemonSqueezy
+
+## Configuración
+
+### Variables de Entorno (.env)
+```env
+# Firebase
+FIREBASE_PROJECT_ID=revendr-9add8
+
+# LemonSqueezy
+LEMONSQUEEZY_API_KEY=
+LEMONSQUEEZY_STORE_ID=
+LEMONSQUEEZY_VARIANT_STARTER_MONTHLY=
+LEMONSQUEEZY_VARIANT_STARTER_ANNUAL=
+LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY=
+LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL=
+LEMONSQUEEZY_VARIANT_ENTERPRISE_MONTHLY=
+LEMONSQUEEZY_VARIANT_ENTERPRISE_ANNUAL=
+LEMONSQUEEZY_WEBHOOK_SECRET=
+
+# WhatsApp (Meta API)
+WHATSAPP_TOKEN=
+WHATSAPP_PHONE_ID=
+WHATSAPP_BUSINESS_ID=
+
+# AI
+GEMINI_API_KEY=
+```
+
+## Instalación
 
 ```bash
-# Frontend
-cd frontend && npm install && npm run dev
+# Instalar dependencias
+cd frontend && npm install
+cd ../functions && npm install
 
-# Backend
-cd functions && npm install && npm run serve
+# Configurar Firebase
+firebase use revendr-9add8
+
+# Desarrollo
+cd frontend && npm run dev
+
+# Build y deploy
+cd frontend && npm run build
+firebase deploy --only hosting,functions
 ```
 
-## Deploy
+## Testing
 
 ```bash
-# Todo junto
-firebase deploy
+# Ejecutar tests
+node tests/smoke-test.js
 
-# Solo funciones
-firebase deploy --only functions
-
-# Solo hosting
-firebase deploy --only hosting
-
-# Solo reglas de Firestore
-firebase deploy --only firestore:rules,firestore:indexes
+# Tests cubiertos:
+# - config.js (plan limits, email limits)
+# - warmup.js (anti-ban system)
+# - engagement.js (categorization, eligible leads)
+# - followup.js (status, messages, config)
+# - reengagement.js (triggers, config)
+# - message-log.js (logging, history, stats)
+# - lemonsqueezy.js (checkout)
+# - ai-message.js (generation, bulk)
 ```
 
-## Estructura del Proyecto
+## Notas Técnicas
 
-```
-revendr/
-├── frontend/                    # React + Vite + Tailwind
-│   ├── src/
-│   │   ├── components/          # UI components
-│   │   ├── contexts/            # Auth, Theme, I18n
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx    # Métricas y gráficos
-│   │   │   ├── Products.jsx     # CRUD de productos
-│   │   │   ├── Campaigns.jsx    # Campañas vinculadas a productos
-│   │   │   ├── Leads.jsx        # Lista de leads
-│   │   │   ├── Settings.jsx     # API keys, facturación
-│   │   │   └── public/          # Páginas públicas
-│   │   │       ├── Landing.jsx
-│   │   │       ├── Pricing.jsx
-│   │   │       ├── DemoProductLanding.jsx  # Landing personalizada por lead
-│   │   │       └── DemoBooking/Properties/Clinic.jsx  # Demos de ejemplo
-│   │   └── services/
-│   │       ├── api.js           # Cliente API
-│   │       └── stripe.js        # Checkout Stripe
-│   └── .env                     # Firebase config + API URL
-│
-├── functions/                   # Firebase Cloud Functions
-│   ├── index.js                 # Toda la lógica backend
-│   ├── .env                     # API keys (gitignored)
-│   └── templates/               # Templates de email
-│
-├── firestore.rules              # Reglas de seguridad Firestore
-├── firestore.indexes.json       # Índices compuestos
-└── firebase.json                # Configuración Firebase
-```
+### Anti-Ban Warm-up
+- **Día 1:** 10 mensajes máximo
+- **Día 2:** 15 mensajes
+- **Día 3:** 20 mensajes
+- **Día 4:** 25 mensajes
+- **Día 5+:** 30 mensajes (límite del plan)
 
-## Costos Estimados
+### Quality Score
+- **0-40%:** Poca gente entra al link (mejorar mensaje)
+- **40-70%:** Regular
+- **70-100%:** Excelente engagement
 
-| Servicio | Costo | Notas |
-|---|---|---|
-| Firebase Hosting | Gratis | 10 GB storage, 10 GB/mes transfer |
-| Firebase Functions | Gratis tier | 2M invocaciones/mes |
-| Firebase Firestore | Gratis tier | 50K lecturas, 20K escrituras/día |
-| Apify | $49/mes | Plan Starter, 49 Actor compute units |
-| Stripe | 2.9% + $0.30/txn | Solo en producción |
-| WhatsApp Business | ~$0.005-0.05/mensaje | Pay per message |
-| Dominio | ~$10-15/año | Opcional |
+### Follow-up Logic
+1. Mensaje inicial → esperar 3 días
+2. Si no respondió → Follow-up 1 → esperar 3 días
+3. Si no respondió → Follow-up 2 (último) → bloquear 40 días
+4. Después de 40 días → se desbloquea automáticamente
+
+### Re-engagement Logic
+1. Lead fue ignorado (no entró al link)
+2. Lead vuelve a visitar el landing
+3. Esperar 24 horas
+4. Enviar mensaje de re-engagement
+5. Marcar como enviado (no repetir)
