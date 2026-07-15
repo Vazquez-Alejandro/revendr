@@ -18,6 +18,16 @@ const WARMUP_CONFIG = {
   },
 }
 
+const DELAY_CONFIG = {
+  minSeconds: 30,
+  maxSeconds: 90,
+}
+
+const BUSINESS_HOURS = {
+  start: 9,
+  end: 20,
+}
+
 async function getWarmupDay(userId) {
   const userDoc = await db.collection('usuarios').doc(userId).get()
   const data = userDoc.data() || {}
@@ -98,9 +108,33 @@ async function shouldPauseSending(userId) {
     return { pause: true, reason: 'Calidad muy baja. Poca gente entra a tu link. Revisá el mensaje y la propuesta.' }
   }
   if (quality.score <= 40) {
-    return { pause: false, warning: 'Calidad baja. Personalizá más tus mensajes para mejorar el engagement.' }
+    return { pause: true, warning: 'Calidad baja (<40%). Personalizá más tus mensajes para mejorar el engagement.' }
   }
   return { pause: false }
+}
+
+function getRandomDelay() {
+  const { minSeconds, maxSeconds } = DELAY_CONFIG
+  return Math.floor(Math.random() * (maxSeconds - minSeconds + 1)) + minSeconds
+}
+
+function isBusinessHours() {
+  const now = new Date()
+  const hour = now.getHours()
+  return hour >= BUSINESS_HOURS.start && hour < BUSINESS_HOURS.end
+}
+
+function getBusinessHoursMessage() {
+  return `Fuera de horario laboral (${BUSINESS_HOURS.start}:00 - ${BUSINESS_HOURS.end}:00). Los mensajes se enviarán en horario hábil.`
+}
+
+function canSendNow() {
+  const qualityCheck = { canSend: true }
+  if (!isBusinessHours()) {
+    qualityCheck.canSend = false
+    qualityCheck.reason = getBusinessHoursMessage()
+  }
+  return qualityCheck
 }
 
 module.exports = {
@@ -109,5 +143,10 @@ module.exports = {
   incrementDailyUsage,
   getQualityScore,
   shouldPauseSending,
+  getRandomDelay,
+  isBusinessHours,
+  canSendNow,
   WARMUP_CONFIG,
+  DELAY_CONFIG,
+  BUSINESS_HOURS,
 }

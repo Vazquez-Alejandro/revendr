@@ -57,6 +57,19 @@ async function runTests() {
     assert(typeof warmup.canSendToday === 'function', 'canSendToday should exist')
     assert(typeof warmup.incrementDailyUsage === 'function', 'incrementDailyUsage should exist')
     assert(typeof warmup.getQualityScore === 'function', 'getQualityScore should exist')
+    assert(typeof warmup.shouldPauseSending === 'function', 'shouldPauseSending should exist')
+    assert(typeof warmup.getRandomDelay === 'function', 'getRandomDelay should exist')
+    assert(typeof warmup.isBusinessHours === 'function', 'isBusinessHours should exist')
+    assertEqual(warmup.DELAY_CONFIG.minSeconds, 30, 'Min delay should be 30')
+    assertEqual(warmup.DELAY_CONFIG.maxSeconds, 90, 'Max delay should be 90')
+    assertEqual(warmup.BUSINESS_HOURS.start, 9, 'Business hours start at 9')
+    assertEqual(warmup.BUSINESS_HOURS.end, 20, 'Business hours end at 20')
+  })
+
+  test('Random delay returns value in range', () => {
+    const { getRandomDelay } = require('../functions/services/warmup')
+    const delay = getRandomDelay()
+    assert(delay >= 30 && delay <= 90, `Delay ${delay} should be between 30 and 90`)
   })
 
   // Engagement tests

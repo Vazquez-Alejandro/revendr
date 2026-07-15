@@ -152,6 +152,16 @@ app.post('/whatsapp/send-text', async (req, res) => {
     const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
     if (!limitCheck.allowed) return res.status(403).json({ success: false, error: { message: `Message limit reached (${limitCheck.limit}/month). Upgrade your plan.`, code: 'PLAN_LIMIT_REACHED' } })
 
+    const { shouldPauseSending, isBusinessHours, canSendToday } = require('../../services/warmup')
+    const pauseCheck = await shouldPauseSending(req.user.uid)
+    if (pauseCheck.pause) {
+      return res.status(403).json({ success: false, error: { message: pauseCheck.reason || pauseCheck.warning, code: 'QUALITY_PAUSED' } })
+    }
+
+    if (!isBusinessHours()) {
+      return res.status(403).json({ success: false, error: { message: 'Fuera de horario laboral (9:00 - 20:00). Intentá en horario hábil.', code: 'OUTSIDE_BUSINESS_HOURS' } })
+    }
+
     const result = await whatsappService.sendMessage(req.user.uid, to, message)
     await require('../../config').incrementUsage(req.user.uid, 'messages', 1)
 
@@ -226,10 +236,20 @@ app.post('/whatsapp/send-bulk', async (req, res) => {
     const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
     if (!limitCheck.allowed) return res.status(403).json({ success: false, error: { message: `Monthly limit reached (${limitCheck.limit}). Upgrade your plan.`, code: 'PLAN_LIMIT_REACHED' } })
 
+    const warmup = require('../../services/warmup')
+
+    const pauseCheck = await warmup.shouldPauseSending(req.user.uid)
+    if (pauseCheck.pause) {
+      return res.status(403).json({ success: false, error: { message: pauseCheck.reason || pauseCheck.warning, code: 'QUALITY_PAUSED' } })
+    }
+
+    if (!warmup.isBusinessHours()) {
+      return res.status(403).json({ success: false, error: { message: 'Fuera de horario laboral (9:00 - 20:00). Intentá en horario hábil.', code: 'OUTSIDE_BUSINESS_HOURS' } })
+    }
+
     const { getEligibleLeadsForSending } = require('../../services/engagement')
     const eligible = await getEligibleLeadsForSending(req.user.uid)
 
-    const warmup = require('../../services/warmup')
     const warmupStatus = await warmup.canSendToday(req.user.uid, limitCheck.plan)
     const remaining = warmupStatus.maxToday - warmupStatus.dailyCount
 
@@ -251,7 +271,8 @@ app.post('/whatsapp/send-bulk', async (req, res) => {
         await warmup.incrementDailyUsage(req.user.uid)
         sent++
         results.push({ leadId: lead.id, status: 'sent' })
-        await new Promise(r => setTimeout(r, 2000 + Math.random() * 3000))
+        const delay = warmup.getRandomDelay()
+        await new Promise(r => setTimeout(r, delay * 1000))
       } catch (err) {
         failed++
         results.push({ leadId: lead.id, status: 'failed', error: err.message })
