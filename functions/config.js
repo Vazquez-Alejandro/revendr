@@ -205,9 +205,66 @@ const STRIPE_PRICES = {
 }
 
 const PLAN_LIMITS = {
-  starter: { leads: 100, rubros: 1, propuestas: 50, messages: 900 },
-  growth: { leads: 1000, rubros: 3, propuestas: 500, messages: 3000 },
-  enterprise: { leads: -1, rubros: -1, propuestas: -1, messages: -1 },
+  starter: { leads: 100, rubros: 1, propuestas: 50, messages: 900, emails: 500 },
+  growth: { leads: 1000, rubros: 3, propuestas: 500, messages: 3000, emails: 2000 },
+  enterprise: { leads: -1, rubros: -1, propuestas: -1, messages: -1, emails: -1 },
+}
+
+const EMAIL_RATE_LIMITS = {
+  starter: { perHour: 20, perDay: 100 },
+  growth: { perHour: 50, perDay: 300 },
+  enterprise: { perHour: 100, perDay: 500 },
+}
+
+async function checkEmailLimit(userId, type = 'emails') {
+  const userDoc = await db.collection('usuarios').doc(userId).get()
+  let plan = 'starter'
+  let usage = { emails: 0 }
+  let planLimits = PLAN_LIMITS.starter
+
+  if (userDoc.exists) {
+    const userData = userDoc.data()
+    plan = userData.plan || 'starter'
+    usage = userData.usage || { emails: 0 }
+    planLimits = userData.plan_limits || PLAN_LIMITS[plan] || PLAN_LIMITS.starter
+  } else {
+    const adminDoc = await db.collection('usuarios_admin').doc(userId).get()
+    if (adminDoc.exists) {
+      const adminData = adminDoc.data()
+      plan = adminData.plan || 'starter'
+      usage = adminData.usage || { emails: 0 }
+      planLimits = adminData.plan_limits || PLAN_LIMITS[plan] || PLAN_LIMITS.starter
+    }
+  }
+
+  const limit = planLimits.emails
+  const currentUsage = usage.emails || 0
+  const rateLimits = EMAIL_RATE_LIMITS[plan] || EMAIL_RATE_LIMITS.starter
+
+  if (limit !== -1 && currentUsage >= limit) {
+    return { allowed: false, remaining: 0, usage: currentUsage, limit, plan, reason: 'monthly_limit' }
+  }
+
+  return {
+    allowed: true,
+    remaining: limit === -1 ? -1 : limit - currentUsage,
+    usage: currentUsage,
+    limit,
+    plan,
+  }
+}
+
+async function incrementEmailUsage(userId, amount = 1) {
+  const userRef = db.collection('usuarios').doc(userId)
+  const adminRef = db.collection('usuarios_admin').doc(userId)
+
+  const updateData = {
+    'usage.emails': admin.firestore.FieldValue.increment(amount),
+    fecha_actualizacion: new Date(),
+  }
+
+  await userRef.set(updateData, { merge: true })
+  await adminRef.set(updateData, { merge: true })
 }
 
 const RESEND_FROM = 'onboarding@resend.dev'
@@ -225,4 +282,5 @@ module.exports = {
   isBusinessHours, isCampaignExpired, PUBLIC_PATHS,
   STRIPE_PRICES, PLAN_LIMITS, RESEND_FROM,
   getWhatsAppConfig, checkPlanLimit, incrementUsage,
+  checkEmailLimit, incrementEmailUsage,
 }

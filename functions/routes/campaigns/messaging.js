@@ -1,4 +1,4 @@
-const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, FIREBASE_APP_URL, ADMIN_TELEGRAM_CHAT_ID, isBusinessHours, isCampaignExpired, getWhatsAppConfig, checkPlanLimit, incrementUsage } = require('../../config')
+const { admin, db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID, RESEND_API_KEY, FIREBASE_APP_URL, ADMIN_TELEGRAM_CHAT_ID, isBusinessHours, isCampaignExpired, getWhatsAppConfig, checkPlanLimit, incrementUsage, checkEmailLimit, incrementEmailUsage } = require('../../config')
 const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, generatePersonalizedMessage, sendEmail, generateEmailTemplate, SEQUENCE_RULES, sendSimpleEmail, sendTelegramMessage } = require('../../helpers')
 
 module.exports = function(app) {
@@ -83,10 +83,14 @@ app.post('/campaigns/:campaignId/process-sequence', async (req, res) => {
       if (!rule.condition(lead)) continue
       const nextStep = rule.nextStep
       if (nextStep && nextStep.startsWith('email_') && lead.email && RESEND_API_KEY) {
+        const emailLimitCheck = await checkEmailLimit(campaign.user_id || req.user.uid)
+        if (!emailLimitCheck.allowed) continue
+
         const messageType = nextStep.replace('email_', '')
         const { subject, html } = generateEmailTemplate(lead, product, messageType)
         const emailResult = await sendEmail(lead.email, subject, html)
-        if (emailResult) {
+        if (emailResult && emailResult.sent) {
+          await incrementEmailUsage(campaign.user_id || req.user.uid)
           await leadDoc.ref.update({ sequence_step: nextStep, fecha_ultimo_followup: new Date(), fecha_actualizacion: new Date() })
           await db.collection('message_events').add({ lead_id: leadDoc.id, campaign_id: campaignId, channel: 'email', event_type: 'sent', message_type: messageType, timestamp: new Date() })
           actions++
