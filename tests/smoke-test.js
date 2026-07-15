@@ -175,6 +175,35 @@ async function runTests() {
     assert(typeof scheduled.getPendingScheduledMessages === 'function', 'getPendingScheduledMessages should exist')
   })
 
+  // Campaign metrics tests
+  test('campaign-metrics.js loads correctly', () => {
+    const metrics = require('../functions/services/campaign-metrics')
+    assert(typeof metrics.getCampaignMetrics === 'function', 'getCampaignMetrics should exist')
+    assert(typeof metrics.getAllCampaignsMetrics === 'function', 'getAllCampaignsMetrics should exist')
+  })
+
+  // A/B testing tests
+  test('ab-testing.js loads correctly', () => {
+    const ab = require('../functions/services/ab-testing')
+    assert(typeof ab.createABTest === 'function', 'createABTest should exist')
+    assert(typeof ab.getABTest === 'function', 'getABTest should exist')
+    assert(typeof ab.getABTests === 'function', 'getABTests should exist')
+    assert(typeof ab.assignVariant === 'function', 'assignVariant should exist')
+    assert(typeof ab.recordABResult === 'function', 'recordABResult should exist')
+    assert(typeof ab.getABTestWinner === 'function', 'getABTestWinner should exist')
+  })
+
+  // Notifications tests
+  test('notifications.js loads correctly', () => {
+    const notifications = require('../functions/services/notifications')
+    assert(typeof notifications.sendNotificationEmail === 'function', 'sendNotificationEmail should exist')
+    assert(typeof notifications.notifyConversion === 'function', 'notifyConversion should exist')
+    assert(typeof notifications.notifyResponse === 'function', 'notifyResponse should exist')
+    assert(typeof notifications.notifyLowQuality === 'function', 'notifyLowQuality should exist')
+    assert(typeof notifications.getNotifications === 'function', 'getNotifications should exist')
+    assert(typeof notifications.markNotificationRead === 'function', 'markNotificationRead should exist')
+  })
+
   // Run all tests
   for (const t of tests) {
     try {

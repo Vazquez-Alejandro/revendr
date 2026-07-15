@@ -575,4 +575,101 @@ app.delete('/whatsapp/schedule/:id', async (req, res) => {
   }
 })
 
+app.get('/whatsapp/campaigns/metrics', async (req, res) => {
+  try {
+    const { getAllCampaignsMetrics } = require('../../services/campaign-metrics')
+    const metrics = await getAllCampaignsMetrics(req.user.uid)
+    res.json({ success: true, data: metrics })
+  } catch (error) {
+    console.error('Error getting campaigns metrics:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/campaigns/:campaignId/metrics', async (req, res) => {
+  try {
+    const { getCampaignMetrics } = require('../../services/campaign-metrics')
+    const metrics = await getCampaignMetrics(req.user.uid, req.params.campaignId)
+    if (!metrics) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    res.json({ success: true, data: metrics })
+  } catch (error) {
+    console.error('Error getting campaign metrics:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/whatsapp/ab-tests', async (req, res) => {
+  try {
+    const { campaignId, name, messageA, messageB, splitPercent } = req.body
+    if (!name || !messageA || !messageB) {
+      return res.status(400).json({ success: false, error: { message: 'name, messageA, and messageB required' } })
+    }
+
+    const { createABTest } = require('../../services/ab-testing')
+    const result = await createABTest(req.user.uid, { campaignId, name, messageA, messageB, splitPercent })
+    res.json({ success: true, data: result })
+  } catch (error) {
+    console.error('Error creating A/B test:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/ab-tests', async (req, res) => {
+  try {
+    const { getABTests } = require('../../services/ab-testing')
+    const tests = await getABTests(req.user.uid)
+    res.json({ success: true, data: tests })
+  } catch (error) {
+    console.error('Error getting A/B tests:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/ab-tests/:testId', async (req, res) => {
+  try {
+    const { getABTest } = require('../../services/ab-testing')
+    const test = await getABTest(req.user.uid, req.params.testId)
+    if (!test) return res.status(404).json({ success: false, error: { message: 'Test not found' } })
+    res.json({ success: true, data: test })
+  } catch (error) {
+    console.error('Error getting A/B test:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/ab-tests/:testId/winner', async (req, res) => {
+  try {
+    const { getABTestWinner } = require('../../services/ab-testing')
+    const winner = await getABTestWinner(req.user.uid, req.params.testId)
+    if (!winner) return res.status(404).json({ success: false, error: { message: 'Test not found' } })
+    res.json({ success: true, data: winner })
+  } catch (error) {
+    console.error('Error getting A/B test winner:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/whatsapp/notifications', async (req, res) => {
+  try {
+    const { getNotifications } = require('../../services/notifications')
+    const notifications = await getNotifications(req.user.uid)
+    res.json({ success: true, data: notifications })
+  } catch (error) {
+    console.error('Error getting notifications:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.put('/whatsapp/notifications/:id/read', async (req, res) => {
+  try {
+    const { markNotificationRead } = require('../../services/notifications')
+    const result = await markNotificationRead(req.user.uid, req.params.id)
+    if (!result) return res.status(404).json({ success: false, error: { message: 'Notification not found' } })
+    res.json({ success: true, data: { read: true } })
+  } catch (error) {
+    console.error('Error marking notification read:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 }
