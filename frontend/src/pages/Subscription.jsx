@@ -149,7 +149,7 @@ export default function Subscription() {
   const sub = subscription || {
     plan: 'starter', status: 'active',
     usage: { leads: 0, propuestas: 0, messages: 0 },
-    limits: { leads: 100, rubros: 1, propuestas: 50, messages: 1000 },
+    limits: { leads: 100, rubros: 1, propuestas: 50, messages: 900 },
     hasSubscription: false, trialDaysRemaining: 14, trialEnd: null,
   }
 

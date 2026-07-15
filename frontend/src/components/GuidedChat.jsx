@@ -18,6 +18,8 @@ const TREE = {
       { label: '📦 Crear un producto', next: 'crear_producto' },
       { label: '🎯 Crear una campaña', next: 'crear_campania' },
       { label: '👥 Ver mis leads', next: 'ver_leads' },
+      { label: '📱 Conectar WhatsApp', next: 'conectar_whatsapp' },
+      { label: '📊 Ver engagement', next: 'ver_engagement' },
       { label: '📚 Guía completa', type: 'link', path: '/guide' },
       { label: '← Volver', next: 'menu' },
     ],
@@ -43,6 +45,20 @@ const TREE = {
       { label: '← Volver', next: 'guia' },
     ],
   },
+  conectar_whatsapp: {
+    text: 'Para conectar WhatsApp:\n\n1. Andá a **Settings → WhatsApp**\n2. Elegí "Gratis (Baileys)"\n3. Escaneá el código QR\n\n✅ Sin costo por mensaje\n⚠️ Respetá los límites para evitar baneo\n\nTambién podés usar la API oficial de Meta si preferís.',
+    options: [
+      { label: 'Ir a Settings →', type: 'link', path: '/dashboard/settings' },
+      { label: '← Volver', next: 'guia' },
+    ],
+  },
+  ver_engagement: {
+    text: 'El sistema trackea automáticamente:\n\n• **Abrió/Interesado** - Hizo clic en tu link\n• **Vio el link** - Abrió pero no hizo clic\n• **Ignoró** - No abrió después de 3 días\n• **Convirtió** - Se hizo cliente\n\nEsto te ayuda a saber a quién contactar de nuevo.',
+    options: [
+      { label: 'Ir a Leads →', type: 'link', path: '/dashboard/leads' },
+      { label: '← Volver', next: 'guia' },
+    ],
+  },
   faq: {
     text: 'Elegí una pregunta frecuente:',
     options: [
@@ -54,7 +70,7 @@ const TREE = {
     ],
   },
   que_es: {
-    text: 'Revendr es un motor SaaS que automatiza tu prospección comercial.\n\n• Busca leads automáticamente (scraping)\n• Genera propuestas personalizadas para cada prospecto\n• Envía mensajes por WhatsApp y email\n• Cobra con Stripe\n\nTodo configurado por rubro y ciudad.',
+    text: 'Revendr es un motor SaaS que automatiza tu prospección comercial.\n\n• Busca leads automáticamente (scraping)\n• Genera propuestas personalizadas para cada prospecto\n• Envía mensajes por WhatsApp y email\n• Cobra con LemonSqueezy\n\nTodo configurado por rubro y ciudad.',
     options: [
       { label: '← Volver', next: 'faq' },
     ],
@@ -66,7 +82,7 @@ const TREE = {
     ],
   },
   planes: {
-    text: 'Tenemos **3 planes**:\n\n• **Starter** ($49/mes) - 200 leads, 50 props., 100 WhatsApp\n• **Growth** ($149/mes) - 1.000 leads, 250 props., 500 WhatsApp\n• **Enterprise** ($399/mes) - Ilimitado + prioridad\n\n🔄 Pagando anual tenés **20% de descuento**.',
+    text: 'Tenemos **3 planes**:\n\n• **Starter** ($29/mes) - 100 leads, 50 props., 900 WhatsApp\n• **Growth** ($79/mes) - 1.000 leads, 500 props., 3.000 WhatsApp\n• **Enterprise** ($199/mes) - Ilimitado + white-label\n\n🔄 Pagando anual tenés **20% de descuento**.',
     options: [
       { label: 'Ver precios →', type: 'link', path: '/pricing' },
       { label: '← Volver', next: 'faq' },
