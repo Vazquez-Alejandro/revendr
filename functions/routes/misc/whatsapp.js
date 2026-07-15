@@ -256,4 +256,35 @@ app.post('/whatsapp/check-reengagement', async (req, res) => {
   }
 })
 
+app.post('/whatsapp/generate-message', async (req, res) => {
+  try {
+    const { leadId, leadIds, productContext, tone, useAI } = req.body
+
+    const { generatePersonalizedMessage, generateBulkMessages } = require('../../services/ai-message')
+
+    if (leadId) {
+      const leadDoc = await db.collection('leads').doc(leadId).get()
+      if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+      const lead = { id: leadDoc.id, ...leadDoc.data() }
+      const message = await generatePersonalizedMessage(lead, { productContext, tone, useAI })
+      return res.json({ success: true, data: { leadId, message } })
+    }
+
+    if (leadIds && Array.isArray(leadIds)) {
+      const leads = []
+      for (const id of leadIds) {
+        const doc = await db.collection('leads').doc(id).get()
+        if (doc.exists) leads.push({ id: doc.id, ...doc.data() })
+      }
+      const results = await generateBulkMessages(leads, { productContext, tone, useAI })
+      return res.json({ success: true, data: results })
+    }
+
+    res.status(400).json({ success: false, error: { message: 'leadId or leadIds required' } })
+  } catch (error) {
+    console.error('Error generating message:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 }

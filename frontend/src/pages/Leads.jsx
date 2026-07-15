@@ -41,6 +41,7 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
+import AIMessageGenerator from '../components/AIMessageGenerator'
 
 const RUBROS = [
   { value: 'todos', labelEs: 'Rubros', labelEn: 'Niche' },
@@ -127,6 +128,7 @@ export default function Leads() {
   const [sortMode, setSortMode] = useState('date')
   const [emailInput, setEmailInput] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [createForm, setCreateForm] = useState({
     nombre_negocio: '',
     telefono_whatsapp: '',
@@ -1121,6 +1123,28 @@ export default function Leads() {
                       Telegram
                     </a>
                   </div>
+                  <button
+                    onClick={() => setShowAIGenerator(!showAIGenerator)}
+                    className="mt-2 inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 text-brand-400 border border-brand-500/20 rounded-lg text-sm font-medium hover:bg-brand-500/20 transition-all"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {locale === 'es' ? 'Generar con IA' : 'Generate with AI'}
+                  </button>
+                </div>
+              )}
+
+              {showAIGenerator && selectedLead && (
+                <div className="bg-dark-900 rounded-lg p-4 border border-dark-700">
+                  <AIMessageGenerator
+                    leads={[selectedLead]}
+                    onSendMessage={async (phone, message) => {
+                      await fetch(`${API}/whatsapp/send-text`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+                        body: JSON.stringify({ to: phone, message }),
+                      })
+                    }}
+                  />
                 </div>
               )}
 
