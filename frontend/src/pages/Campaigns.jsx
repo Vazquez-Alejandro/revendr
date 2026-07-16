@@ -1192,24 +1192,30 @@ export default function Campaigns() {
               </div>
 
               {/* Preview del mensaje */}
-              {(campaign.producto_mensaje || campaign.mensaje_template) && (
-                <div className="mt-3 bg-dark-900 rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <MessageCircle className="w-3 h-3 text-emerald-400" />
-                    <span className="text-xs font-medium text-dark-400">
-                      {locale === 'es' ? 'Preview del mensaje' : 'Message preview'}
-                    </span>
+              {(() => {
+                const previewMsg = editingId
+                  ? (formData.mensaje_template || products.find(p => p.id === formData.producto_id)?.mensaje_whatsapp || '')
+                  : (campaign.producto_mensaje || campaign.mensaje_template || '')
+                if (!previewMsg) return null
+                return (
+                  <div className="mt-3 bg-dark-900 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageCircle className="w-3 h-3 text-emerald-400" />
+                      <span className="text-xs font-medium text-dark-400">
+                        {locale === 'es' ? 'Preview del mensaje' : 'Message preview'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-dark-300 whitespace-pre-line leading-relaxed">
+                      {previewMsg
+                        .replace(/{nombre_negocio}/g, 'Ej: Revendr')
+                        .replace(/{url_propuesta}/g, 'https://revendr-9add8.web.app/...')
+                        .replace(/{rubro}/g, 'inmobiliaria')
+                        .substring(0, 200)}
+                      {previewMsg.length > 200 && '...'}
+                    </p>
                   </div>
-                  <p className="text-xs text-dark-300 whitespace-pre-line leading-relaxed">
-                    {(campaign.producto_mensaje || campaign.mensaje_template || '')
-                      .replace(/{nombre_negocio}/g, 'Ej: Revendr')
-                      .replace(/{url_propuesta}/g, 'https://revendr-9add8.web.app/...')
-                      .replace(/{rubro}/g, 'inmobiliaria')
-                      .substring(0, 200)}
-                    {(campaign.producto_mensaje || campaign.mensaje_template || '').length > 200 && '...'}
-                  </p>
-                </div>
-              )}
+                )
+              })()}
             </div>
           ))}
         </div>
