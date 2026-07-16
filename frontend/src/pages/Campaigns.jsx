@@ -223,7 +223,7 @@ export default function Campaigns() {
         producto_nombre: selectedProduct?.nombre || null,
         producto_url_demo: selectedProduct?.url_demo || null,
         producto_mensaje: selectedProduct?.mensaje_whatsapp || null,
-        rubro_objetivo: selectedProduct?.nicho || formData.rubro_objetivo,
+        rubro_objetivo: formData.rubro_objetivo || selectedProduct?.nicho || '',
         mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
         provincia: formData.provincia,
         ciudad: formData.ciudad,
@@ -548,7 +548,7 @@ export default function Campaigns() {
         producto_nombre: selectedProduct?.nombre || null,
         producto_url_demo: selectedProduct?.url_demo || null,
         producto_mensaje: selectedProduct?.mensaje_whatsapp || null,
-        rubro_objetivo: selectedProduct?.nicho || formData.rubro_objetivo,
+        rubro_objetivo: formData.rubro_objetivo || selectedProduct?.nicho || '',
         mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
         provincia: formData.provincia,
         ciudad: formData.ciudad,
@@ -1266,8 +1266,8 @@ export default function Campaigns() {
                     setFormData({
                       ...formData,
                       producto_id: e.target.value,
-                      rubro_objetivo: product?.nicho || formData.rubro_objetivo,
-                      mensaje_template: product?.mensaje_whatsapp || formData.mensaje_template,
+                      rubro_objetivo: formData.rubro_objetivo || product?.nicho || '',
+                      mensaje_template: formData.mensaje_template || product?.mensaje_whatsapp || '',
                     })
                   }}
                   className="select-field"
