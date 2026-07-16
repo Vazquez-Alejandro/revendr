@@ -21,23 +21,24 @@ app.post('/campaigns/:campaignId/scrape-google', async (req, res) => {
     for (const place of places) {
       const phone = place.internationalPhoneNumber || ''
       const phoneClean = phone.replace(/\D/g, '')
-      if (!phoneClean || phoneClean.length < 8) continue
+      const hasPhone = phoneClean && phoneClean.length >= 8
       const leadData = {
         id_campania: req.params.campaignId, user_id: req.user?.uid || '',
         nombre_negocio: place.displayName?.text || 'Sin nombre',
-        telefono_whatsapp: phoneClean.startsWith('54') ? `+${phoneClean}` : `+54${phoneClean}`,
+        telefono_whatsapp: hasPhone ? (phoneClean.startsWith('54') ? `+${phoneClean}` : `+54${phoneClean}`) : '',
         email: '', rubro: rubro_objetivo || 'general', ciudad: ciudad || '',
         direccion: place.formattedAddress || '', url_origen: place.googleMapsUri || '',
         url_google_maps: place.googleMapsUri || '', calificacion: place.rating || null,
         reviews_count: place.userRatingCount || 0, total_reviews: place.userRatingCount || 0,
         datos_personalizados: { logo: '', horarios: place.regularOpeningHours?.weekdayDescriptions || [], website: place.websiteUri || '' },
-        estado_proceso: 'scraped', fecha_creacion: new Date(),
+        tiene_telefono: hasPhone,
+        estado_proceso: hasPhone ? 'scraped' : 'sin_telefono', fecha_creacion: new Date(),
       }
       const score = calculateLeadScore(leadData)
       leadData.lead_score = score
       leadData.temperatura = getTemperature(score)
       leadData.score_label = getScoreLabel(score).label
-      leadData.qualifies_for_messaging = score >= 30
+      leadData.qualifies_for_messaging = hasPhone && score >= 30
       await db.collection('leads').add(leadData)
       saved++
     }

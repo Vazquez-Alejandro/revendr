@@ -56,6 +56,7 @@ const RUBROS = [
 
 const ESTADOS = {
   scraped: { class: 'badge-info' },
+  sin_telefono: { class: 'badge-warning' },
   propuesta_generada: { class: 'badge-warning' },
   mensaje_enviado: { class: 'badge-info' },
   interesado: { class: 'badge-success' },
@@ -64,6 +65,7 @@ const ESTADOS = {
 
 const ESTADOS_LABELS_ES = {
   scraped: 'Scrapeado',
+  sin_telefono: 'Sin Teléfono',
   propuesta_generada: 'Propuesta Generada',
   mensaje_enviado: 'Mensaje Enviado',
   interesado: 'Interesado',
@@ -72,6 +74,7 @@ const ESTADOS_LABELS_ES = {
 
 const ESTADOS_LABELS_EN = {
   scraped: 'Scraped',
+  sin_telefono: 'No Phone',
   propuesta_generada: 'Proposal Generated',
   mensaje_enviado: 'Message Sent',
   interesado: 'Interested',
@@ -560,6 +563,24 @@ export default function Leads() {
           </div>
         </div>
 
+        <div className="flex items-center gap-2 mb-3">
+          <span className="text-sm text-dark-400">
+            {locale === 'es' ? 'Mostrando' : 'Showing'}{' '}
+            <span className="text-dark-200 font-medium">{filteredLeads.length}</span>
+            {' '}{locale === 'es' ? 'de' : 'of'}{' '}
+            <span className="text-dark-200 font-medium">{leads.length}</span>
+            {' '}{locale === 'es' ? 'leads' : 'leads'}
+          </span>
+          {(filterRubro !== 'todos' || filterEstado !== 'todos' || filterCampania !== 'todas') && (
+            <button
+              onClick={() => { setFilterRubro('todos'); setFilterEstado('todos'); setFilterCampania('todas') }}
+              className="text-xs text-brand-400 hover:text-brand-300"
+            >
+              {locale === 'es' ? 'Limpiar filtros' : 'Clear filters'}
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <div className="flex items-center justify-center h-32">
             <Loader2 className="w-8 h-8 text-brand-500 animate-spin" />
@@ -861,6 +882,7 @@ export default function Leads() {
                   className="select-field"
                 >
                   <option value="scraped">{ESTADOS_LABELS_ES.scraped}</option>
+                  <option value="sin_telefono">{ESTADOS_LABELS_ES.sin_telefono}</option>
                   <option value="propuesta_generada">{ESTADOS_LABELS_ES.propuesta_generada}</option>
                   <option value="mensaje_enviado">{ESTADOS_LABELS_ES.mensaje_enviado}</option>
                   <option value="interesado">{ESTADOS_LABELS_ES.interesado}</option>
