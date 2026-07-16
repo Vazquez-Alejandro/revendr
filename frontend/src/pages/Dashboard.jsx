@@ -4,6 +4,8 @@ import { db, auth } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { Megaphone, Users, TrendingUp, MessageCircle, Package, ArrowUpRight, ArrowDownRight } from 'lucide-react'
 import ReengagementAlert from '../components/ReengagementAlert'
+import NotificationCenter from '../components/NotificationCenter'
+import CampaignMetrics from '../components/CampaignMetrics'
 import {
   AreaChart,
   Area,
@@ -252,6 +254,19 @@ export default function Dashboard() {
       </div>
 
       <ReengagementAlert />
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2">
+          <div className="card p-4">
+            <NotificationCenter />
+          </div>
+        </div>
+        <div>
+          <div className="card p-4">
+            <CampaignMetrics />
+          </div>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {statCards.map((stat) => (

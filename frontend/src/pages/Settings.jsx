@@ -18,6 +18,8 @@ import {
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import MessageHistory from '../components/MessageHistory'
+import Blacklist from '../components/Blacklist'
+import ABTesting from '../components/ABTesting'
 
 const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
 
@@ -542,6 +544,16 @@ export default function Settings() {
                   {locale === 'es' ? 'Historial de mensajes' : 'Message History'}
                 </h3>
                 <MessageHistory />
+              </div>
+
+              {/* Blacklist */}
+              <div className="pt-4 border-t border-dark-700">
+                <Blacklist />
+              </div>
+
+              {/* A/B Testing */}
+              <div className="pt-4 border-t border-dark-700">
+                <ABTesting />
               </div>
             </div>
           )}

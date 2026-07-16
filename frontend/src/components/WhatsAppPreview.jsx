@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { MessageCircle, Eye, Send, Loader2, X } from 'lucide-react'
+import { MessageCircle, Eye, Send, Loader2, X, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ScheduleMessage from './ScheduleMessage'
 
 export default function WhatsAppPreview({ lead, onSend, onClose }) {
   const [message, setMessage] = useState(
@@ -8,6 +9,7 @@ export default function WhatsAppPreview({ lead, onSend, onClose }) {
   )
   const [sending, setSending] = useState(false)
   const [showPreview, setShowPreview] = useState(false)
+  const [showSchedule, setShowSchedule] = useState(false)
 
   const handleSend = async () => {
     if (!message.trim()) {
@@ -24,6 +26,10 @@ export default function WhatsAppPreview({ lead, onSend, onClose }) {
     } finally {
       setSending(false)
     }
+  }
+
+  if (showSchedule) {
+    return <ScheduleMessage lead={lead} onClose={() => setShowSchedule(false)} />
   }
 
   return (
@@ -99,6 +105,13 @@ export default function WhatsAppPreview({ lead, onSend, onClose }) {
             className="flex-1 px-4 py-2 bg-dark-800 text-dark-300 border border-dark-700 rounded-lg text-sm font-medium hover:bg-dark-700 transition-all"
           >
             Cancelar
+          </button>
+          <button
+            onClick={() => setShowSchedule(true)}
+            className="px-4 py-2 bg-dark-800 text-dark-300 border border-dark-700 rounded-lg text-sm font-medium hover:bg-dark-700 transition-all flex items-center gap-2"
+          >
+            <Calendar className="w-4 h-4" />
+            Programar
           </button>
           <button
             onClick={handleSend}

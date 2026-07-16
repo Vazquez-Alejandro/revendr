@@ -43,6 +43,7 @@ import toast from 'react-hot-toast'
 import LeadPipeline from './LeadPipeline'
 import AIMessageGenerator from '../components/AIMessageGenerator'
 import WhatsAppPreview from '../components/WhatsAppPreview'
+import CSVImport from '../components/CSVImport'
 
 const RUBROS = [
   { value: 'todos', labelEs: 'Rubros', labelEn: 'Niche' },
@@ -129,6 +130,7 @@ export default function Leads() {
   const [sortMode, setSortMode] = useState('date')
   const [emailInput, setEmailInput] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showCSVImport, setShowCSVImport] = useState(false)
   const [showAIGenerator, setShowAIGenerator] = useState(false)
   const [showWhatsAppPreview, setShowWhatsAppPreview] = useState(false)
   const [createForm, setCreateForm] = useState({
@@ -416,15 +418,10 @@ export default function Leads() {
             {locale === 'es' ? 'Nuevo Lead' : 'New Lead'}
           </button>
           <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={importing}
+            onClick={() => setShowCSVImport(true)}
             className="btn-secondary flex items-center gap-2"
           >
-            {importing ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Upload className="w-4 h-4" />
-            )}
+            <Upload className="w-4 h-4" />
             {locale === 'es' ? 'Importar CSV' : 'Import CSV'}
           </button>
           <button
@@ -1144,6 +1141,16 @@ export default function Leads() {
                     })
                   }}
                   onClose={() => setShowWhatsAppPreview(false)}
+                />
+              )}
+
+              {showCSVImport && (
+                <CSVImport
+                  onImported={() => {
+                    loadLeads()
+                    setShowCSVImport(false)
+                  }}
+                  onClose={() => setShowCSVImport(false)}
                 />
               )}
 
