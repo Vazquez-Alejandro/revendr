@@ -39,7 +39,7 @@ export default function PrivacyPolicy() {
               <li>Correo electrónico</li>
               <li>Nombre de empresa (opcional)</li>
               <li>Contraseña (encriptada con bcrypt)</li>
-              <li>Información de pago (procesada por Stripe, no almacenada en nuestros servidores)</li>
+              <li>Información de pago (procesada por LemonSqueezy, no almacenada en nuestros servidores)</li>
             </ul>
 
             <p className="font-medium text-dark-200 mt-4">2.2 Datos de Uso:</p>
@@ -96,8 +96,7 @@ export default function PrivacyPolicy() {
             <p>No vendemos ni compartimos sus datos personales con terceros, excepto:</p>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li><strong>Firebase (Google):</strong> Hosting, base de datos, autenticación, funciones serverless</li>
-              <li><strong>Stripe:</strong> Procesamiento de pagos (datos de tarjeta no almacenados por nosotros)</li>
-              <li><strong>Mercado Pago:</strong> Procesamiento de pagos en Argentina</li>
+              <li><strong>LemonSqueezy:</strong> Procesamiento de pagos (datos de tarjeta no almacenados por nosotros)</li>
               <li><strong>Apify:</strong> Servicio de scraping de datos públicos</li>
               <li><strong>Resend:</strong> Envío de emails transaccionales</li>
               <li><strong>Meta (WhatsApp):</strong> Envío de mensajes a través de WhatsApp Business API</li>

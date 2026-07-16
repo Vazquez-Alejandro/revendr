@@ -140,7 +140,7 @@ export default function TermsOfService() {
               Los planes de suscripción y sus precios están detallados en la página de Pricing. Al contratar un plan:
             </p>
             <ul className="list-disc list-inside mt-2 space-y-1">
-              <li>El pago se procesa a través de Stripe o Mercado Pago</li>
+              <li>El pago se procesa a través de LemonSqueezy</li>
               <li>La suscripción se renueva automáticamente al final de cada período</li>
               <li>El Usuario puede cancelar en cualquier momento desde su panel</li>
               <li>Los precios están sujetos a cambios con 30 días de anticipación</li>

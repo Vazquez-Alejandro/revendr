@@ -23,9 +23,6 @@ app.use(generalLimiter)
 
 const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { success: false, error: { message: 'Too many requests' } } })
 
-app.use('/webhook/stripe', webhookLimiter)
-app.use('/mercadopago/webhook', webhookLimiter)
-
 app.use(express.json({
   verify: (req, res, buf) => {
     req.rawBody = buf

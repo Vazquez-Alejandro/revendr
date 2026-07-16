@@ -119,7 +119,7 @@ const translations = {
     dashboardDesc: 'Vista general de tu plataforma SaaS',
     landing: {
       title: 'Automatizá tus ventas',
-      subtitle: 'Un motor SaaS que scrapea leads, genera propuestas personalizadas, envía WhatsApp y cobra con Stripe. Todo automático, por rubro.',
+      subtitle: 'Un motor SaaS que scrapea leads, genera propuestas personalizadas, envía WhatsApp y cobra con LemonSqueezy. Todo automático, por rubro.',
       getStarted: 'Empezar Gratis',
       seeFeatures: 'Ver Features',
       features: 'Todo lo que necesitás para revender',
@@ -248,7 +248,7 @@ const translations = {
     dashboardDesc: 'Overview of your SaaS platform',
     landing: {
       title: 'Automate your sales',
-      subtitle: 'A SaaS engine that scrapes leads, generates personalized proposals, sends WhatsApp and collects payments via Stripe. All automated, per niche.',
+      subtitle: 'A SaaS engine that scrapes leads, generates personalized proposals, sends WhatsApp and collects payments via LemonSqueezy. All automated, per niche.',
       getStarted: 'Get Started Free',
       seeFeatures: 'See Features',
       features: 'Everything you need to resell',

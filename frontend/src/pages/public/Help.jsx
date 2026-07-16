@@ -31,7 +31,7 @@ const faqEs = [
   },
   {
     q: '¿Cómo cobro a mis clientes?',
-    a: 'Configurá tu cuenta de Stripe en Settings → API Keys. Los clientes pagan con tarjeta de crédito directamente desde la propuesta.',
+    a: 'Configurá tu cuenta de LemonSqueezy en Settings → API Keys. Los clientes pagan con tarjeta de crédito directamente desde la propuesta.',
   },
   {
     q: '¿Puedo probar gratis?',
@@ -58,7 +58,7 @@ const faqEn = [
   },
   {
     q: 'How do I charge my clients?',
-    a: 'Set up your Stripe account in Settings → API Keys. Clients pay with credit card directly from the proposal.',
+    a: 'Set up your LemonSqueezy account in Settings → API Keys. Clients pay with credit card directly from the proposal.',
   },
   {
     q: 'Can I try for free?',

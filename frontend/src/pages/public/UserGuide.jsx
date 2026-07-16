@@ -101,9 +101,9 @@ const stepsEs = [
     icon: Settings,
     title: 'Paso 8: Configurá tu cuenta',
     path: '/dashboard/settings',
-    description: 'Activá las integraciones que necesitás: WhatsApp, Stripe, email.',
+    description: 'Activá las integraciones que necesitás: WhatsApp, LemonSqueezy, email.',
     details: [
-      'Stripe: para cobrar a tus clientes (ver paso 9)',
+      'LemonSqueezy: para cobrar a tus clientes (ver paso 9)',
       'WhatsApp API: para enviar mensajes automáticos',
       'Email: ya viene configurado con Resend',
       'API Keys: para conectarte con otras herramientas',
@@ -114,14 +114,14 @@ const stepsEs = [
     icon: CreditCard,
     title: 'Paso 9: Activá los pagos',
     path: '/dashboard/subscription',
-    description: 'Si querés vender Revendr como SaaS, activá Stripe Live para cobrar suscripciones.',
+    description: 'Si querés vender Revendr como SaaS, activá LemonSqueezy para cobrar suscripciones.',
     details: [
       'Andá a Subscription → Cambiar plan',
       'Elegí el plan que mejor se ajuste a vos',
-      'Stripe te cobra una comisión por cada transacción',
+      'LemonSqueezy te cobra una comisión por cada transacción',
       'Los pagos se procesan automáticamente',
     ],
-    tip: 'Activá Stripe Live solo cuando tengas clientes confirmados.',
+    tip: 'Activá LemonSqueezy solo cuando tengas clientes confirmados.',
   },
 ]
 
@@ -221,9 +221,9 @@ const stepsEn = [
     icon: Settings,
     title: 'Step 8: Configure your account',
     path: '/dashboard/settings',
-    description: 'Activate the integrations you need: WhatsApp, Stripe, email.',
+    description: 'Activate the integrations you need: WhatsApp, LemonSqueezy, email.',
     details: [
-      'Stripe: to charge your clients (see step 9)',
+      'LemonSqueezy: to charge your clients (see step 9)',
       'WhatsApp API: to send automatic messages',
       'Email: already configured with Resend',
       'API Keys: to connect with other tools',
@@ -234,14 +234,14 @@ const stepsEn = [
     icon: CreditCard,
     title: 'Step 9: Activate payments',
     path: '/dashboard/subscription',
-    description: 'If you want to sell Revendr as SaaS, activate Stripe Live to charge subscriptions.',
+    description: 'If you want to sell Revendr as SaaS, activate LemonSqueezy to charge subscriptions.',
     details: [
       'Go to Subscription → Change plan',
       'Choose the plan that best fits you',
-      'Stripe charges a fee per transaction',
+      'LemonSqueezy charges a fee per transaction',
       'Payments are processed automatically',
     ],
-    tip: 'Only activate Stripe Live when you have confirmed clients.',
+    tip: 'Only activate LemonSqueezy when you have confirmed clients.',
   },
 ]
 

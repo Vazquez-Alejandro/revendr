@@ -89,7 +89,7 @@ export default function StatusPage() {
                   scraping: 'Scraping (Apify)',
                   whatsapp: 'WhatsApp API',
                   email: 'Email (Resend)',
-                  stripe: 'Pagos (Stripe)',
+                  stripe: 'Pagos (LemonSqueezy)',
                 }
                 return (
                   <div key={service} className="card flex items-center justify-between">
