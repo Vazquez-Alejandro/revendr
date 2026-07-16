@@ -4,6 +4,7 @@ import {
   getDocs, 
   addDoc, 
   updateDoc, 
+  deleteDoc,
   doc,
   query,
   orderBy,
@@ -33,7 +34,9 @@ import {
   Eye,
   Send,
   DollarSign,
-  RefreshCw
+  RefreshCw,
+  Trash2,
+  Filter
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useConfirm } from '../hooks/useConfirm'
@@ -112,6 +115,7 @@ export default function Campaigns() {
   const [processingAction, setProcessingAction] = useState(null)
   const [editingId, setEditingId] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
+  const [filterStatus, setFilterStatus] = useState('todas')
   const [analyticsCampaign, setAnalyticsCampaign] = useState(null)
   const [followupsCampaign, setFollowupsCampaign] = useState(null)
   const [followups, setFollowups] = useState([])
@@ -592,12 +596,30 @@ export default function Campaigns() {
     }
   }
 
+  const handleDeleteCampaign = async (campaign) => {
+    const confirmed = await confirm(
+      locale === 'es'
+        ? `¿Eliminar la campaña "${campaign.nombre}"? Esta acción no se puede deshacer.`
+        : `Delete campaign "${campaign.nombre}"? This action cannot be undone.`
+    )
+    if (!confirmed) return
+    try {
+      await deleteDoc(doc(db, 'campanias', campaign.id))
+      toast.success(locale === 'es' ? 'Campaña eliminada' : 'Campaign deleted')
+      loadCampaigns()
+    } catch (error) {
+      console.error('Error deleting campaign:', error)
+      toast.error(locale === 'es' ? 'Error al eliminar' : 'Error deleting')
+    }
+  }
+
   const startEditCampaign = (campaign) => {
     setFormData({
       nombre: campaign.nombre || '',
       producto_id: campaign.producto_id || '',
       rubro_objetivo: campaign.rubro_objetivo || '',
       mensaje_template: campaign.mensaje_template || '',
+      provincia: campaign.provincia || '',
       ciudad: campaign.ciudad || '',
       fecha_fin: campaign.fecha_fin || '',
     })
@@ -606,6 +628,7 @@ export default function Campaigns() {
   }
 
   const filteredCampaigns = campaigns.filter(c => {
+    if (filterStatus !== 'todas' && c.estado !== filterStatus) return false
     if (!searchTerm) return true
     const search = searchTerm.toLowerCase()
     return (
@@ -851,17 +874,29 @@ export default function Campaigns() {
         </button>
       </div>
 
-      {/* Search */}
+      {/* Search & Filter */}
       {campaigns.length > 0 && (
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="input-field pl-10"
-            placeholder={locale === 'es' ? 'Buscar campañas...' : 'Search campaigns...'}
-          />
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-dark-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="input-field pl-10"
+              placeholder={locale === 'es' ? 'Buscar campañas...' : 'Search campaigns...'}
+            />
+          </div>
+          <select
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="select-field w-48"
+          >
+            <option value="todas">{locale === 'es' ? 'Todas' : 'All'}</option>
+            <option value="activa">{ESTADOS_ES.activa.label}</option>
+            <option value="pausada">{ESTADOS_ES.pausada.label}</option>
+            <option value="terminada">{ESTADOS_ES.terminada.label}</option>
+          </select>
         </div>
       )}
 
@@ -886,7 +921,17 @@ export default function Campaigns() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <>
+          {filterStatus !== 'todas' && (
+            <p className="text-sm text-dark-400 mb-2">
+              {locale === 'es' ? 'Mostrando' : 'Showing'}{' '}
+              <span className="text-dark-200 font-medium">{filteredCampaigns.length}</span>
+              {' '}{locale === 'es' ? 'de' : 'of'}{' '}
+              <span className="text-dark-200 font-medium">{campaigns.length}</span>
+              {' '}{locale === 'es' ? 'campañas' : 'campaigns'}
+            </p>
+          )}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {filteredCampaigns.map((campaign) => (
             <div key={campaign.id} className="card-hover">
               <div className="flex items-start justify-between mb-4">
@@ -979,6 +1024,13 @@ export default function Campaigns() {
                     title={locale === 'es' ? 'Duplicar' : 'Duplicate'}
                   >
                     <Copy className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCampaign(campaign)}
+                    className="p-2 text-dark-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                    title={locale === 'es' ? 'Eliminar' : 'Delete'}
+                  >
+                    <Trash2 className="w-4 h-4" />
                   </button>
                   <button
                     onClick={() => toggleCampaignStatus(campaign.id, campaign.estado)}
@@ -1161,6 +1213,7 @@ export default function Campaigns() {
             </div>
           ))}
         </div>
+        </>
       )}
 
       {showCreateModal && (
