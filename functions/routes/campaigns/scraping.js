@@ -8,8 +8,8 @@ app.post('/campaigns/:campaignId/scrape-google', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
-    const { ciudad, rubro_objetivo } = campaign
-    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''}`.trim()
+    const { ciudad, rubro_objetivo, provincia } = campaign
+    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''} ${provincia || ''}`.trim()
     if (!GOOGLE_PLACES_API_KEY) return res.status(500).json({ success: false, error: { message: 'Google Places API key not configured. Set GOOGLE_PLACES_API_KEY in .env' } })
     await db.collection('campanias').doc(req.params.campaignId).update({ scraping_status: 'running', scraping_started_at: new Date() })
     const searchRes = await axios.post('https://places.googleapis.com/v1/places:searchText',
@@ -57,8 +57,8 @@ app.post('/campaigns/:campaignId/scrape', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
-    const { ciudad, rubro_objetivo } = campaign
-    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''}`.trim()
+    const { ciudad, rubro_objetivo, provincia } = campaign
+    const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''} ${provincia || ''}`.trim()
     if (!APIFY_TOKEN) return res.status(500).json({ success: false, error: { message: 'Apify token not configured' } })
     await db.collection('campanias').doc(req.params.campaignId).update({ scraping_status: 'running', scraping_started_at: new Date() })
     const runResponse = await axios.post(`https://api.apify.com/v2/acts/${APIFY_ACTORS.google_maps}/runs`, { searchStringsArray: [searchTerm], maxCrawledPlacesPerSearch: 50, language: 'es' }, { params: { token: APIFY_TOKEN } })

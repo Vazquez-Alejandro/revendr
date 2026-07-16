@@ -44,10 +44,38 @@ const RUBROS = [
   { value: 'clinica', labelEs: 'Clínicas Médicas', labelEn: 'Medical Clinics' },
   { value: 'restaurante', labelEs: 'Restaurantes', labelEn: 'Restaurants' },
   { value: 'gimnasio', labelEs: 'Gimnasios', labelEn: 'Gyms' },
+  { value: 'barberia', labelEs: 'Barberías', labelEn: 'Barbershops' },
   { value: 'tecnologia', labelEs: 'Tecnología / SaaS', labelEn: 'Technology / SaaS' },
   { value: 'agencia_marketing', labelEs: 'Agencias de Marketing', labelEn: 'Marketing Agencies' },
   { value: 'desarrolladores', labelEs: 'Desarrolladores / Freelancers', labelEn: 'Developers / Freelancers' },
   { value: 'otro', labelEs: 'Otro', labelEn: 'Other' },
+]
+
+const PROVINCIAS_ARGENTINA = [
+  'Ciudad Autónoma de Buenos Aires',
+  'Buenos Aires',
+  'Catamarca',
+  'Chaco',
+  'Chubut',
+  'Córdoba',
+  'Corrientes',
+  'Entre Ríos',
+  'Formosa',
+  'Jujuy',
+  'La Pampa',
+  'La Rioja',
+  'Mendoza',
+  'Misiones',
+  'Neuquén',
+  'Río Negro',
+  'Salta',
+  'San Juan',
+  'San Luis',
+  'Santa Cruz',
+  'Santa Fe',
+  'Santiago del Estero',
+  'Tierra del Fuego',
+  'Tucumán',
 ]
 
 const CIUDADES_ARGENTINA = [
@@ -95,6 +123,9 @@ export default function Campaigns() {
   const [showCityDropdown, setShowCityDropdown] = useState(false)
   const [cityFilter, setCityFilter] = useState('')
   const cityInputRef = useRef(null)
+  const [showProvinciaDropdown, setShowProvinciaDropdown] = useState(false)
+  const [provinciaFilter, setProvinciaFilter] = useState('')
+  const provinciaInputRef = useRef(null)
   const [abTestModal, setAbTestModal] = useState(null)
   const [abTestForm, setAbTestForm] = useState({ messageA: '', messageB: '' })
   const [abResults, setAbResults] = useState(null)
@@ -103,6 +134,7 @@ export default function Campaigns() {
     producto_id: '',
     rubro_objetivo: '',
     mensaje_template: '',
+    provincia: '',
     ciudad: '',
   })
 
@@ -190,6 +222,7 @@ export default function Campaigns() {
         producto_mensaje: selectedProduct?.mensaje_whatsapp || null,
         rubro_objetivo: selectedProduct?.nicho || formData.rubro_objetivo,
         mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
+        provincia: formData.provincia,
         ciudad: formData.ciudad,
         estado: 'activa',
         fecha_inicio: new Date(),
@@ -202,7 +235,7 @@ export default function Campaigns() {
 
       toast.success(locale === 'es' ? 'Campaña creada. Iniciando scraping...' : 'Campaign created. Starting scrape...')
       setShowCreateModal(false)
-      setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', ciudad: '' })
+      setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', provincia: '', ciudad: '' })
 
       handleScrape(docRef.id)
 
@@ -514,6 +547,7 @@ export default function Campaigns() {
         producto_mensaje: selectedProduct?.mensaje_whatsapp || null,
         rubro_objetivo: selectedProduct?.nicho || formData.rubro_objetivo,
         mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
+        provincia: formData.provincia,
         ciudad: formData.ciudad,
         fecha_fin: formData.fecha_fin || null,
         fecha_actualizacion: new Date(),
@@ -521,7 +555,7 @@ export default function Campaigns() {
       toast.success(locale === 'es' ? 'Campaña actualizada' : 'Campaign updated')
       setShowCreateModal(false)
       setEditingId(null)
-      setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', ciudad: '' })
+      setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', provincia: '', ciudad: '' })
       loadCampaigns()
     } catch (error) {
       console.error('Error updating campaign:', error)
@@ -1140,7 +1174,7 @@ export default function Campaigns() {
                   : t('newCampaign')}
               </h2>
               <button
-                onClick={() => { setShowCreateModal(false); setEditingId(null); setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', ciudad: '' }) }}
+                onClick={() => { setShowCreateModal(false); setEditingId(null); setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', provincia: '', ciudad: '' }) }}
                 className="text-dark-400 hover:text-dark-200"
               >
                 ✕
@@ -1210,6 +1244,53 @@ export default function Campaigns() {
 
               <div className="relative">
                 <label className="block text-sm font-medium text-dark-300 mb-2">
+                  {locale === 'es' ? 'Provincia' : 'Province'}
+                </label>
+                <input
+                  ref={provinciaInputRef}
+                  type="text"
+                  value={formData.provincia}
+                  onChange={(e) => {
+                    setFormData({ ...formData, provincia: e.target.value })
+                    setProvinciaFilter(e.target.value)
+                    setShowProvinciaDropdown(true)
+                  }}
+                  onFocus={() => {
+                    setProvinciaFilter(formData.provincia)
+                    setShowProvinciaDropdown(true)
+                  }}
+                  onBlur={() => setTimeout(() => setShowProvinciaDropdown(false), 200)}
+                  className="input-field"
+                  placeholder={locale === 'es' ? 'Ej: Buenos Aires, Córdoba, etc.' : 'E.g.: Buenos Aires, Cordoba, etc.'}
+                />
+                {showProvinciaDropdown && (
+                  <div className="absolute z-10 w-full mt-1 bg-dark-800 border border-dark-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    {PROVINCIAS_ARGENTINA
+                      .filter(p => p.toLowerCase().includes(provinciaFilter.toLowerCase()))
+                      .slice(0, 10)
+                      .map(provincia => (
+                        <button
+                          key={provincia}
+                          onMouseDown={() => {
+                            setFormData({ ...formData, provincia })
+                            setShowProvinciaDropdown(false)
+                          }}
+                          className="w-full text-left px-4 py-2 text-sm text-dark-200 hover:bg-dark-700 transition-colors"
+                        >
+                          {provincia}
+                        </button>
+                      ))}
+                    {PROVINCIAS_ARGENTINA.filter(p => p.toLowerCase().includes(provinciaFilter.toLowerCase())).length === 0 && (
+                      <div className="px-4 py-2 text-sm text-dark-500">
+                        {locale === 'es' ? 'Escribí para buscar...' : 'Type to search...'}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="relative">
+                <label className="block text-sm font-medium text-dark-300 mb-2">
                   {t('city')}
                 </label>
                 <input
@@ -1227,7 +1308,7 @@ export default function Campaigns() {
                   }}
                   onBlur={() => setTimeout(() => setShowCityDropdown(false), 200)}
                   className="input-field"
-                  placeholder={locale === 'es' ? 'Ej: Buenos Aires, Córdoba, etc.' : 'E.g.: Buenos Aires, Córdoba, etc.'}
+                  placeholder={locale === 'es' ? 'Ej: Villa del Parque, Palermo, etc.' : 'E.g.: Villa del Parque, Palermo, etc.'}
                 />
                 {showCityDropdown && (
                   <div className="absolute z-10 w-full mt-1 bg-dark-800 border border-dark-600 rounded-lg shadow-lg max-h-48 overflow-y-auto">
@@ -1288,7 +1369,7 @@ export default function Campaigns() {
               <div className="flex items-center gap-3 pt-4">
                 <button
                   type="button"
-                  onClick={() => { setShowCreateModal(false); setEditingId(null); setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', ciudad: '' }) }}
+                  onClick={() => { setShowCreateModal(false); setEditingId(null); setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', provincia: '', ciudad: '' }) }}
                   className="btn-secondary flex-1"
                 >
                   {t('cancel')}

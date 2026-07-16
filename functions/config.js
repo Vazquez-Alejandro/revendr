@@ -37,6 +37,7 @@ const RUBRO_SEARCH_TERMS = {
   clinica: 'clinica medica',
   restaurante: 'restaurante',
   gimnasio: 'gimnasio',
+  barberia: 'barberia',
   otro: 'negocio',
 }
 
