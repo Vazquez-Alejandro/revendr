@@ -113,7 +113,7 @@ exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
     // Notificar por Telegram
     try {
       const axios = require('axios')
-      const TELEGRAM_NOTIFIER_URL = process.env.TELEGRAM_NOTIFIER_URL || 'https://telegram-notifier.onrender.com'
+      const TELEGRAM_NOTIFIER_URL = 'https://telegram-notifier-pmcs.onrender.com'
       await axios.post(`${TELEGRAM_NOTIFIER_URL}/notify`, {
         app: 'revendr',
         event: '👤 Nuevo registro',
