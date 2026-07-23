@@ -109,6 +109,19 @@ exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
       html,
     })
     console.log('Welcome + verification email sent to:', email)
+
+    // Notificar por Telegram
+    try {
+      const axios = require('axios')
+      const TELEGRAM_NOTIFIER_URL = process.env.TELEGRAM_NOTIFIER_URL || 'https://telegram-notifier.onrender.com'
+      await axios.post(`${TELEGRAM_NOTIFIER_URL}/notify`, {
+        app: 'revendr',
+        event: '👤 Nuevo registro',
+        message: `Email: ${email}\nNombre: ${nombre}`,
+      })
+    } catch (e) {
+      console.error('Telegram notification error:', e.message)
+    }
   } catch (error) {
     console.error('Error sending welcome email:', error.message)
   }
