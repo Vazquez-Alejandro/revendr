@@ -15,15 +15,15 @@
 ## Pendiente
 
 ### SEO y Posicionamiento
-- [ ] Meta tags optimizados (título, descripción, keywords)
-- [ ] Open Graph para redes sociales (Facebook, LinkedIn)
-- [ ] Twitter Cards
-- [ ] JSON-LD structured data
-- [ ] sitemap.xml
-- [ ] robots.txt
-- [ ] Google Search Console verificado
-- [ ] Sitemap enviado a Google
-- [ ] Imagen OG para compartir en redes
+- [x] Meta tags optimizados (título, descripción, keywords)
+- [x] Open Graph para redes sociales (Facebook, LinkedIn)
+- [x] Twitter Cards
+- [x] JSON-LD structured data
+- [x] sitemap.xml
+- [x] robots.txt
+- [ ] Google Search Console verificado (requiere dominio propio)
+- [ ] Sitemap enviado a Google (requiere dominio propio)
+- [ ] Imagen OG para compartir en redes (pendiente de crear)
 
 ### Mejoras
 - [ ] Blog con contenido de marketing

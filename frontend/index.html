@@ -9,9 +9,10 @@
     <!-- SEO Meta Tags -->
     <title>Revendr | Motor SaaS de Prospección Automatizada</title>
     <meta name="description" content="Plataforma B2B SaaS para automatizar la prospección de clientes, generar demos personalizadas, enviar WhatsApp masivo y cobrar con Stripe. Multi-rubro: inmobiliarias, peluquerías, clínicas, restaurantes." />
-    <meta name="keywords" content="SaaS, prospección automatizada, demo interactiva, WhatsApp business, scraping leads, B2B, Revendr" />
+    <meta name="keywords" content="SaaS, prospección automatizada, demo interactiva, WhatsApp business, scraping leads, B2B, Revendr, ventas, marketing, automatización" />
     <meta name="author" content="Revendr" />
     <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -19,6 +20,8 @@
     <meta property="og:title" content="Revendr | Motor SaaS de Prospección Automatizada" />
     <meta property="og:description" content="Automatizá la prospección de clientes, generá demos personalizadas, enviá WhatsApp masivo y cobrá con Stripe." />
     <meta property="og:image" content="https://revendr-9add8.web.app/og-image.png" />
+    <meta property="og:site_name" content="Revendr" />
+    <meta property="og:locale" content="es_AR" />
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
@@ -41,6 +44,30 @@
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
+    
+    <!-- JSON-LD Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Revendr",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "description": "Plataforma B2B SaaS para automatizar la prospección de clientes, generar demos personalizadas, enviar WhatsApp masivo y cobrar con Stripe.",
+      "url": "https://revendr-9add8.web.app/",
+      "offers": {
+        "@type": "Offer",
+        "price": "99",
+        "priceCurrency": "USD",
+        "description": "Plan profesional"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Revendr",
+        "url": "https://revendr-9add8.web.app/"
+      }
+    }
+    </script>
   </head>
   <body class="bg-dark-950 text-dark-50 antialiased">
     <div id="root"></div>

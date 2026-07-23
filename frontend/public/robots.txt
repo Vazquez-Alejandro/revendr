@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /api/
+
+Sitemap: https://revendr-9add8.web.app/sitemap.xml
