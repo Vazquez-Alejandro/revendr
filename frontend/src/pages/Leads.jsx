@@ -90,7 +90,7 @@ const ESTADOS_LABELS_EN = {
 }
 
 const ENGAGEMENT_LEVELS = {
-  engaged: { labelEs: 'Interesado', labelEn: 'Engaged', color: 'bg-blue-500/20 text-blue-400', icon: '🔥' },
+  engaged: { labelEs: 'Interesado', labelEn: 'Engaged', color: 'bg-amber-500/20 text-amber-400', icon: '🔥' },
   viewed: { labelEs: 'Vio Landing', labelEn: 'Viewed Landing', color: 'bg-amber-500/20 text-amber-400', icon: '👁️' },
   ignored: { labelEs: 'Ignoró', labelEn: 'Ignored', color: 'bg-red-500/20 text-red-400', icon: '—' },
   converted: { labelEs: 'Convirtió', labelEn: 'Converted', color: 'bg-emerald-500/20 text-emerald-400', icon: '✅' },
@@ -678,7 +678,7 @@ export default function Leads() {
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                           lead.temperatura === 'hot' ? 'bg-red-500/20 text-red-400' :
                           lead.temperatura === 'warm' ? 'bg-amber-500/20 text-amber-400' :
-                          lead.temperatura === 'cold' ? 'bg-blue-500/20 text-blue-400' :
+                          lead.temperatura === 'cold' ? 'bg-amber-500/20 text-amber-400' :
                           'bg-dark-800 text-dark-500'
                         }`}>
                           {lead.temperatura === 'hot' ? '🔥' : lead.temperatura === 'warm' ? '🟡' : lead.temperatura === 'cold' ? '❄️' : '—'}
@@ -907,7 +907,7 @@ export default function Leads() {
                   {[
                     { value: 'hot', emoji: '🔥', label: 'Hot', color: 'bg-red-500/20 text-red-400 border-red-500/30' },
                     { value: 'warm', emoji: '🟡', label: 'Warm', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
-                    { value: 'cold', emoji: '❄️', label: 'Cold', color: 'bg-blue-500/20 text-blue-400 border-blue-500/30' },
+                    { value: 'cold', emoji: '❄️', label: 'Cold', color: 'bg-amber-500/20 text-amber-400 border-amber-500/30' },
                   ].map(t => (
                     <button
                       key={t.value}
@@ -937,7 +937,7 @@ export default function Leads() {
                     <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                       selectedLead.temperatura === 'hot' ? 'bg-red-500/20 text-red-400' :
                       selectedLead.temperatura === 'warm' ? 'bg-amber-500/20 text-amber-400' :
-                      'bg-blue-500/20 text-blue-400'
+                      'bg-amber-500/20 text-amber-400'
                     }`}>
                       {selectedLead.temperatura === 'hot' ? '🔥 Hot' : selectedLead.temperatura === 'warm' ? '🟡 Warm' : '❄️ Cold'}
                     </span>

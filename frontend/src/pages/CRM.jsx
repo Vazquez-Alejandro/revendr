@@ -30,7 +30,7 @@ const getAuthHeaders = async () => {
 }
 
 const STAGES = [
-  { id: 'nuevo', label: 'Nuevo', color: 'bg-blue-500', lightColor: 'bg-blue-500/10 text-blue-400' },
+  { id: 'nuevo', label: 'Nuevo', color: 'bg-amber-500', lightColor: 'bg-amber-500/10 text-amber-400' },
   { id: 'contactado', label: 'Contactado', color: 'bg-amber-500', lightColor: 'bg-amber-500/10 text-amber-400' },
   { id: 'interesado', label: 'Interesado', color: 'bg-violet-500', lightColor: 'bg-violet-500/10 text-violet-400' },
   { id: 'negociacion', label: 'Negociación', color: 'bg-orange-500', lightColor: 'bg-orange-500/10 text-orange-400' },

@@ -6,7 +6,7 @@ import { ExternalLink, MessageCircle, ArrowRight, GripVertical } from 'lucide-re
 import toast from 'react-hot-toast'
 
 const COLUMNAS = [
-  { id: 'scraped', color: 'border-cyan-500', bgColor: 'bg-cyan-500/10' },
+  { id: 'scraped', color: 'border-amber-500', bgColor: 'bg-amber-500/10' },
   { id: 'propuesta_generada', color: 'border-amber-500', bgColor: 'bg-amber-500/10' },
   { id: 'mensaje_enviado', color: 'border-violet-500', bgColor: 'bg-violet-500/10' },
   { id: 'interesado', color: 'border-emerald-500', bgColor: 'bg-emerald-500/10' },

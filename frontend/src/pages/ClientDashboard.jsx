@@ -96,7 +96,7 @@ export default function ClientDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
           { label: t('Campañas', 'Campaigns'), value: d.totalCampaigns || 0, sub: `${d.activeCampaigns || 0} ${t('activas', 'active')}`, icon: Megaphone, color: 'text-brand-400' },
-          { label: t('Leads', 'Leads'), value: d.totalLeads || 0, sub: `${d.qualifiedLeads || 0} ${t('calificados', 'qualified')}`, icon: Users, color: 'text-blue-400' },
+          { label: t('Leads', 'Leads'), value: d.totalLeads || 0, sub: `${d.qualifiedLeads || 0} ${t('calificados', 'qualified')}`, icon: Users, color: 'text-amber-400' },
           { label: t('Propuestas', 'Proposals'), value: d.totalPropuestas || 0, icon: Eye, color: 'text-violet-400' },
           { label: t('Mensajes', 'Messages'), value: d.messagesSent || 0, icon: MessageCircle, color: 'text-emerald-400' },
         ].map(item => (

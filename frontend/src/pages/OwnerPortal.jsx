@@ -80,7 +80,7 @@ export default function OwnerPortal() {
           label={locale === 'es' ? 'Leads Totales' : 'Total Leads'}
           value={data.totalLeads}
           icon={Users}
-          color="text-blue-400"
+          color="text-amber-400"
         />
         <StatCard
           label={locale === 'es' ? 'Leads Calificados' : 'Qualified Leads'}
@@ -116,7 +116,7 @@ export default function OwnerPortal() {
           label={locale === 'es' ? 'Leads Calificados %' : 'Qualified %'}
           value={data.totalLeads > 0 ? `${((data.qualifiedLeads / data.totalLeads) * 100).toFixed(1)}%` : '0%'}
           icon={TrendingUp}
-          color="text-cyan-400"
+          color="text-amber-400"
         />
       </div>
 
@@ -127,7 +127,7 @@ export default function OwnerPortal() {
         </h3>
         <div className="space-y-3">
           {[
-            { label: locale === 'es' ? 'Leads Totales' : 'Total Leads', value: data.totalLeads, color: 'bg-blue-500' },
+            { label: locale === 'es' ? 'Leads Totales' : 'Total Leads', value: data.totalLeads, color: 'bg-amber-500' },
             { label: locale === 'es' ? 'Leads Calificados' : 'Qualified Leads', value: data.qualifiedLeads, color: 'bg-violet-500' },
             { label: locale === 'es' ? 'Mensajes Enviados' : 'Messages Sent', value: data.totalMessages, color: 'bg-amber-500' },
             { label: locale === 'es' ? 'Visitas Landing' : 'Landing Views', value: data.landingViews, color: 'bg-emerald-500' },

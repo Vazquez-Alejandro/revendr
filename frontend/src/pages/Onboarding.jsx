@@ -247,7 +247,7 @@ export default function Onboarding() {
                 <button
                   onClick={() => setData({...data, channels: {...data.channels, email: !data.channels.email}})}
                   className={`w-full flex items-center gap-4 p-4 rounded-lg border transition-all ${
-                    data.channels.email ? 'border-blue-500 bg-blue-500/10' : 'border-dark-700 bg-dark-800'
+                    data.channels.email ? 'border-amber-500 bg-amber-500/10' : 'border-dark-700 bg-dark-800'
                   }`}
                 >
                   <span className="text-2xl">📧</span>
@@ -258,7 +258,7 @@ export default function Onboarding() {
                     </div>
                   </div>
                   <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                    data.channels.email ? 'border-blue-500 bg-blue-500' : 'border-dark-600'
+                    data.channels.email ? 'border-amber-500 bg-amber-500' : 'border-dark-600'
                   }`}>
                     {data.channels.email && <Check className="w-3 h-3 text-white" />}
                   </div>

@@ -216,7 +216,7 @@ export default function DemoProperties() {
           </div>
           <a 
             href="#"
-            className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 bg-amber-600 text-white rounded-xl font-medium hover:bg-amber-700 transition-colors"
           >
             Quiero esto
           </a>

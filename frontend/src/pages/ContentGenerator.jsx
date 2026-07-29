@@ -24,8 +24,8 @@ const CONTENT_TYPES = [
 const PLATFORMS = [
   { id: 'twitter', label: 'Twitter', icon: Twitter, maxChars: 280, color: 'text-sky-400' },
   { id: 'instagram', label: 'Instagram', icon: Instagram, maxChars: 2200, color: 'text-pink-400' },
-  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, maxChars: 3000, color: 'text-blue-400' },
-  { id: 'facebook', label: 'Facebook', icon: Facebook, maxChars: 63206, color: 'text-indigo-400' },
+  { id: 'linkedin', label: 'LinkedIn', icon: Linkedin, maxChars: 3000, color: 'text-amber-400' },
+  { id: 'facebook', label: 'Facebook', icon: Facebook, maxChars: 63206, color: 'text-amber-400' },
 ]
 
 export default function ContentGenerator() {

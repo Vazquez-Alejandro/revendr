@@ -990,7 +990,7 @@ export default function Campaigns() {
                 <button
                   onClick={() => handleSendTestEmail(campaign.id)}
                   disabled={processingAction !== null}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-blue-500/10 text-blue-400 border border-blue-500/20 rounded-lg text-xs font-medium hover:bg-blue-500/20 transition-all disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-medium hover:bg-amber-500/20 transition-all disabled:opacity-50"
                 >
                   {processingAction === `${campaign.id}-test` ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -1014,7 +1014,7 @@ export default function Campaigns() {
                 <button
                   onClick={() => processSequence(campaign.id)}
                   disabled={processingAction !== null}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-lg text-xs font-medium hover:bg-cyan-500/20 transition-all disabled:opacity-50"
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-lg text-xs font-medium hover:bg-amber-500/20 transition-all disabled:opacity-50"
                 >
                   {processingAction === `${campaign.id}-sequence` ? (
                     <Loader2 className="w-3 h-3 animate-spin" />
@@ -1582,7 +1582,7 @@ export default function Campaigns() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-cyan-400 mb-2">Variante B</label>
+                <label className="block text-sm font-medium text-amber-400 mb-2">Variante B</label>
                 <textarea
                   value={abTestForm.messageB}
                   onChange={(e) => setAbTestForm({ ...abTestForm, messageB: e.target.value })}
@@ -1614,7 +1614,7 @@ export default function Campaigns() {
                         </span>
                         <span className={`text-xs font-medium px-2 py-1 rounded-full ${
                           test.winner === 'A' ? 'bg-pink-500/20 text-pink-400' :
-                          test.winner === 'B' ? 'bg-cyan-500/20 text-cyan-400' :
+                          test.winner === 'B' ? 'bg-amber-500/20 text-amber-400' :
                           'bg-dark-700 text-dark-400'
                         }`}>
                           {test.winner === 'A' ? 'A ganó' : test.winner === 'B' ? 'B ganó' : 'Empate'}
@@ -1626,7 +1626,7 @@ export default function Campaigns() {
                           <div className="text-xs text-dark-500">A ({test.groupA?.size || 0} leads)</div>
                         </div>
                         <div className="text-center">
-                          <div className="text-lg font-bold text-cyan-400">{test.groupB?.engagementRate || 0}%</div>
+                          <div className="text-lg font-bold text-amber-400">{test.groupB?.engagementRate || 0}%</div>
                           <div className="text-xs text-dark-500">B ({test.groupB?.size || 0} leads)</div>
                         </div>
                       </div>
