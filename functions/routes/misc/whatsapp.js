@@ -11,7 +11,7 @@ app.get('/whatsapp/config', async (req, res) => {
     const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
 
     let baileysStatus = null
-    if (provider === 'baileys' || req.body?.forceBaileys) {
+    if (provider === 'baileys' || req.query.forceBaileys === 'true') {
       baileysStatus = await whatsappService.getBaileysStatus(req.user.uid)
     }
 

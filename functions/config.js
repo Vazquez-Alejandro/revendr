@@ -18,7 +18,7 @@ const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY
 const FIREBASE_APP_URL = process.env.APP_URL || 'https://revendr-9add8.web.app'
 const FIREBASE_API_URL = process.env.API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
 const ADMIN_TELEGRAM_CHAT_ID = process.env.ADMIN_TELEGRAM_CHAT_ID || ''
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL || ''
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'vazquezale82@gmail.com'
 
 const nodemailer = GMAIL_USER && GMAIL_APP_PASSWORD ? require('nodemailer') : null
 const emailTransporter = nodemailer ? nodemailer.createTransport({
@@ -54,20 +54,11 @@ const isCampaignExpired = (campaign) => {
   return new Date() > fechaFin
 }
 
-const PUBLIC_PATHS = ['/health', '/check-email', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/propuestas/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification', '/test/send-demo-email', '/whatsapp/webhook']
+const PUBLIC_PATHS = ['/health', '/check-email', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/propuestas/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification', '/test/send-demo-email', '/whatsapp/webhook', '/mercadopago/webhook', '/mercadopago/success', '/mercadopago/failure', '/mercadopago/pending', '/me']
 
 const getWhatsAppConfig = async (userId) => {
   const userDoc = await db.collection('usuarios').doc(userId).get()
-  if (!userDoc.exists) {
-    const adminDoc = await db.collection('usuarios_admin').doc(userId).get()
-    if (!adminDoc.exists) throw new Error('Usuario no encontrado')
-    const adminData = adminDoc.data()
-    const config = adminData?.whatsapp_config || {}
-    if (!config.phone_number_id || !config.access_token) {
-      return { configured: false, phoneId: null, token: null }
-    }
-    return { configured: true, phoneId: config.phone_number_id, token: config.access_token, status: config.status || 'active' }
-  }
+  if (!userDoc.exists) throw new Error('Usuario no encontrado')
   const userData = userDoc.data()
   const config = userData?.whatsapp_config || {}
   if (!config.phone_number_id || !config.access_token) {
@@ -88,15 +79,6 @@ const checkPlanLimit = async (userId, type) => {
     planLimits = userData.plan_limits || PLAN_LIMITS[plan] || PLAN_LIMITS.starter
     usage = userData.usage || { leads: 0, propuestas: 0, messages: 0 }
     whatsappConfig = userData.whatsapp_config || {}
-  } else {
-    const adminDoc = await db.collection('usuarios_admin').doc(userId).get()
-    if (adminDoc.exists) {
-      const adminData = adminDoc.data()
-      plan = adminData.plan || 'starter'
-      planLimits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter
-      usage = adminData.usage || { leads: 0, propuestas: 0, messages: 0 }
-      whatsappConfig = adminData.whatsapp_config || {}
-    }
   }
   const limit = planLimits[type]
   const currentUsage = usage[type] || 0
@@ -149,42 +131,41 @@ const checkPlanLimit = async (userId, type) => {
 }
 
 const incrementUsage = async (userId, type, amount = 1) => {
-  const userRef = db.collection('usuarios').doc(userId)
-  const userDoc = await userRef.get()
   const now = new Date()
-  const updates = {
-    [`usage.${type}`]: admin.firestore.FieldValue.increment(amount),
-    fecha_actualizacion: now,
-  }
+  const userRef = db.collection('usuarios').doc(userId)
 
-  if (type === 'messages') {
+  await db.runTransaction(async (transaction) => {
+    const userDoc = await transaction.get(userRef)
     const data = userDoc.exists ? userDoc.data() : {}
-    const whatsappConfig = data.whatsapp_config || {}
-    const lastMessageAt = whatsappConfig.last_message_at?.toDate?.() || whatsappConfig.last_message_at
-    const messagesLastHourResetAt = whatsappConfig.messages_last_hour_reset_at?.toDate?.() || whatsappConfig.messages_last_hour_reset_at
-    let messagesLastHour = whatsappConfig.messages_last_hour || 0
+    const currentUsage = data.usage || {}
+    const newVal = (currentUsage[type] || 0) + amount
 
-    if (messagesLastHourResetAt && (now - messagesLastHourResetAt) > 3600000) {
-      messagesLastHour = 0
-      updates['whatsapp_config.messages_last_hour_reset_at'] = now
+    const updates = {
+      [`usage.${type}`]: newVal,
+      fecha_actualizacion: now,
     }
 
-    updates['whatsapp_config.last_message_at'] = now
-    updates['whatsapp_config.messages_last_hour'] = messagesLastHour + amount
-    if (!messagesLastHourResetAt || (now - messagesLastHourResetAt) > 3600000) {
-      updates['whatsapp_config.messages_last_hour_reset_at'] = now
-    }
-  }
+    if (type === 'messages') {
+      const whatsappConfig = data.whatsapp_config || {}
+      const messagesLastHourResetAt = whatsappConfig.messages_last_hour_reset_at?.toDate?.() || whatsappConfig.messages_last_hour_reset_at
+      let messagesLastHour = whatsappConfig.messages_last_hour || 0
 
-  if (userDoc.exists) {
-    await userRef.update(updates)
-  } else {
-    const adminRef = db.collection('usuarios_admin').doc(userId)
-    const adminDoc = await adminRef.get()
-    if (adminDoc.exists) {
-      await adminRef.update(updates)
+      if (messagesLastHourResetAt && (now - messagesLastHourResetAt) > 3600000) {
+        messagesLastHour = 0
+        updates['whatsapp_config.messages_last_hour_reset_at'] = now
+      }
+
+      updates['whatsapp_config.last_message_at'] = now
+      updates['whatsapp_config.messages_last_hour'] = messagesLastHour + amount
+      if (!messagesLastHourResetAt || (now - messagesLastHourResetAt) > 3600000) {
+        updates['whatsapp_config.messages_last_hour_reset_at'] = now
+      }
     }
-  }
+
+    if (userDoc.exists) {
+      transaction.update(userRef, updates)
+    }
+  })
 }
 
 const PLAN_LIMITS = {
@@ -210,14 +191,6 @@ async function checkEmailLimit(userId, type = 'emails') {
     plan = userData.plan || 'starter'
     usage = userData.usage || { emails: 0 }
     planLimits = userData.plan_limits || PLAN_LIMITS[plan] || PLAN_LIMITS.starter
-  } else {
-    const adminDoc = await db.collection('usuarios_admin').doc(userId).get()
-    if (adminDoc.exists) {
-      const adminData = adminDoc.data()
-      plan = adminData.plan || 'starter'
-      usage = adminData.usage || { emails: 0 }
-      planLimits = adminData.plan_limits || PLAN_LIMITS[plan] || PLAN_LIMITS.starter
-    }
   }
 
   const limit = planLimits.emails
@@ -239,15 +212,11 @@ async function checkEmailLimit(userId, type = 'emails') {
 
 async function incrementEmailUsage(userId, amount = 1) {
   const userRef = db.collection('usuarios').doc(userId)
-  const adminRef = db.collection('usuarios_admin').doc(userId)
-
   const updateData = {
     'usage.emails': admin.firestore.FieldValue.increment(amount),
     fecha_actualizacion: new Date(),
   }
-
   await userRef.set(updateData, { merge: true })
-  await adminRef.set(updateData, { merge: true })
 }
 
 const RESEND_FROM = 'onboarding@resend.dev'

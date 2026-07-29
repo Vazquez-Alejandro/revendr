@@ -1,14 +1,7 @@
 import { useState } from 'react'
-import { auth } from '../config/firebase'
 import { Loader2, Sparkles, Send, RefreshCw, Copy, Check } from 'lucide-react'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 export default function AIMessageGenerator({ leads, onSendMessage, onBulkSend }) {
   const [productContext, setProductContext] = useState('')
@@ -26,12 +19,7 @@ export default function AIMessageGenerator({ leads, onSendMessage, onBulkSend })
     setGenerating(true)
     try {
       const leadIds = leads.map(l => l.id)
-      const res = await fetch(`${API}/whatsapp/generate-message`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ leadIds, productContext }),
-      })
-      const data = await res.json()
+      const data = await api.whatsapp.generateMessage({ leadIds, productContext })
       if (data.success) {
         setGeneratedMessages(data.data)
         toast.success(`${data.data.length} mensajes generados`)

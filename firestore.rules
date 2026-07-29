@@ -2,130 +2,148 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Admin users collection - users can read/write their own doc
-    match /usuarios_admin/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow write: if request.auth != null && request.auth.uid == userId;
-    }
+    function isAuth() { return request.auth != null }
+    function isOwner(userId) { return isAuth() && request.auth.uid == userId }
+    function isAdmin() { return isAuth() && (
+      request.auth.token.email == 'vazquezale82@gmail.com' ||
+      get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.role in ['admin', 'super_admin']
+    )}
+    function sameUser(resource) { return resource.data.user_id == request.auth.uid || resource.data.userId == request.auth.uid }
+    function ownerOrAdmin(resource) { return sameUser(resource) || isAdmin() }
 
-    // Client users collection
     match /usuarios/{userId} {
-      allow read: if request.auth != null && request.auth.uid == userId;
-      allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if isOwner(userId) || isAdmin()
     }
 
-    // API Keys collection
     match /api_keys/{keyId} {
-      allow read, write: if request.auth != null && request.auth.uid == resource.data.user_id;
+      allow read, write: if isAuth() && ownerOrAdmin(resource)
+      allow create: if isAuth()
     }
 
-    // Campaigns collection
     match /campanias/{campaignId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
     }
 
-    // Global leads collection
     match /leads/{leadId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
     }
 
-    // Products collection - read is public for demo pages, write requires auth
     match /productos/{productId} {
-      allow read: if true;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
+      allow read: if true
+      allow create: if isAuth()
+      allow update, delete: if isAuth() && sameUser(resource)
     }
 
-    // CRM events
-    match /crm_events/{eventId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
-    }
-
-    // Revenue tracking
-    match /revenue/{revenueId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
-    }
-
-    // Team members
-    match /team_members/{memberId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.owner_user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.owner_user_id;
-    }
-
-    // Team invites
-    match /team_invites/{inviteId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.owner_user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.owner_user_id;
-    }
-
-    // Generated content
-    match /generated_content/{docId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
-    }
-
-    // Message events
-    match /message_events/{docId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
-    }
-
-    // A/B tests
-    match /ab_tests/{docId} {
-      allow read, update, delete: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if request.auth != null && request.auth.uid == request.resource.data.user_id;
-    }
-
-    // Support tickets
-    match /support_tickets/{ticketId} {
-      allow read, update: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if true;
-    }
-
-    // Chat messages
-    match /chat_messages/{docId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.user_id;
-      allow create: if true;
-    }
-
-    // Demo configurations
-    match /config_demos/{nicheId} {
-      allow read: if request.auth != null;
-      allow write: if request.auth != null;
-    }
-
-    // Public propuestas (for demo pages)
     match /propuestas/{propuestaId} {
-      allow read: if true;
-      allow write: if request.auth != null;
+      allow read: if true
+      allow create, update: if isAuth()
+      allow delete: if isAuth() && sameUser(resource)
     }
 
-    // Landing views tracking
+    match /crm_events/{eventId} {
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /revenue/{revenueId} {
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /team_members/{memberId} {
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /team_invites/{inviteId} {
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /generated_content/{docId} {
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /ab_tests/{docId} {
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /support_tickets/{ticketId} {
+      allow read, update: if isAuth() && sameUser(resource)
+      allow create: if true
+    }
+
+    match /chat_messages/{docId} {
+      allow read: if isAuth() && sameUser(resource)
+      allow create: if true
+    }
+
+    match /config_demos/{nicheId} {
+      allow read: if isAuth()
+      allow write: if isAdmin()
+    }
+
     match /landing_views/{viewId} {
-      allow read: if request.auth != null;
-      allow create: if true;
+      allow read: if isAuth()
+      allow create: if true
     }
 
-    // Landing engagement tracking
     match /landing_engagement/{engagementId} {
-      allow read: if request.auth != null;
-      allow create: if true;
+      allow read: if isAuth()
+      allow create: if true
     }
 
-    // Notifications
     match /notificaciones/{notifId} {
-      allow read, update: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create: if request.auth != null;
+      allow read, update: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
     }
 
-    // Health check
+    match /notifications/{notifId} {
+      allow read, update: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /message_log/{msgId} {
+      allow read: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /message_events/{msgId} {
+      allow read: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /whatsapp_conversations/{convId} {
+      allow read, update: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /whatsapp_messages/{msgId} {
+      allow read: if isAuth() && sameUser(resource)
+      allow create: if true
+    }
+
+    match /scheduled_messages/{msgId} {
+      allow read, update, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /blacklist/{entryId} {
+      allow read, delete: if isAuth() && sameUser(resource)
+      allow create: if isAuth()
+    }
+
+    match /checkout_sessions/{sessionId} {
+      allow read, write: if isAdmin()
+      allow create: if isAuth()
+    }
+
     match /_health/{docId} {
-      allow read, write: if true;
+      allow read, write: if isAdmin()
     }
   }
 }

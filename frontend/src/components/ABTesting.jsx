@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react'
 import { FlaskConical, Plus, Trophy, Loader2, X } from 'lucide-react'
-import { auth } from '../config/firebase'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 export default function ABTesting() {
   const [tests, setTests] = useState([])
@@ -22,8 +15,7 @@ export default function ABTesting() {
   const loadTests = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/whatsapp/ab-tests`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.whatsapp.abTests()
       if (data.success) setTests(data.data)
     } catch (e) {
       console.error('Error loading tests:', e)
@@ -79,8 +71,7 @@ function ABTestCard({ test }) {
 
   const loadWinner = async () => {
     try {
-      const res = await fetch(`${API}/whatsapp/ab-tests/${test.id}/winner`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.request(`/whatsapp/ab-tests/${test.id}/winner`)
       if (data.success) setWinner(data.data)
     } catch (e) {}
   }
@@ -128,12 +119,7 @@ function CreateABTest({ onClose, onCreated }) {
     }
     setCreating(true)
     try {
-      const res = await fetch(`${API}/whatsapp/ab-tests`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ name, messageA, messageB }),
-      })
-      const data = await res.json()
+      const data = await api.whatsapp.createAbTest({ name, messageA, messageB })
       if (data.success) {
         toast.success('Test creado')
         onCreated()

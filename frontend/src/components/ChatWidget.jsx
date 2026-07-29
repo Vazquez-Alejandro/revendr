@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { MessageCircle, Send, X, Loader2, Mail } from 'lucide-react'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
 
 export default function ChatWidget({ productName = 'Revendr', productId = null }) {
@@ -24,19 +25,12 @@ export default function ChatWidget({ productName = 'Revendr', productId = null }
     setInput('')
     setSending(true)
     try {
-      const result = await fetch(
-        'https://us-central1-revendr-9add8.cloudfunctions.net/api/chat/message',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            productName,
-            productId,
-            visitorEmail: null,
-            message: userMsg,
-          }),
-        }
-      ).then(r => r.json())
+      const result = await api.chat.sendMessage({
+        productName,
+        productId,
+        visitorEmail: null,
+        message: userMsg,
+      })
       if (result.success) {
         setMessages(prev => [
           ...prev,
@@ -58,20 +52,13 @@ export default function ChatWidget({ productName = 'Revendr', productId = null }
     if (!emailData.name || !emailData.email || !emailData.message) return
     setSending(true)
     try {
-      await fetch(
-        'https://us-central1-revendr-9add8.cloudfunctions.net/api/chat/message',
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            productName,
-            productId,
-            visitorEmail: emailData.email,
-            visitorName: emailData.name,
-            message: emailData.message,
-          }),
-        }
-      )
+      await api.chat.sendMessage({
+        productName,
+        productId,
+        visitorEmail: emailData.email,
+        visitorName: emailData.name,
+        message: emailData.message,
+      })
       setMessages(prev => [...prev, { role: 'user', text: `📧 ${emailData.message}` }])
       setMessages(prev => [...prev, { role: 'bot', text: '¡Mensaje enviado! Te responderemos a tu email. ✅' }])
       setShowEmailForm(false)

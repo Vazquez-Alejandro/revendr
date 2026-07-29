@@ -20,7 +20,7 @@ import {
 import clsx from 'clsx'
 
 export function Sidebar() {
-  const { signOut } = useAuth()
+  const { signOut, isAdmin } = useAuth()
   const { t, locale } = useI18n()
   const navigate = useNavigate()
 
@@ -34,7 +34,7 @@ export function Sidebar() {
     { name: locale === 'es' ? 'Contenido' : 'Content', href: '/dashboard/contenido', icon: Sparkles },
     { name: locale === 'es' ? 'Equipo' : 'Team', href: '/dashboard/team', icon: Users },
     { name: locale === 'es' ? 'Suscripción' : 'Subscription', href: '/dashboard/subscription', icon: CreditCard },
-    { name: locale === 'es' ? 'Admin' : 'Admin', href: '/dashboard/admin', icon: Shield },
+    ...(isAdmin ? [{ name: locale === 'es' ? 'Admin' : 'Admin', href: '/dashboard/admin', icon: Shield }] : []),
     { name: t('settings'), href: '/dashboard/settings', icon: Settings },
   ]
 

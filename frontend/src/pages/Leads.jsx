@@ -13,6 +13,14 @@ import {
 } from 'firebase/firestore'
 import { db, auth } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
+const LOCAL_API = 'http://127.0.0.1:5001/revendr-9add8/us-central1/api'
+const API = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? LOCAL_API
+  : (import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api')
+const getAuthHeaders = async () => {
+  const token = await auth.currentUser?.getIdToken()
+  return token ? { Authorization: `Bearer ${token}` } : {}
+}
 import { 
   Plus,
   Users, 

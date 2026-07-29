@@ -4,7 +4,11 @@ module.exports = function(app) {
 
 app.get('/stats/dashboard', async (req, res) => {
   try {
-    const [campaignsSnap, leadsSnap] = await Promise.all([db.collection('campanias').get(), db.collection('leads').get()])
+    const userId = req.user.uid
+    const [campaignsSnap, leadsSnap] = await Promise.all([
+      db.collection('campanias').where('user_id', '==', userId).get(),
+      db.collection('leads').where('user_id', '==', userId).get(),
+    ])
     let activeCampaigns = 0, propuestasGeneradas = 0, clientesActivos = 0
     campaignsSnap.docs.forEach(doc => { if (doc.data().estado === 'activa') activeCampaigns++ })
     leadsSnap.docs.forEach(doc => { const l = doc.data(); if (l.estado_proceso === 'propuesta_generada') propuestasGeneradas++; if (l.estado_proceso === 'cliente_activo') clientesActivos++ })
@@ -14,7 +18,12 @@ app.get('/stats/dashboard', async (req, res) => {
 
 app.get('/stats/products', async (req, res) => {
   try {
-    const [productsSnapshot, campaignsSnapshot, leadsSnapshot] = await Promise.all([db.collection('productos').get(), db.collection('campanias').get(), db.collection('leads').get()])
+    const userId = req.user.uid
+    const [productsSnapshot, campaignsSnapshot, leadsSnapshot] = await Promise.all([
+      db.collection('productos').where('user_id', '==', userId).get(),
+      db.collection('campanias').where('user_id', '==', userId).get(),
+      db.collection('leads').where('user_id', '==', userId).get(),
+    ])
     const statsByProduct = {}
     productsSnapshot.docs.forEach(doc => { statsByProduct[doc.id] = { nombre: doc.data().nombre, nicho: doc.data().nicho, totalCampaigns: 0, activeCampaigns: 0, totalLeads: 0, qualifiedLeads: 0, propuestasGenerated: 0, messagesSent: 0, clients: 0, totalRevenue: 0 } })
     campaignsSnapshot.docs.forEach(doc => { const c = doc.data(); if (c.producto_id && statsByProduct[c.producto_id]) { statsByProduct[c.producto_id].totalCampaigns++; if (c.estado === 'activa') statsByProduct[c.producto_id].activeCampaigns++; statsByProduct[c.producto_id].messagesSent += c.mensajes_enviados || 0; statsByProduct[c.producto_id].totalRevenue += c.total_revenue || 0 } })
@@ -30,6 +39,7 @@ app.get('/analytics/predictions/:campaignId', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Access denied' } })
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', req.params.campaignId).get()
     let totalLeads = leadsSnapshot.size, hotLeads = 0, warmLeads = 0, coldLeads = 0, avgScore = 0, totalScore = 0, engaged = 0, converted = 0
     leadsSnapshot.docs.forEach(doc => { const lead = doc.data(); const score = lead.lead_score || 0; totalScore += score; if (lead.temperatura === 'hot') hotLeads++; else if (lead.temperatura === 'warm') warmLeads++; else coldLeads++; if (lead.cta_clicks > 0 || lead.landing_views > 0) engaged++; if (lead.estado_proceso === 'cliente_activo') converted++ })
@@ -48,7 +58,8 @@ app.get('/analytics/predictions/:campaignId', async (req, res) => {
 
 app.get('/analytics/trends', async (req, res) => {
   try {
-    const leadsSnapshot = await db.collection('leads').orderBy('fecha_creacion', 'desc').limit(500).get()
+    const userId = req.user.uid
+    const leadsSnapshot = await db.collection('leads').where('user_id', '==', userId).orderBy('fecha_creacion', 'desc').limit(500).get()
     const dailyData = {}
     leadsSnapshot.docs.forEach(doc => { const lead = doc.data(); const date = lead.fecha_creacion?.toDate?.(); if (date) { const key = date.toISOString().split('T')[0]; if (!dailyData[key]) dailyData[key] = { leads: 0, qualified: 0, converted: 0, totalScore: 0 }; dailyData[key].leads++; if ((lead.lead_score || 0) >= 50) dailyData[key].qualified++; if (lead.estado_proceso === 'cliente_activo') dailyData[key].converted++; dailyData[key].totalScore += lead.lead_score || 0 } })
     const trends = Object.entries(dailyData).sort(([a], [b]) => a.localeCompare(b)).slice(-30).map(([date, data]) => ({ date, leads: data.leads, qualified: data.qualified, converted: data.converted, avgScore: data.leads > 0 ? (data.totalScore / data.leads).toFixed(1) : 0 }))

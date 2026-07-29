@@ -77,10 +77,7 @@ export default function Onboarding() {
         onboarding_data: data,
         fecha_onboarding: new Date(),
       }
-      await Promise.allSettled([
-        setDoc(doc(db, 'usuarios_admin', user.uid), payload, { merge: true }),
-        setDoc(doc(db, 'usuarios', user.uid), payload, { merge: true }),
-      ])
+      await setDoc(doc(db, 'usuarios', user.uid), payload, { merge: true })
       toast.success(locale === 'es' ? '¡Listo! Tu panel está preparado' : 'Done! Your panel is ready')
       navigate('/dashboard')
     } catch (error) {

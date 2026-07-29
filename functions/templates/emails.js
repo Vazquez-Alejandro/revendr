@@ -25,7 +25,7 @@ const welcomeEmail = (userName, loginUrl) => `
           <tr>
             <td style="padding:24px 40px;background-color:#0f172a;border-top:1px solid #334155;">
               <p style="color:#64748b;font-size:12px;margin:0;text-align:center;">
-                © 2024 Revendr. Todos los derechos reservados.
+                © 2026 Revendr. Todos los derechos reservados.
               </p>
             </td>
           </tr>
@@ -90,7 +90,7 @@ const bookingConfirmation = (userName, businessName, service, date, time, propue
           <tr>
             <td style="padding:24px 40px;background-color:#0f172a;border-top:1px solid #334155;">
               <p style="color:#64748b;font-size:12px;margin:0;text-align:center;">
-                © 2024 Revendr. Todos los derechos reservados.
+                © 2026 Revendr. Todos los derechos reservados.
               </p>
             </td>
           </tr>
@@ -151,7 +151,7 @@ const paymentConfirmation = (userName, plan, amount) => `
           <tr>
             <td style="padding:24px 40px;background-color:#0f172a;border-top:1px solid #334155;">
               <p style="color:#64748b;font-size:12px;margin:0;text-align:center;">
-                © 2024 Revendr. Todos los derechos reservados.
+                © 2026 Revendr. Todos los derechos reservados.
               </p>
             </td>
           </tr>

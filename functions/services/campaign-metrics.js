@@ -2,14 +2,14 @@ const { db } = require('../config')
 
 async function getCampaignMetrics(userId, campaignId) {
   try {
-    const campaignDoc = await db.collection('campaigns').doc(campaignId).get()
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return null
     const campaign = campaignDoc.data()
     if (campaign.user_id !== userId) return null
 
     const leadsSnapshot = await db.collection('leads')
       .where('user_id', '==', userId)
-      .where('campaign_id', '==', campaignId)
+      .where('id_campania', '==', campaignId)
       .get()
 
     const messagesSnapshot = await db.collection('message_log')
@@ -93,7 +93,7 @@ function categorizeEngagementSimple(lead) {
 
 async function getAllCampaignsMetrics(userId) {
   try {
-    const campaignsSnapshot = await db.collection('campaigns')
+    const campaignsSnapshot = await db.collection('campanias')
       .where('user_id', '==', userId)
       .get()
 

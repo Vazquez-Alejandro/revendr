@@ -1,16 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc,
-  doc,
-  query,
-  orderBy,
-  where,
-} from 'firebase/firestore'
-import { db, auth } from '../config/firebase'
+import { auth } from '../config/firebase'
 import { useI18n } from '../contexts/I18nContext'
 import { api } from '../services/api'
 import { 
@@ -159,14 +148,9 @@ export default function Campaigns() {
 
   const loadCampaigns = async () => {
     try {
-      const q = query(
-        collection(db, 'campanias'),
-        where('user_id', '==', auth.currentUser?.uid || '')
-      )
-      const snapshot = await getDocs(q)
-      const data = snapshot.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => (b.fecha_inicio?.toMillis?.() || 0) - (a.fecha_inicio?.toMillis?.() || 0))
+      const result = await api.campaigns.list()
+      const data = (result.data || [])
+        .sort((a, b) => new Date(b.fecha_inicio || 0) - new Date(a.fecha_inicio || 0))
 
       data.forEach(newCamp => {
         const oldCamp = campaigns.find(c => c.id === newCamp.id)
@@ -193,14 +177,11 @@ export default function Campaigns() {
     try {
       const userId = auth.currentUser?.uid
       if (!userId) return
-
-      const q = query(
-        collection(db, 'productos'),
-        where('user_id', '==', userId)
-      )
+      const { collection, getDocs, query, where } = await import('firebase/firestore')
+      const { db } = await import('../config/firebase')
+      const q = query(collection(db, 'productos'), where('user_id', '==', userId))
       const snapshot = await getDocs(q)
-      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
-      setProducts(data)
+      setProducts(snapshot.docs.map(d => ({ id: d.id, ...d.data() })))
     } catch (error) {
       console.error('Error loading products:', error)
     }
@@ -216,31 +197,21 @@ export default function Campaigns() {
     setCreating(true)
     try {
       const selectedProduct = products.find(p => p.id === formData.producto_id)
-      const docRef = await addDoc(collection(db, 'campanias'), {
+      const body = {
         nombre: formData.nombre,
-        user_id: auth.currentUser?.uid || '',
-        producto_id: formData.producto_id || null,
-        producto_nombre: selectedProduct?.nombre || null,
-        producto_url_demo: selectedProduct?.url_demo || null,
-        producto_mensaje: selectedProduct?.mensaje_whatsapp || null,
         rubro_objetivo: formData.rubro_objetivo || selectedProduct?.nicho || '',
         mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
-        provincia: formData.provincia,
         ciudad: formData.ciudad,
-        estado: 'activa',
-        fecha_inicio: new Date(),
-        fecha_creacion: new Date(),
-        fecha_fin: formData.fecha_fin || null,
-        leads_count: 0,
-        propuestas_generadas: 0,
-        mensajes_enviados: 0,
-      })
+        provincia: formData.provincia,
+        producto_id: formData.producto_id || null,
+      }
+      const result = await api.campaigns.create(body)
 
       toast.success(locale === 'es' ? 'Campaña creada. Iniciando scraping...' : 'Campaign created. Starting scrape...')
       setShowCreateModal(false)
       setFormData({ nombre: '', producto_id: '', rubro_objetivo: '', mensaje_template: '', provincia: '', ciudad: '' })
 
-      handleScrape(docRef.id)
+      handleScrape(result.data.id)
 
       loadCampaigns()
     } catch (error) {
@@ -312,42 +283,9 @@ export default function Campaigns() {
     setProcessingAction(`${campaignId}-demos`)
     toast.loading(locale === 'es' ? 'Calificando leads y generando propuestas...' : 'Qualifying leads and generating proposals...', { id: 'demos' })
     try {
-      const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
-      const authHeaders = {
-        'Content-Type': 'application/json',
-        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-      }
-
-      // First, score all leads
-      await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/score-all`,
-        {
-          method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({ campaignId }),
-        }
-      )
-
-      // Then generate messages for qualified leads
-      const msgResult = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/generate-messages`,
-        {
-          method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({ minScore: 0 }),
-        }
-      ).then(r => r.json())
-
-      // Then generate demos
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/process-demos`,
-        {
-          method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({ limit: 20 }),
-        }
-      ).then(r => r.json())
-
+      await api.leads.scoreAll({ campaignId })
+      const msgResult = await api.campaigns.generateMessages(campaignId)
+      const result = await api.campaigns.processDemos(campaignId, 20)
       toast.success(
         locale === 'es'
           ? `${msgResult.data?.generated || 0} mensajes personalizados, ${result.data?.processed || 0} propuestas generadas`
@@ -365,31 +303,13 @@ export default function Campaigns() {
 
   const handleSendMessages = async (campaignId) => {
     setProcessingAction(`${campaignId}-messages`)
-    const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
-    const authHeaders = {
-      'Content-Type': 'application/json',
-      ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
-    }
-
-    // Check if WhatsApp is configured
-    const configRes = await fetch(
-      `https://us-central1-revendr-9add8.cloudfunctions.net/api/whatsapp/config`,
-      { headers: authHeaders }
-    ).then(r => r.json())
+    const configRes = await api.whatsapp.config()
     const whatsappConfigured = configRes?.data?.configured
 
     if (whatsappConfigured) {
       toast.loading(locale === 'es' ? 'Enviando mensajes por WhatsApp...' : 'Sending WhatsApp messages...', { id: 'messages' })
       try {
-        const result = await fetch(
-          `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/send-messages`,
-          {
-            method: 'POST',
-            headers: authHeaders,
-            body: JSON.stringify({ limit: 10, minScore: 30 }),
-          }
-        ).then(r => r.json())
-
+        const result = await api.campaigns.sendMessages(campaignId, 10)
         toast.success(
           locale === 'es'
             ? `${result.data?.sent || 0} mensajes enviados, ${result.data?.failed || 0} fallidos, ${result.data?.skippedLowScore || 0} descartados (score bajo)`
@@ -406,14 +326,7 @@ export default function Campaigns() {
     } else {
         toast.loading(locale === 'es' ? 'Enviando propuestas por email...' : 'Sending proposals via email...', { id: 'messages' })
       try {
-        const result = await fetch(
-          `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/send-demo-emails`,
-          {
-            method: 'POST',
-            headers: authHeaders,
-          }
-        ).then(r => r.json())
-
+        const result = await api.campaigns.sendDemoEmails(campaignId)
         const waFallback = result.data?.whatsapp_fallback || 0
         toast.success(
           locale === 'es'
@@ -439,10 +352,7 @@ export default function Campaigns() {
     toast.loading(locale === 'es' ? 'Enviando propuesta a Telegram...' : 'Sending proposal to Telegram...', { id: 'test-tg' })
     try {
       const chatId = 8091046688
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/test/send-demo-email?campaignId=${campaignId}&chatId=${chatId}`
-      ).then(r => r.json())
-
+      const result = await api.email.sendTestDemo({ campaignId, chatId })
       if (result.data?.sent) {
         toast.success(
           locale === 'es'
@@ -474,9 +384,7 @@ export default function Campaigns() {
     }
     toast.loading(locale === 'es' ? 'Enviando propuesta a tu email...' : 'Sending proposal to your email...', { id: 'test' })
     try {
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/test/send-demo-email?campaignId=${campaignId}&email=${encodeURIComponent(email)}`
-      ).then(r => r.json())
+      const result = await api.email.sendTestDemo({ campaignId, email })
 
       if (result.data?.sent) {
         toast.success(
@@ -504,10 +412,7 @@ export default function Campaigns() {
   const toggleCampaignStatus = async (campaignId, currentStatus) => {
     try {
       const newStatus = currentStatus === 'activa' ? 'pausada' : 'activa'
-      await updateDoc(doc(db, 'campanias', campaignId), {
-        estado: newStatus,
-        fecha_actualizacion: new Date(),
-      })
+      await api.campaigns.updateStatus(campaignId, newStatus)
       toast.success(locale === 'es' ? `Campaña ${newStatus === 'activa' ? 'activada' : 'pausada'}` : `Campaign ${newStatus === 'activa' ? 'activated' : 'paused'}`)
       loadCampaigns()
     } catch (error) {
@@ -520,10 +425,7 @@ export default function Campaigns() {
     if (!(await confirm(t('confirmTerminate'), 'Finalizar'))) return
     
     try {
-      await updateDoc(doc(db, 'campanias', campaignId), {
-        estado: 'terminada',
-        fecha_fin: new Date(),
-      })
+      await api.campaigns.updateStatus(campaignId, 'terminada')
       toast.success(locale === 'es' ? 'Campaña terminada' : 'Campaign terminated')
       loadCampaigns()
     } catch (error) {
@@ -541,19 +443,13 @@ export default function Campaigns() {
 
     setCreating(true)
     try {
-      const selectedProduct = products.find(p => p.id === formData.producto_id)
-      await updateDoc(doc(db, 'campanias', editingId), {
+      await api.campaigns.update(editingId, {
         nombre: formData.nombre,
-        producto_id: formData.producto_id || null,
-        producto_nombre: selectedProduct?.nombre || null,
-        producto_url_demo: selectedProduct?.url_demo || null,
-        producto_mensaje: selectedProduct?.mensaje_whatsapp || null,
-        rubro_objetivo: formData.rubro_objetivo || selectedProduct?.nicho || '',
-        mensaje_template: formData.mensaje_template || selectedProduct?.mensaje_whatsapp || '',
-        provincia: formData.provincia,
+        rubro_objetivo: formData.rubro_objetivo,
+        mensaje_template: formData.mensaje_template,
         ciudad: formData.ciudad,
-        fecha_fin: formData.fecha_fin || null,
-        fecha_actualizacion: new Date(),
+        provincia: formData.provincia,
+        producto_id: formData.producto_id || null,
       })
       toast.success(locale === 'es' ? 'Campaña actualizada' : 'Campaign updated')
       setShowCreateModal(false)
@@ -570,24 +466,7 @@ export default function Campaigns() {
 
   const handleDuplicateCampaign = async (campaign) => {
     try {
-      const newCampaign = {
-        nombre: campaign.nombre + ' (copia)',
-        user_id: auth.currentUser?.uid || '',
-        producto_id: campaign.producto_id || null,
-        producto_nombre: campaign.producto_nombre || null,
-        producto_url_demo: campaign.producto_url_demo || null,
-        producto_mensaje: campaign.producto_mensaje || null,
-        rubro_objetivo: campaign.rubro_objetivo,
-        mensaje_template: campaign.mensaje_template || '',
-        ciudad: campaign.ciudad || '',
-        estado: 'activa',
-        fecha_inicio: new Date(),
-        fecha_creacion: new Date(),
-        leads_count: 0,
-        propuestas_generadas: 0,
-        mensajes_enviados: 0,
-      }
-      await addDoc(collection(db, 'campanias'), newCampaign)
+      await api.campaigns.duplicate(campaign.id)
       toast.success(locale === 'es' ? 'Campaña duplicada' : 'Campaign duplicated')
       loadCampaigns()
     } catch (error) {
@@ -604,7 +483,7 @@ export default function Campaigns() {
     )
     if (!confirmed) return
     try {
-      await deleteDoc(doc(db, 'campanias', campaign.id))
+      await api.campaigns.delete(campaign.id)
       toast.success(locale === 'es' ? 'Campaña eliminada' : 'Campaign deleted')
       loadCampaigns()
     } catch (error) {
@@ -657,14 +536,7 @@ export default function Campaigns() {
 
   const saveFollowups = async () => {
     try {
-      await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${followupsCampaign.id}/followups`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ followups }),
-        }
-      )
+      await api.campaigns.followups(followupsCampaign.id, { followups })
       toast.success(locale === 'es' ? 'Follow-ups guardados' : 'Follow-ups saved')
       setFollowupsCampaign(null)
       loadCampaigns()
@@ -691,10 +563,7 @@ export default function Campaigns() {
     setProcessingAction(`${campaignId}-followups`)
     toast.loading(locale === 'es' ? 'Procesando follow-ups...' : 'Processing follow-ups...', { id: 'followups' })
     try {
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/process-followups`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
-      ).then(r => r.json())
+      const result = await api.campaigns.processFollowups(campaignId)
       toast.success(
         locale === 'es' ? `${result.data?.sent || 0} follow-ups enviados` : `${result.data?.sent || 0} follow-ups sent`,
         { id: 'followups' }
@@ -709,9 +578,7 @@ export default function Campaigns() {
 
   const loadROI = async (campaignId) => {
     try {
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/roi`
-      ).then(r => r.json())
+      const result = await api.campaigns.roi(campaignId)
       setRoiData(result.data)
     } catch (error) {
       console.error('Error loading ROI:', error)
@@ -727,14 +594,7 @@ export default function Campaigns() {
     e.preventDefault()
     if (!revenueForm.amount) return
     try {
-      await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${revenueModal.id}/revenue`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(revenueForm),
-        }
-      )
+      await api.campaigns.revenue(revenueModal.id, revenueForm)
       toast.success(locale === 'es' ? 'Ingreso registrado' : 'Revenue recorded')
       setRevenueModal(null)
       setRevenueForm({ leadId: '', amount: '', notes: '' })
@@ -746,14 +606,7 @@ export default function Campaigns() {
 
   const toggleAutoScrape = async (campaignId, current) => {
     try {
-      await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/set-schedule`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ auto_scrape: !current, scrape_schedule: 'weekly' }),
-        }
-      )
+      await api.campaigns.setSchedule(campaignId, { auto_scrape: !current, scrape_schedule: 'weekly' })
       toast.success(locale === 'es' ? 'Scraping automático actualizado' : 'Auto-scrape updated')
       loadCampaigns()
     } catch (error) {
@@ -765,10 +618,7 @@ export default function Campaigns() {
     setProcessingAction(`${campaignId}-sequence`)
     toast.loading(locale === 'es' ? 'Procesando secuencia inteligente...' : 'Processing smart sequence...', { id: 'sequence' })
     try {
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/process-sequence`,
-        { method: 'POST', headers: { 'Content-Type': 'application/json' } }
-      ).then(r => r.json())
+      const result = await api.campaigns.processSequence(campaignId)
       toast.success(
         locale === 'es'
           ? `${result.data?.actions || 0} acciones ejecutadas (emails enviados)`
@@ -794,9 +644,7 @@ export default function Campaigns() {
 
   const loadAbResults = async (campaignId) => {
     try {
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${campaignId}/ab-results`
-      ).then(r => r.json())
+      const result = await api.campaigns.abResults(campaignId)
       setAbResults(result.data)
     } catch (error) {
       console.error('Error loading A/B results:', error)
@@ -809,14 +657,7 @@ export default function Campaigns() {
       return
     }
     try {
-      const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/campaigns/${abTestModal.id}/ab-test`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(abTestForm),
-        }
-      ).then(r => r.json())
+      const result = await api.campaigns.abTest(abTestModal.id, abTestForm)
 
       if (result.success) {
         toast.success(

@@ -25,7 +25,7 @@ app.post('/landing/view', async (req, res) => {
       const productDoc = await db.collection('productos').doc(productId).get()
       if (productDoc.exists) {
         const product = productDoc.data()
-        const ownerDoc = await db.collection('usuarios_admin').doc(product.user_id).get()
+        const ownerDoc = await db.collection('usuarios').doc(product.user_id).get()
         if (ownerDoc.exists && ownerDoc.data().email && emailTransporter) {
           const lead = leadId ? await db.collection('leads').doc(leadId).get() : null
           const leadName = lead?.exists ? lead.data().nombre_negocio : 'Alguien'

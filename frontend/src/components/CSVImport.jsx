@@ -1,14 +1,7 @@
 import { useState, useRef } from 'react'
 import { Upload, FileText, X, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
-import { auth } from '../config/firebase'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 export default function CSVImport({ onImported, onClose }) {
   const [file, setFile] = useState(null)
@@ -54,12 +47,10 @@ export default function CSVImport({ onImported, onClose }) {
 
     try {
       const text = await file.text()
-      const res = await fetch(`${API}/whatsapp/import-csv`, {
+      const data = await api.request('/whatsapp/import-csv', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
         body: JSON.stringify({ csvText: text }),
       })
-      const data = await res.json()
 
       if (data.success) {
         setResults(data.data)

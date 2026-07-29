@@ -24,7 +24,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return
   if (event.request.url.includes('firestore.googleapis.com')) return
-  if (event.request.url.includes('us-central1-revendr-9add8')) return
+  if (event.request.url.includes('cloudfunctions.net')) return
+  if (event.request.url.includes('127.0.0.1')) return
+  if (event.request.url.includes('localhost')) return
 
   if (event.request.mode === 'navigate') {
     event.respondWith(

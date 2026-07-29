@@ -19,6 +19,18 @@ app.get('/whatsapp/webhook', (req, res) => {
 
 app.post('/whatsapp/webhook', async (req, res) => {
   try {
+    const signature = req.headers['x-hub-signature-256'] || ''
+    const rawBody = req.rawBody || JSON.stringify(req.body)
+    if (signature) {
+      const crypto = require('crypto')
+      const expected = crypto.createHmac('sha256', process.env.WHATSAPP_APP_SECRET || '').update(rawBody).digest('hex')
+      const expectedSig = `sha256=${expected}`
+      if (signature !== expectedSig) {
+        console.error('Invalid webhook signature')
+        return res.sendStatus(403)
+      }
+    }
+
     res.sendStatus(200)
 
     const body = req.body
@@ -59,14 +71,7 @@ async function handleIncomingMessage(phoneNumberId, message, contacts) {
       .where('whatsapp_config.phone_number_id', '==', phoneNumberId)
       .get()
 
-    if (usersSnapshot.empty) {
-      const adminSnapshot = await db.collection('usuarios_admin')
-        .where('whatsapp_config.phone_number_id', '==', phoneNumberId)
-        .get()
-      if (adminSnapshot.empty) return
-      await processMessageForUser(adminSnapshot.docs[0].id, from, contactName, message)
-      return
-    }
+    if (usersSnapshot.empty) return
 
     await processMessageForUser(usersSnapshot.docs[0].id, from, contactName, message)
   } catch (error) {

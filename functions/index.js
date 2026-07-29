@@ -4,24 +4,61 @@ const express = require('express')
 const cors = require('cors')
 const rateLimit = require('express-rate-limit')
 
+if (process.env.SENTRY_DSN) {
+  try {
+    const Sentry = require('@sentry/node')
+    Sentry.init({ dsn: process.env.SENTRY_DSN, tracesSampleRate: 0.1, environment: process.env.NODE_ENV || 'production' })
+  } catch (e) { console.error('Sentry init failed:', e.message) }
+}
+
 const { PUBLIC_PATHS, FIREBASE_APP_URL } = require('./config')
 
 if (!admin.apps.length) admin.initializeApp()
 const db = admin.firestore()
 
+const userRateLimits = new Map()
+
+function getUserRateLimiter(maxPerMinute = 30) {
+  return (req, res, next) => {
+    if (isPublicPath(req)) return next()
+    const userId = req.user?.uid || req.ip
+    const now = Date.now()
+    const windowMs = 60 * 1000
+    if (!userRateLimits.has(userId)) {
+      userRateLimits.set(userId, [])
+    }
+    const timestamps = userRateLimits.get(userId).filter(t => now - t < windowMs)
+    if (timestamps.length >= maxPerMinute) {
+      return res.status(429).json({ success: false, error: { message: 'Too many requests. Try again in a minute.' } })
+    }
+    timestamps.push(now)
+    userRateLimits.set(userId, timestamps)
+    next()
+  }
+}
+
+function isPublicPath(req) {
+  return PUBLIC_PATHS.some(p => req.path.startsWith(p) || req.originalUrl.startsWith(p))
+}
+
 const app = express()
-const allowedOrigins = [FIREBASE_APP_URL, 'https://revendr-9add8.web.app', 'http://localhost:3000', 'http://localhost:5173']
+app.set('trust proxy', 1)
+const allowedOrigins = [FIREBASE_APP_URL, 'https://revendr-9add8.web.app', 'http://localhost:3000', 'http://localhost:5173', 'http://127.0.0.1:5000']
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true)
-    cb(null, true)
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.web.app') || origin.endsWith('.firebaseapp.com')) {
+      return cb(null, true)
+    }
+    cb(new Error('Not allowed by CORS'))
   },
 }))
 
-const generalLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, message: { success: false, error: { message: 'Too many requests' } } })
+const generalLimiter = rateLimit({ windowMs: 60 * 1000, max: 100, validate: false, message: { success: false, error: { message: 'Too many requests' } } })
 app.use(generalLimiter)
 
-const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, message: { success: false, error: { message: 'Too many requests' } } })
+const webhookLimiter = rateLimit({ windowMs: 60 * 1000, max: 20, validate: false, message: { success: false, error: { message: 'Too many requests' } } })
+
+app.use(getUserRateLimiter(60))
 
 app.use(express.json({
   verify: (req, res, buf) => {
@@ -30,8 +67,7 @@ app.use(express.json({
 }))
 
 app.use((req, res, next) => {
-  const isPublic = PUBLIC_PATHS.some(p => req.path.startsWith(p) || req.originalUrl.startsWith(p))
-  if (isPublic) return next()
+  if (isPublicPath(req)) return next()
 
   const header = req.headers.authorization
   if (!header?.startsWith('Bearer ')) {
@@ -59,21 +95,49 @@ app.get('/check-email', async (req, res) => {
     const { email } = req.query
     if (!email) return res.status(400).json({ error: 'Email required' })
     const q = await db.collection('usuarios').where('email', '==', email).limit(1).get()
-    if (!q.empty) return res.json({ exists: true })
-    const qa = await db.collection('usuarios_admin').where('email', '==', email).limit(1).get()
-    if (!qa.empty) return res.json({ exists: true })
-    res.json({ exists: false })
+    res.json({ exists: !q.empty })
   } catch (error) {
     res.json({ exists: false })
+  }
+})
+
+app.get('/me', async (req, res) => {
+  const header = req.headers.authorization
+  if (!header?.startsWith('Bearer ')) {
+    return res.json({ error: 'No auth token. Open this page while logged in to the app.' })
+  }
+  try {
+    const token = header.split('Bearer ')[1]
+    const decoded = await admin.auth().verifyIdToken(token)
+    res.json({ uid: decoded.uid, email: decoded.email, name: decoded.name })
+  } catch (e) {
+    res.json({ error: 'Invalid token' })
   }
 })
 
 require('./routes/campaigns')(app)
 require('./routes/leads')(app)
 require('./routes/payments')(app)
+require('./routes/mercadopago')(app)
 require('./routes/misc')(app)
 
 exports.api = functions.https.onRequest(app)
+
+exports.processScheduledMessages = functions.pubsub.schedule('every 1 minutes').onRun(async () => {
+  const { getPendingScheduledMessages, markScheduledMessageSent, markScheduledMessageFailed } = require('./services/scheduled-messages')
+  const whatsappService = require('./services/whatsapp')
+  const pending = await getPendingScheduledMessages()
+  for (const msg of pending) {
+    try {
+      await whatsappService.sendMessage(msg.user_id, msg.phone, msg.message)
+      await markScheduledMessageSent(msg.id)
+      console.log(`Scheduled message ${msg.id} sent to ${msg.phone}`)
+    } catch (err) {
+      console.error(`Scheduled message ${msg.id} failed:`, err.message)
+      await markScheduledMessageFailed(msg.id, err.message)
+    }
+  }
+})
 
 exports.onUserCreated = functions.auth.user().onCreate(async (user) => {
   try {

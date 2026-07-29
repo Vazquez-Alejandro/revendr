@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Bell, Check, MessageCircle, TrendingUp, AlertTriangle, Loader2 } from 'lucide-react'
-import { auth } from '../config/firebase'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { api } from '../services/api'
 
 export default function NotificationCenter() {
   const [notifications, setNotifications] = useState([])
@@ -21,8 +14,7 @@ export default function NotificationCenter() {
 
   const loadNotifications = async () => {
     try {
-      const res = await fetch(`${API}/whatsapp/notifications`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.whatsapp.notifications()
       if (data.success) setNotifications(data.data)
     } catch (e) {
       console.error('Error loading notifications:', e)
@@ -33,10 +25,7 @@ export default function NotificationCenter() {
 
   const markRead = async (id) => {
     try {
-      await fetch(`${API}/whatsapp/notifications/${id}/read`, {
-        method: 'PUT',
-        headers: await getAuthHeaders(),
-      })
+      await api.request(`/whatsapp/notifications/${id}/read`, { method: 'PUT' })
       setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, status: 'read' } : n)
       )

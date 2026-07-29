@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react'
 import { MessageCircle, Mail, CheckCircle, XCircle, Loader2, Filter, BarChart3 } from 'lucide-react'
-import { auth } from '../config/firebase'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 export default function MessageHistory({ leadId = null }) {
   const [messages, setMessages] = useState([])
@@ -24,11 +17,10 @@ export default function MessageHistory({ leadId = null }) {
   const loadMessages = async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (leadId) params.append('leadId', leadId)
-      if (filter !== 'all') params.append('channel', filter)
-      const res = await fetch(`${API}/whatsapp/messages?${params}`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const params = {}
+      if (leadId) params.leadId = leadId
+      if (filter !== 'all') params.channel = filter
+      const data = await api.whatsapp.messages(params)
       if (data.success) setMessages(data.data)
     } catch (e) {
       console.error('Error loading messages:', e)
@@ -39,8 +31,7 @@ export default function MessageHistory({ leadId = null }) {
 
   const loadStats = async () => {
     try {
-      const res = await fetch(`${API}/whatsapp/messages/stats`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.whatsapp.messagesStats()
       if (data.success) setStats(data.data)
     } catch (e) {
       console.error('Error loading stats:', e)

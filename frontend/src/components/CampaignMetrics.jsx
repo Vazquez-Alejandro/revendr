@@ -1,13 +1,6 @@
 import { useState, useEffect } from 'react'
 import { BarChart3, TrendingUp, Users, MessageCircle, Eye, MousePointer, Loader2 } from 'lucide-react'
-import { auth } from '../config/firebase'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { api } from '../services/api'
 
 export default function CampaignMetrics({ campaignId = null }) {
   const [metrics, setMetrics] = useState(null)
@@ -20,11 +13,7 @@ export default function CampaignMetrics({ campaignId = null }) {
   const loadMetrics = async () => {
     setLoading(true)
     try {
-      const url = campaignId
-        ? `${API}/whatsapp/campaigns/${campaignId}/metrics`
-        : `${API}/whatsapp/campaigns/metrics`
-      const res = await fetch(url, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.whatsapp.campaignMetrics(campaignId)
       if (data.success) setMetrics(data.data)
     } catch (e) {
       console.error('Error loading metrics:', e)

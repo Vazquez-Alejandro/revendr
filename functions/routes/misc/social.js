@@ -48,7 +48,7 @@ app.post('/chat/message', async (req, res) => {
       const productDoc = await db.collection('productos').doc(productId).get()
       if (productDoc.exists) {
         const product = productDoc.data()
-        const ownerDoc = await db.collection('usuarios_admin').doc(product.user_id).get()
+        const ownerDoc = await db.collection('usuarios').doc(product.user_id).get()
         if (ownerDoc.exists && ownerDoc.data().email && RESEND_API_KEY) await sendEmail(ownerDoc.data().email, `Nuevo mensaje de chat - ${visitorName}`, `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px;"><h2 style="color:#0ea5e9;">💬 Nuevo mensaje de chat</h2><p><strong>${visitorName}</strong> (${visitorEmail || 'sin email'}) te escribió:</p><div style="background:#1e293b;padding:15px;border-radius:8px;margin:15px 0;"><p style="color:#e2e8f0;">${message}</p></div><p><a href="${FIREBASE_APP_URL}/dashboard" style="color:#0ea5e9;">Responder en el dashboard</a></p></div>`)
       }
     }

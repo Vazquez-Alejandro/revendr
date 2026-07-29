@@ -10,9 +10,13 @@ import { NotificationProvider } from './contexts/NotificationContext.jsx'
 import './index.css'
 
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {})
-  })
+  if (window.location.hostname === 'localhost') {
+    navigator.serviceWorker.getRegistrations().then(r => r.forEach(r => r.unregister()))
+  } else {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    })
+  }
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(

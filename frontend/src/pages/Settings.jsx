@@ -15,13 +15,17 @@ import {
   WifiOff,
   Check,
   MessageSquare,
+  Send,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import MessageHistory from '../components/MessageHistory'
 import Blacklist from '../components/Blacklist'
 import ABTesting from '../components/ABTesting'
 
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+const LOCAL_API = 'http://127.0.0.1:5001/revendr-9add8/us-central1/api'
+const PROD_API = import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+const API = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') ? LOCAL_API : PROD_API
+const BAILEYS_WORKER = 'http://127.0.0.1:3001'
 
 const getAuthHeaders = async () => {
   const token = await auth.currentUser?.getIdToken()
@@ -52,7 +56,12 @@ export default function Settings() {
   const [baileysQR, setBaileysQR] = useState(null)
   const [baileysPolling, setBaileysPolling] = useState(false)
   const [baileysConnecting, setBaileysConnecting] = useState(false)
+  const [baileysConnected, setBaileysConnected] = useState(false)
   const [showMetaGuide, setShowMetaGuide] = useState(false)
+  const [usePairingCode, setUsePairingCode] = useState(false)
+  const [baileysPairingCode, setBaileysPairingCode] = useState(null)
+  const [phoneForPairing, setPhoneForPairing] = useState('')
+  const [sendingTest, setSendingTest] = useState(false)
 
   useEffect(() => {
     if (adminData?.notif_prefs) {
@@ -69,6 +78,11 @@ export default function Settings() {
     } catch (e) {
       console.error('Error loading WhatsApp status:', e)
     }
+    try {
+      const wr = await fetch(`${BAILEYS_WORKER}/qr?userId=${user.uid}`)
+      const wd = await wr.json()
+      setBaileysConnected(wd.status === 'connected')
+    } catch {}
   }
 
   const handleConnectWhatsApp = async () => {
@@ -102,6 +116,13 @@ export default function Settings() {
   const handleDisconnectWhatsApp = async () => {
     setWhatsappDisconnecting(true)
     try {
+      try {
+        await fetch(`${BAILEYS_WORKER}/disconnect`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid }),
+        })
+      } catch {}
       const res = await fetch(`${API}/whatsapp/disconnect`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
@@ -110,6 +131,10 @@ export default function Settings() {
       if (data.success) {
         toast.success(locale === 'es' ? 'WhatsApp desconectado' : 'WhatsApp disconnected')
         setBaileysQR(null)
+        setBaileysPairingCode(null)
+        setBaileysConnected(false)
+        setUsePairingCode(false)
+        setPhoneForPairing('')
         loadWhatsAppStatus()
       }
     } catch (e) {
@@ -123,26 +148,55 @@ export default function Settings() {
     setBaileysConnecting(true)
     setBaileysQR(null)
     try {
-      const res = await fetch(`${API}/whatsapp/connect-baileys`, {
+      const res = await fetch(`${BAILEYS_WORKER}/connect`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid }),
       })
+      if (!res.ok) throw new Error('Worker responded ' + res.status)
       const data = await res.json()
-      if (data.success) {
-        if (data.data.status === 'connected') {
-          toast.success(locale === 'es' ? 'WhatsApp conectado via Baileys' : 'WhatsApp connected via Baileys')
-          loadWhatsAppStatus()
-        } else {
-          toast.success(locale === 'es' ? 'Escaneá el código QR con tu WhatsApp' : 'Scan the QR code with your WhatsApp')
-          startBaileysQRPolling()
-        }
+      if (data.error) throw new Error(data.error)
+      if (data.status === 'connected') {
+        setBaileysConnected(true)
+        toast.success(locale === 'es' ? 'WhatsApp conectado!' : 'WhatsApp connected!')
+      } else if (data.status === 'reconnecting') {
+        toast.loading(locale === 'es' ? 'Reconectando...' : 'Reconnecting...', { duration: 5000 })
       } else {
-        toast.error(data.error?.message || 'Error connecting')
+        if (data.qr) setBaileysQR(data.qr)
+        toast.success(locale === 'es' ? 'Escaneá el código QR con tu WhatsApp' : 'Scan the QR code with your WhatsApp')
       }
+      startBaileysQRPolling()
+      loadWhatsAppStatus()
     } catch (e) {
-      toast.error(locale === 'es' ? 'Error al conectar' : 'Error connecting')
+      console.error('Baileys connect error:', e)
+      toast.error(locale === 'es'
+        ? 'Error al conectar. ¿El worker está corriendo? (node baileys-worker.js en functions/)'
+        : 'Connect error. Is the worker running? (node baileys-worker.js in functions/)')
     } finally {
       setBaileysConnecting(false)
+    }
+  }
+
+  const handlePairCode = async () => {
+    if (!phoneForPairing || phoneForPairing.length < 8) {
+      toast.error(locale === 'es' ? 'Ingresá un número válido' : 'Enter a valid phone number')
+      return
+    }
+    try {
+      const res = await fetch(`${BAILEYS_WORKER}/pair-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.uid, phone: phoneForPairing.replace(/\D/g, '') }),
+      })
+      const data = await res.json()
+      if (data.error) throw new Error(data.error)
+      setBaileysPairingCode(data.pairingCode)
+      toast.success(locale === 'es'
+        ? `Código: ${data.pairingCode}. Ingresalo en WhatsApp > Vincular dispositivo`
+        : `Code: ${data.pairingCode}. Enter it in WhatsApp > Link device`)
+      startBaileysQRPolling()
+    } catch (e) {
+      toast.error(e.message || 'Error requesting pairing code')
     }
   }
 
@@ -157,19 +211,30 @@ export default function Settings() {
       }
       attempts++
       try {
-        const res = await fetch(`${API}/whatsapp/qr`, { headers: await getAuthHeaders() })
+        const res = await fetch(`${BAILEYS_WORKER}/qr?userId=${user.uid}`)
+        if (!res.ok) throw new Error('Worker error')
         const data = await res.json()
-        if (data.success) {
-          if (data.data.status === 'connected') {
-            setBaileysQR(null)
-            setBaileysPolling(false)
-            toast.success(locale === 'es' ? 'WhatsApp conectado!' : 'WhatsApp connected!')
-            loadWhatsAppStatus()
-            return
-          }
-          if (data.data.qr) {
-            setBaileysQR(data.data.qr)
-          }
+        if (data.status === 'connected') {
+          setBaileysQR(null)
+          setBaileysPolling(false)
+          setBaileysConnected(true)
+          toast.success(locale === 'es' ? 'WhatsApp conectado!' : 'WhatsApp connected!')
+          loadWhatsAppStatus()
+          return
+        }
+        if (data.qr) setBaileysQR(data.qr)
+        if (data.pairingCode) setBaileysPairingCode(data.pairingCode)
+        if (data.status === 'reconnecting') {
+          setBaileysQR(null)
+          if (attempts % 5 === 1) toast.loading(locale === 'es' ? 'Escaneado detectado, reconectando...' : 'Scan detected, reconnecting...', { duration: 3000 })
+          setTimeout(poll, 2000)
+          return
+        }
+        if (data.status === 'disconnected' || data.status === 'logged_out') {
+          setBaileysPolling(false)
+          toast.error(locale === 'es' ? 'Conexión perdida' : 'Connection lost')
+          loadWhatsAppStatus()
+          return
         }
       } catch {}
       setTimeout(poll, 2000)
@@ -246,13 +311,15 @@ export default function Settings() {
                   </div>
                 </div>
 
-                {whatsappStatus.configured ? (
+                {(whatsappStatus.configured || baileysConnected) ? (
                   <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-dark-300">{locale === 'es' ? 'Proveedor' : 'Provider'}</span>
-                      <span className="text-sm text-dark-100 font-mono">{whatsappStatus.provider === 'baileys' ? 'Baileys (Gratuito)' : 'Meta Cloud API'}</span>
+                      <span className="text-sm text-dark-100 font-mono">
+                        {baileysConnected || whatsappStatus.provider === 'baileys' ? 'Baileys (Gratuito)' : 'Meta Cloud API'}
+                      </span>
                     </div>
-                    {whatsappStatus.phone_number_id && (
+                    {(whatsappStatus.phone_number_id) && (
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-dark-300">{locale === 'es' ? 'Teléfono' : 'Phone'}</span>
                         <span className="text-sm text-dark-100 font-mono">{whatsappStatus.phone_number_id}</span>
@@ -339,7 +406,34 @@ export default function Settings() {
                         )}
                       </div>
                     )}
-                    <div className="pt-2 border-t border-dark-700/50">
+                    <div className="pt-2 border-t border-dark-700/50 space-y-2">
+                      <button
+                        onClick={async () => {
+                          setSendingTest(true)
+                          try {
+                            const res = await fetch(`${BAILEYS_WORKER}/send-test`, {
+                              method: 'POST',
+                              headers: { 'Content-Type': 'application/json' },
+                              body: JSON.stringify({ userId: user.uid }),
+                            })
+                            const data = await res.json()
+                            if (data.status === 'sent') {
+                              toast.success(locale === 'es' ? '✅ Mensaje de prueba enviado a tu WhatsApp' : '✅ Test message sent to your WhatsApp')
+                            } else {
+                              toast.error(data.error || 'Error al enviar')
+                            }
+                          } catch (e) {
+                            toast.error('Error al enviar mensaje de prueba')
+                          } finally {
+                            setSendingTest(false)
+                          }
+                        }}
+                        disabled={sendingTest}
+                        className="w-full flex items-center justify-center gap-2 text-sm text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 p-2 rounded-lg transition-all"
+                      >
+                        {sendingTest ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                        {locale === 'es' ? 'Enviar mensaje de prueba a mi WhatsApp' : 'Send test message to my WhatsApp'}
+                      </button>
                       <button
                         onClick={() => {
                           if (window.confirm(
@@ -421,6 +515,61 @@ export default function Settings() {
                             <p className="text-xs text-gray-500 animate-pulse">
                               {locale === 'es' ? 'Esperando escaneo...' : 'Waiting for scan...'}
                             </p>
+                            <button
+                              onClick={async () => {
+                                setBaileysPolling(false)
+                                try { await fetch(`${BAILEYS_WORKER}/disconnect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.uid }) }) } catch {}
+                                setBaileysQR(null)
+                                setUsePairingCode(true)
+                                setPhoneForPairing('')
+                              }}
+                              className="text-xs text-gray-500 hover:text-gray-700 underline"
+                            >
+                              {locale === 'es' ? 'Cancelar - Probar con código de vinculación' : 'Cancel - Try linking code instead'}
+                            </button>
+                          </div>
+                        ) : baileysPairingCode ? (
+                          <div className="flex flex-col items-center gap-3 p-4 bg-white rounded-xl">
+                            <p className="text-xs text-gray-600 font-medium">
+                              {locale === 'es' ? 'Ingresá este código en WhatsApp > Dispositivos vinculados > Vincular con número' : 'Enter this code in WhatsApp > Linked devices > Link with phone number'}
+                            </p>
+                            <p className="text-2xl font-mono font-bold tracking-widest text-gray-800 select-all">{baileysPairingCode}</p>
+                            <p className="text-xs text-gray-500 animate-pulse">
+                              {locale === 'es' ? 'Esperando confirmación...' : 'Waiting for confirmation...'}
+                            </p>
+                            <button
+                              onClick={async () => {
+                                setBaileysPolling(false)
+                                try { await fetch(`${BAILEYS_WORKER}/disconnect`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: user.uid }) }) } catch {}
+                                setBaileysPairingCode(null)
+                                setUsePairingCode(false)
+                                setPhoneForPairing('')
+                              }}
+                              className="text-xs text-gray-500 hover:text-gray-700 underline"
+                            >
+                              {locale === 'es' ? 'Cancelar' : 'Cancel'}
+                            </button>
+                          </div>
+                        ) : usePairingCode ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-gray-400">
+                              {locale === 'es' ? 'Ingresá tu número de WhatsApp (con código de país)' : 'Enter your WhatsApp number (with country code)'}
+                            </p>
+                            <input
+                              type="tel"
+                              value={phoneForPairing}
+                              onChange={e => setPhoneForPairing(e.target.value)}
+                              placeholder="5491155551234"
+                              className="w-full px-3 py-2 bg-dark-800 border border-dark-600 rounded-lg text-dark-100 text-sm"
+                            />
+                            <button
+                              onClick={handlePairCode}
+                              disabled={!phoneForPairing}
+                              className="w-full btn-primary flex items-center justify-center gap-2"
+                            >
+                              <Smartphone className="w-4 h-4" />
+                              {locale === 'es' ? 'Obtener código de vinculación' : 'Get linking code'}
+                            </button>
                           </div>
                         ) : (
                           <button
@@ -433,6 +582,16 @@ export default function Settings() {
                             ) : (
                               <><Smartphone className="w-4 h-4" /> {locale === 'es' ? 'Conectar con QR' : 'Connect with QR'}</>
                             )}
+                          </button>
+                        )}
+                        {!baileysQR && !baileysPairingCode && (
+                          <button
+                            onClick={() => setUsePairingCode(!usePairingCode)}
+                            className="w-full text-xs text-gray-500 hover:text-gray-400 text-center py-1"
+                          >
+                            {usePairingCode
+                              ? (locale === 'es' ? '← Volver al QR' : '← Back to QR')
+                              : (locale === 'es' ? '¿No podés escanear? Usá código de vinculación' : 'Can\'t scan? Use linking code')}
                           </button>
                         )}
                       </div>
@@ -598,7 +757,7 @@ export default function Settings() {
                           setNotifPrefs(p => ({ ...p, [notif.key]: next }))
                           setNotifSaving(true)
                           try {
-                            await updateDoc(doc(db, 'usuarios_admin', user.uid), {
+                            await updateDoc(doc(db, 'usuarios', user.uid), {
                               notif_prefs: { ...notifPrefs, [notif.key]: next },
                             })
                           } catch { /* silent */ }

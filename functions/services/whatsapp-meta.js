@@ -1,9 +1,16 @@
-const { db, axios } = require('../config')
+const { db, axios, WHATSAPP_TOKEN, PHONE_NUMBER_ID } = require('../config')
 
 async function sendMessage(phoneId, token, phone, text, templateData = null) {
+  const resolvedPhoneId = phoneId || PHONE_NUMBER_ID
+  const resolvedToken = token || WHATSAPP_TOKEN
+
+  if (!resolvedPhoneId || !resolvedToken) {
+    throw new Error('Meta Cloud API credentials not configured')
+  }
+
   if (templateData) {
     const response = await axios.post(
-      `https://graph.facebook.com/v18.0/${phoneId}/messages`,
+      `https://graph.facebook.com/v18.0/${resolvedPhoneId}/messages`,
       {
         messaging_product: 'whatsapp',
         to: phone.replace(/\D/g, ''),
@@ -18,7 +25,7 @@ async function sendMessage(phoneId, token, phone, text, templateData = null) {
       },
       {
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${resolvedToken}`,
           'Content-Type': 'application/json',
         },
       }
@@ -31,7 +38,7 @@ async function sendMessage(phoneId, token, phone, text, templateData = null) {
   }
 
   const response = await axios.post(
-    `https://graph.facebook.com/v18.0/${phoneId}/messages`,
+    `https://graph.facebook.com/v18.0/${resolvedPhoneId}/messages`,
     {
       messaging_product: 'whatsapp',
       to: phone.replace(/\D/g, ''),
@@ -40,7 +47,7 @@ async function sendMessage(phoneId, token, phone, text, templateData = null) {
     },
     {
       headers: {
-        'Authorization': `Bearer ${token}`,
+        'Authorization': `Bearer ${resolvedToken}`,
         'Content-Type': 'application/json',
       },
     }

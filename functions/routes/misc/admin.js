@@ -1,9 +1,22 @@
-const { admin, db, PLAN_LIMITS, GMAIL_USER, emailTransporter, FIREBASE_API_URL } = require('../../config')
+const { admin, db, PLAN_LIMITS, GMAIL_USER, emailTransporter, FIREBASE_API_URL, ADMIN_EMAIL } = require('../../config')
 const { sendTelegramMessage, sendSimpleEmail } = require('../../helpers')
+
+async function requireAdmin(req, res, next) {
+  if (!req.user) return res.status(401).json({ success: false, error: { message: 'No auth' } })
+  const userDoc = await db.collection('usuarios').doc(req.user.uid).get()
+  const userData = userDoc.exists ? userDoc.data() : null
+  const role = userData?.role || ''
+  const email = req.user.email || ''
+  if (role !== 'super_admin' && role !== 'admin' && email !== ADMIN_EMAIL) {
+    return res.status(403).json({ success: false, error: { message: 'Admin access required' } })
+  }
+  req.adminData = userData
+  next()
+}
 
 module.exports = function(app) {
 
-app.get('/admin/clients', async (req, res) => {
+app.get('/admin/clients', requireAdmin, async (req, res) => {
   try {
     const snapshot = await db.collection('usuarios').orderBy('fecha_creacion', 'desc').get()
     const clients = snapshot.docs.map(doc => { const d = doc.data(); return { id: doc.id, email: d.email, nombre: d.nombre, empresa: d.empresa || '', plan: d.plan || 'starter', activo: d.activo !== false, emailVerified: d.emailVerified || false, onboarding_completed: d.onboarding_completed || false, fecha_creacion: d.fecha_creacion, last_login: d.last_login || null, usage: d.usage || { leads: 0, propuestas: 0, messages: 0 } } })
@@ -11,7 +24,7 @@ app.get('/admin/clients', async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.get('/admin/clients/:id', async (req, res) => {
+app.get('/admin/clients/:id', requireAdmin, async (req, res) => {
   try {
     const doc = await db.collection('usuarios').doc(req.params.id).get()
     if (!doc.exists) return res.status(404).json({ success: false, error: { message: 'Client not found' } })
@@ -19,7 +32,7 @@ app.get('/admin/clients/:id', async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.patch('/admin/clients/:id', async (req, res) => {
+app.patch('/admin/clients/:id', requireAdmin, async (req, res) => {
   try {
     const { plan, activo, role, empresa } = req.body
     const updates = { fecha_actualizacion: new Date() }
@@ -32,11 +45,28 @@ app.patch('/admin/clients/:id', async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.delete('/admin/clients/:id', async (req, res) => {
+app.delete('/admin/clients/:id', requireAdmin, async (req, res) => {
   try {
     await db.collection('usuarios').doc(req.params.id).update({ activo: false, fecha_desactivacion: new Date() })
     res.json({ success: true })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
+})
+
+app.post('/admin/migrate-collections', requireAdmin, async (req, res) => {
+  try {
+    const adminSnapshot = await db.collection('usuarios_admin').get()
+    let migrated = 0
+    const batch = db.batch()
+    adminSnapshot.docs.forEach(adminDoc => {
+      const userRef = db.collection('usuarios').doc(adminDoc.id)
+      batch.set(userRef, adminDoc.data(), { merge: true })
+      migrated++
+    })
+    await batch.commit()
+    res.json({ success: true, data: { message: `Migrated ${migrated} usuarios_admin → usuarios`, migrated } })
+  } catch (error) {
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
 })
 
 app.post('/admin/migrate-ownership', async (req, res) => {
@@ -86,7 +116,7 @@ app.get('/whitelabel/config', async (req, res) => {
   try {
     const userId = req.query.userId
     if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
-    const userDoc = await db.collection('usuarios_admin').doc(userId).get()
+    const userDoc = await db.collection('usuarios').doc(userId).get()
     if (!userDoc.exists) return res.json({ success: true, data: { whitelabel: false } })
     const user = userDoc.data()
     res.json({ success: true, data: { whitelabel: user.whitelabel_enabled || false, custom_logo: user.custom_logo || null, custom_colors: user.custom_colors || null, custom_domain: user.custom_domain || null, custom_name: user.custom_app_name || 'Revendr', features: { remove_branding: user.whitelabel_enabled || false, custom_domain: user.whitelabel_enabled || false, custom_logo: user.whitelabel_enabled || false } } })
@@ -97,7 +127,7 @@ app.post('/whitelabel/config', async (req, res) => {
   try {
     const { userId, custom_logo, custom_colors, custom_domain, custom_app_name } = req.body
     if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
-    await db.collection('usuarios_admin').doc(userId).update({ whitelabel_enabled: true, custom_logo: custom_logo || null, custom_colors: custom_colors || null, custom_domain: custom_domain || null, custom_app_name: custom_app_name || 'Revendr', fecha_actualizacion: new Date() })
+    await db.collection('usuarios').doc(userId).update({ whitelabel_enabled: true, custom_logo: custom_logo || null, custom_colors: custom_colors || null, custom_domain: custom_domain || null, custom_app_name: custom_app_name || 'Revendr', fecha_actualizacion: new Date() })
     res.json({ success: true, data: { message: 'White-label config updated' } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })

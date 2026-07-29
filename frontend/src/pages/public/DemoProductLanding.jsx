@@ -4,7 +4,9 @@ import { doc, getDoc } from 'firebase/firestore'
 import { db } from '../../config/firebase'
 import { Loader2, MessageCircle, ArrowRight, Shield, Star, MapPin, Globe, CreditCard } from 'lucide-react'
 
-const API_BASE = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? 'http://127.0.0.1:5001/revendr-9add8/us-central1/api'
+  : 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
 
 export default function DemoProductLanding() {
   const { productId, demoId: routeDemoId, rubro } = useParams()

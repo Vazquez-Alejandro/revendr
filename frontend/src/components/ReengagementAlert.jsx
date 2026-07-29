@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Bell, X, ArrowRight } from 'lucide-react'
 import { useI18n } from '../contexts/I18nContext'
-import { auth } from '../config/firebase'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { api } from '../services/api'
 
 export default function ReengagementAlert() {
   const [alerts, setAlerts] = useState([])
@@ -23,8 +16,7 @@ export default function ReengagementAlert() {
 
   const checkReengaged = async () => {
     try {
-      const res = await fetch(`${API}/whatsapp/reengaged`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.request('/whatsapp/reengaged')
       if (data.success && data.data.length > 0) {
         setAlerts(data.data)
       }

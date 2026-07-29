@@ -154,7 +154,6 @@ async function handleWebhook(event) {
             }
 
             await db.collection('usuarios').doc(uid).set(updates, { merge: true })
-            await db.collection('usuarios_admin').doc(uid).set(updates, { merge: true })
           }
         } catch (error) {
           console.error('Error updating subscription:', error.message)
@@ -169,12 +168,6 @@ async function handleWebhook(event) {
         try {
           const userRecord = await admin.auth().getUserByEmail(email)
           await db.collection('usuarios').doc(userRecord.uid).set({
-            plan: 'inactive',
-            activo: false,
-            subscription_status: 'cancelled',
-            fecha_desactivacion: new Date(),
-          }, { merge: true })
-          await db.collection('usuarios_admin').doc(userRecord.uid).set({
             plan: 'inactive',
             activo: false,
             subscription_status: 'cancelled',
@@ -197,12 +190,6 @@ async function handleWebhook(event) {
           const userRecord = await admin.auth().getUserByEmail(email).catch(() => null)
           if (userRecord) {
             await db.collection('usuarios').doc(userRecord.uid).set({
-              plan,
-              activo: true,
-              fecha_pago: new Date(),
-              monto_pagado: total,
-            }, { merge: true })
-            await db.collection('usuarios_admin').doc(userRecord.uid).set({
               plan,
               activo: true,
               fecha_pago: new Date(),

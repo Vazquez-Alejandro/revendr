@@ -104,13 +104,6 @@ app.post('/subscription/change', async (req, res) => {
       fecha_actualizacion: new Date(),
     }, { merge: true })
 
-    await db.collection('usuarios_admin').doc(userId).set({
-      plan: newPlan,
-      billing: billing || 'monthly',
-      plan_limits: PLAN_LIMITS[newPlan],
-      fecha_actualizacion: new Date(),
-    }, { merge: true })
-
     const userDoc = await db.collection('usuarios').doc(userId).get()
     if (userDoc.exists && userDoc.data().email && emailTransporter) {
       const names = { starter: 'Starter ($29)', growth: 'Growth ($79)', enterprise: 'Enterprise ($199)' }

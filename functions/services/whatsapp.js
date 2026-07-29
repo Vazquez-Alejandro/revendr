@@ -1,15 +1,14 @@
-const { db, admin } = require('../config')
+const { db, admin, WHATSAPP_TOKEN, PHONE_NUMBER_ID } = require('../config')
 const metaProvider = require('./whatsapp-meta')
 const baileysProvider = require('./whatsapp-baileys')
 
+const SYSTEM_META_CONFIG = WHATSAPP_TOKEN && PHONE_NUMBER_ID
+  ? { phone_number_id: PHONE_NUMBER_ID, access_token: WHATSAPP_TOKEN, status: 'active', provider: 'meta' }
+  : null
+
 async function getActiveProvider(userId) {
   const userDoc = await db.collection('usuarios').doc(userId).get()
-  if (!userDoc.exists) {
-    const adminDoc = await db.collection('usuarios_admin').doc(userId).get()
-    if (!adminDoc.exists) return { provider: null, config: {} }
-    const data = adminDoc.data()
-    return resolveProvider(userId, data)
-  }
+  if (!userDoc.exists) return { provider: null, config: {} }
   return resolveProvider(userId, userDoc.data())
 }
 
@@ -24,6 +23,10 @@ function resolveProvider(userId, userData) {
     return { provider: 'meta', config }
   }
 
+  if (SYSTEM_META_CONFIG) {
+    return { provider: 'meta', config: SYSTEM_META_CONFIG }
+  }
+
   return { provider: null, config }
 }
 
@@ -35,7 +38,27 @@ async function sendMessage(userId, phone, text, options = {}) {
   }
 
   if (provider === 'baileys') {
-    return await baileysProvider.sendMessage(userId, phone, text)
+    try {
+      return await baileysProvider.sendMessage(userId, phone, text)
+    } catch (baileysErr) {
+      const isSessionLost =
+        baileysErr.message?.includes('Baileys worker') ||
+        baileysErr.message?.includes('SESSION_LOST') ||
+        baileysErr.message?.includes('ECONNREFUSED') ||
+        baileysErr.message?.includes('ECONNRESET')
+
+      if (isSessionLost && config.phone_number_id && config.access_token) {
+        console.warn(`[whatsapp] Baileys session lost, falling back to Meta Cloud API: ${baileysErr.message}`)
+        return await metaProvider.sendMessage(
+          config.phone_number_id,
+          config.access_token,
+          phone,
+          text,
+          options.template || null
+        )
+      }
+      throw baileysErr
+    }
   }
 
   if (provider === 'meta') {

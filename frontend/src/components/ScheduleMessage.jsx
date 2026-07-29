@@ -1,14 +1,7 @@
 import { useState } from 'react'
 import { Calendar, Clock, X, Loader2 } from 'lucide-react'
-import { auth } from '../config/firebase'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 export default function ScheduleMessage({ lead, onClose }) {
   const [message, setMessage] = useState(`Hola ${lead.nombre_negocio}, mirá tu propuesta: ${lead.url_propuesta || ''}`)
@@ -30,17 +23,12 @@ export default function ScheduleMessage({ lead, onClose }) {
 
     setScheduling(true)
     try {
-      const res = await fetch(`${API}/whatsapp/schedule`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({
-          leadId: lead.id,
-          phone: lead.telefono_whatsapp,
-          message,
-          scheduledFor: scheduledFor.toISOString(),
-        }),
+      const data = await api.whatsapp.schedule({
+        leadId: lead.id,
+        phone: lead.telefono_whatsapp,
+        message,
+        scheduledFor: scheduledFor.toISOString(),
       })
-      const data = await res.json()
       if (data.success) {
         toast.success('Mensaje programado')
         onClose()

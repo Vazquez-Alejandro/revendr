@@ -19,7 +19,10 @@ import {
 import toast from 'react-hot-toast'
 import { useConfirm } from '../hooks/useConfirm'
 
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+const LOCAL_API = 'http://127.0.0.1:5001/revendr-9add8/us-central1/api'
+const API = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? LOCAL_API
+  : (import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api')
 
 const getAuthHeaders = async () => {
   const token = await auth.currentUser?.getIdToken()

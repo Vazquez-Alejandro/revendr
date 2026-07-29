@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
-import { auth } from '../config/firebase'
+import { api } from '../services/api'
 import {
   CreditCard,
   Loader2,
@@ -22,13 +22,6 @@ const PLANS = [
   { id: 'enterprise', name: 'Enterprise', price: 199, annualPrice: 1910.40, icon: Sparkles, limits: { leads: -1, rubros: -1, propuestas: -1, messages: -1 } },
 ]
 
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
-
 export default function Subscription() {
   const { user } = useAuth()
   const { locale } = useI18n()
@@ -46,7 +39,7 @@ export default function Subscription() {
     if (!user) return
     setLoading(true)
     try {
-      const result = await fetch(`${API}/subscription/${user.uid}`, { headers: await getAuthHeaders() }).then(r => r.json())
+      const result = await api.subscription.get(user.uid)
       if (result.success) setSubscription(result.data)
     } catch (e) {
       console.error(e)
@@ -57,8 +50,7 @@ export default function Subscription() {
 
   const loadWhatsAppStatus = async () => {
     try {
-      const res = await fetch(`${API}/whatsapp/config`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.whatsapp.config()
       if (data.success) setWhatsappStatus(data.data)
     } catch (e) {
       console.error('Error loading WhatsApp status:', e)
@@ -68,16 +60,25 @@ export default function Subscription() {
   const handleSubscribe = async (planId) => {
     setSubscribing(true)
     try {
-      const res = await fetch(`${API}/create-checkout-session`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ plan: planId, userId: user.uid, email: user.email, billing }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.url) {
-        throw new Error(data.error?.message || 'Error creating checkout')
-      }
+      const data = await api.subscription.createCheckout({ plan: planId, userId: user.uid, email: user.email, billing })
+      if (!data.url) throw new Error(data.error?.message || 'Error creating checkout')
       window.location.href = data.url
+    } catch (e) {
+      toast.error(e.message)
+    } finally {
+      setSubscribing(false)
+    }
+  }
+
+  const handleMpSubscribe = async (planId) => {
+    setSubscribing(true)
+    try {
+      const data = await api.mercadopago.createPreference({ plan: planId, billing })
+      if (data.success && data.data?.init_point) {
+        window.location.href = data.data.init_point
+      } else {
+        throw new Error(data.error?.message || 'Error')
+      }
     } catch (e) {
       toast.error(e.message)
     } finally {
@@ -90,11 +91,7 @@ export default function Subscription() {
     if (!(await confirm(locale === 'es' ? `¿Cambiar al plan ${newPlan}?` : `Change to ${newPlan} plan?`, 'Cambiar'))) return
     setChanging(true)
     try {
-      const result = await fetch(`${API}/subscription/change`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ userId: user.uid, newPlan }),
-      }).then(r => r.json())
+      const result = await api.subscription.change({ userId: user.uid, newPlan })
       if (result.success) {
         toast.success(locale === 'es' ? 'Plan actualizado' : 'Plan updated')
         loadSubscription()
@@ -111,11 +108,7 @@ export default function Subscription() {
   const reactivateSubscription = async () => {
     setChanging(true)
     try {
-      await fetch(`${API}/subscription/reactivate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ userId: user.uid }),
-      })
+      await api.subscription.reactivate({ userId: user.uid })
       toast.success(locale === 'es' ? 'Suscripción reactivada' : 'Subscription reactivated')
       loadSubscription()
     } catch (e) {
@@ -129,11 +122,7 @@ export default function Subscription() {
     if (!(await confirm(locale === 'es' ? '¿Cancelar suscripción? Seguirás usando Revendr hasta fin del período.' : 'Cancel subscription? You can use Revendr until the period ends.', 'Cancelar suscripción'))) return
     setChanging(true)
     try {
-      await fetch(`${API}/subscription/cancel`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ userId: user.uid }),
-      })
+      await api.subscription.cancel({ userId: user.uid })
       toast.success(locale === 'es' ? 'Suscripción cancelada' : 'Subscription cancelled')
       loadSubscription()
     } catch (e) {
@@ -341,14 +330,24 @@ export default function Subscription() {
                         </li>
                       ))}
                     </ul>
-                    <button
-                      onClick={() => handleSubscribe(plan.id)}
-                      disabled={subscribing}
-                      className="btn-primary w-full flex items-center justify-center gap-2"
-                    >
-                      {subscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                      {locale === 'es' ? 'Suscribirme' : 'Subscribe'}
-                    </button>
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => handleSubscribe(plan.id)}
+                        disabled={subscribing}
+                        className="btn-primary w-full flex items-center justify-center gap-2"
+                      >
+                        {subscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
+                        {locale === 'es' ? 'Pagar con tarjeta (USD)' : 'Pay with card (USD)'}
+                      </button>
+                      <button
+                        onClick={() => handleMpSubscribe(plan.id)}
+                        disabled={subscribing}
+                        className="w-full py-2 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-700 text-white"
+                      >
+                        {subscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                        {locale === 'es' ? 'Pagar con Mercado Pago (ARS)' : 'Pay with Mercado Pago (ARS)'}
+                      </button>
+                    </div>
                   </div>
                 )
               })}

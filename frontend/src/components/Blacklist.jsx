@@ -1,14 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Shield, Plus, Trash2, Loader2 } from 'lucide-react'
-import { auth } from '../config/firebase'
+import { api } from '../services/api'
 import toast from 'react-hot-toast'
-
-const API = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
-
-const getAuthHeaders = async () => {
-  const token = await auth.currentUser?.getIdToken()
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
 
 export default function Blacklist() {
   const [blacklist, setBlacklist] = useState([])
@@ -24,8 +17,7 @@ export default function Blacklist() {
   const loadBlacklist = async () => {
     setLoading(true)
     try {
-      const res = await fetch(`${API}/whatsapp/blacklist`, { headers: await getAuthHeaders() })
-      const data = await res.json()
+      const data = await api.whatsapp.blacklist()
       if (data.success) setBlacklist(data.data)
     } catch (e) {
       console.error('Error loading blacklist:', e)
@@ -38,12 +30,7 @@ export default function Blacklist() {
     if (!phone.trim()) return
     setAdding(true)
     try {
-      const res = await fetch(`${API}/whatsapp/blacklist`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...await getAuthHeaders() },
-        body: JSON.stringify({ phone, reason }),
-      })
-      const data = await res.json()
+      const data = await api.whatsapp.addToBlacklist({ phone, reason })
       if (data.success) {
         toast.success('Número agregado a blacklist')
         setPhone('')
@@ -61,11 +48,7 @@ export default function Blacklist() {
 
   const handleRemove = async (phone) => {
     try {
-      const res = await fetch(`${API}/whatsapp/blacklist/${phone}`, {
-        method: 'DELETE',
-        headers: await getAuthHeaders(),
-      })
-      const data = await res.json()
+      const data = await api.whatsapp.removeFromBlacklist(phone)
       if (data.success) {
         toast.success('Número removido de blacklist')
         loadBlacklist()

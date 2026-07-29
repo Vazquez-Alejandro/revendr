@@ -17,6 +17,20 @@ import {
 import toast from 'react-hot-toast'
 import { useConfirm } from '../hooks/useConfirm'
 
+const LOCAL_API = 'http://127.0.0.1:5001/revendr-9add8/us-central1/api'
+const API_BASE = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+  ? LOCAL_API
+  : (import.meta.env.VITE_API_URL || 'https://us-central1-revendr-9add8.cloudfunctions.net/api')
+
+async function authFetch(url, options = {}) {
+  const { auth } = await import('../config/firebase')
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+  return fetch(url, {
+    ...options,
+    headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers },
+  })
+}
+
 const PLANS = ['starter', 'growth', 'enterprise']
 
 export default function AdminPanel() {
@@ -34,9 +48,7 @@ export default function AdminPanel() {
   const loadClients = async () => {
     setLoading(true)
     try {
-      const result = await fetch(
-        'https://us-central1-revendr-9add8.cloudfunctions.net/api/admin/clients'
-      ).then(r => r.json())
+      const result = await authFetch(`${API_BASE}/admin/clients`).then(r => r.json())
       if (result.success) setClients(result.data)
     } catch (e) {
       console.error(e)
@@ -47,14 +59,10 @@ export default function AdminPanel() {
 
   const updateClient = async (id, updates) => {
     try {
-      await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/admin/clients/${id}`,
-        {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(updates),
-        }
-      )
+      await authFetch(`${API_BASE}/admin/clients/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates),
+      })
       toast.success(locale === 'es' ? 'Actualizado' : 'Updated')
       loadClients()
       setEditingPlan(null)
@@ -66,10 +74,7 @@ export default function AdminPanel() {
   const deactivateClient = async (id) => {
     if (!(await confirm(locale === 'es' ? '¿Desactivar esta cuenta?' : 'Deactivate this account?', 'Desactivar'))) return
     try {
-      await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/admin/clients/${id}`,
-        { method: 'DELETE' }
-      )
+      await authFetch(`${API_BASE}/admin/clients/${id}`, { method: 'DELETE' })
       toast.success(locale === 'es' ? 'Desactivado' : 'Deactivated')
       loadClients()
     } catch (e) {
