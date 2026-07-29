@@ -80,7 +80,7 @@ const featuresEn = [
 
 const niches = [
   { nameEs: 'Inmobiliarias', nameEn: 'Real Estate', apps: 'Inmoxil', color: 'from-amber-500 to-amber-700' },
-  { nameEs: 'Estética / Peluquería', nameEn: 'Beauty / Salon', apps: 'TurnosPro', color: 'from-pink-500 to-pink-700' },
+  { nameEs: 'Estética / Peluquería', nameEn: 'Beauty / Salon', apps: 'AgenPro', color: 'from-pink-500 to-pink-700' },
   { nameEs: 'E-commerce / Retail', nameEn: 'E-commerce / Retail', apps: 'PriceAnchor', color: 'from-blue-500 to-blue-700' },
   { nameEs: 'Privacidad / Datos', nameEn: 'Privacy / Data', apps: 'TraceLess', color: 'from-emerald-500 to-emerald-700' },
   { nameEs: 'Resellers / Revendedores', nameEn: 'Resellers', apps: 'Revendr', color: 'from-violet-500 to-violet-700' },
