@@ -82,7 +82,7 @@ const TREE = {
     ],
   },
   planes: {
-    text: 'Tenemos **3 planes**:\n\n• **Starter** ($29/mes) - 100 leads, 50 props., 900 WhatsApp\n• **Growth** ($79/mes) - 1.000 leads, 500 props., 3.000 WhatsApp\n• **Enterprise** ($199/mes) - Ilimitado + white-label\n\n🔄 Pagando anual tenés **20% de descuento**.',
+    text: 'Tenemos **3 planes**:\n\n• **Starter** ($15/mes) - 100 leads, 50 props., 900 WhatsApp\n• **Growth** ($39/mes) - 1.000 leads, 500 props., 3.000 WhatsApp\n• **Enterprise** ($99/mes) - Ilimitado + white-label\n\n🔄 Pagando anual tenés **20% de descuento**.',
     options: [
       { label: 'Ver precios →', type: 'link', path: '/pricing' },
       { label: '← Volver', next: 'faq' },

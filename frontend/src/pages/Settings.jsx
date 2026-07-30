@@ -923,8 +923,8 @@ export default function Settings() {
                 />
                 <p className="text-xs text-dark-500">
                   {locale === 'es'
-                    ? 'Plan Starter $29 USD/mes, Growth $79 USD/mes. Se activa cuando Revendr salga al mercado.'
-                    : 'Starter plan $29/mo, Growth $79/mo. Activates when Revendr launches.'}
+                    ? 'Plan Starter $15 USD/mes, Growth $39 USD/mes. Se activa cuando Revendr salga al mercado.'
+                    : 'Starter plan $15/mo, Growth $39/mo. Activates when Revendr launches.'}
                 </p>
               </div>
 
