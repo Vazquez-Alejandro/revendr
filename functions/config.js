@@ -219,7 +219,7 @@ async function incrementEmailUsage(userId, amount = 1) {
   await userRef.set(updateData, { merge: true })
 }
 
-const RESEND_FROM = 'onboarding@resend.dev'
+const RESEND_FROM = 'Revendr <onboarding@revendr.app>'
 
 module.exports = {
   functions, admin, db, axios,

@@ -26,9 +26,9 @@ const PLAN_NAMES = {
 }
 
 const PLAN_PRICES = {
-  starter: 29,
-  growth: 79,
-  enterprise: 199,
+  starter: 15,
+  growth: 39,
+  enterprise: 99,
 }
 
 function getHeaders() {

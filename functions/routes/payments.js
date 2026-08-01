@@ -96,6 +96,9 @@ app.post('/subscription/change', async (req, res) => {
   try {
     const { userId, newPlan, billing } = req.body
     if (!userId || !newPlan) return res.status(400).json({ success: false, error: { message: 'userId and newPlan required' } })
+    if (req.user?.uid !== userId && req.user?.email !== ADMIN_EMAIL) {
+      return res.status(403).json({ success: false, error: { message: 'No autorizado' } })
+    }
 
     await db.collection('usuarios').doc(userId).set({
       plan: newPlan,
@@ -106,7 +109,7 @@ app.post('/subscription/change', async (req, res) => {
 
     const userDoc = await db.collection('usuarios').doc(userId).get()
     if (userDoc.exists && userDoc.data().email && emailTransporter) {
-      const names = { starter: 'Starter ($29)', growth: 'Growth ($79)', enterprise: 'Enterprise ($199)' }
+      const names = { starter: 'Starter ($15)', growth: 'Growth ($39)', enterprise: 'Enterprise ($99)' }
       await sendSimpleEmail(userDoc.data().email, `Plan cambiado a ${names[newPlan] || newPlan}`, `<p>Tu plan ha sido cambiado a <strong>${names[newPlan] || newPlan}</strong>.</p>`)
     }
 
@@ -120,6 +123,9 @@ app.post('/subscription/cancel', async (req, res) => {
   try {
     const { userId } = req.body
     if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    if (req.user?.uid !== userId && req.user?.email !== ADMIN_EMAIL) {
+      return res.status(403).json({ success: false, error: { message: 'No autorizado' } })
+    }
 
     const userDoc = await db.collection('usuarios').doc(userId).get()
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
@@ -144,6 +150,9 @@ app.post('/subscription/reactivate', async (req, res) => {
   try {
     const { userId } = req.body
     if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    if (req.user?.uid !== userId && req.user?.email !== ADMIN_EMAIL) {
+      return res.status(403).json({ success: false, error: { message: 'No autorizado' } })
+    }
 
     await db.collection('usuarios').doc(userId).set({
       cancel_at_period_end: false,
@@ -165,14 +174,14 @@ app.get('/plans', async (req, res) => {
           {
             id: 'starter',
             name: 'Starter',
-            price: 29,
+            price: 15,
             features: ['100 leads/mes', '50 propuestas', '900 mensajes WhatsApp', '1 rubro'],
             variantId: lemonsqueezy.VARIANT_IDS.starter,
           },
           {
             id: 'growth',
             name: 'Growth',
-            price: 79,
+            price: 39,
             popular: true,
             features: ['1,000 leads/mes', '500 propuestas', '3,000 mensajes WhatsApp', '3 rubros', 'A/B Testing'],
             variantId: lemonsqueezy.VARIANT_IDS.growth,
@@ -180,7 +189,7 @@ app.get('/plans', async (req, res) => {
           {
             id: 'enterprise',
             name: 'Enterprise',
-            price: 199,
+            price: 99,
             features: ['Leads ilimitados', 'Propuestas ilimitadas', 'Mensajes ilimitados', 'Todos los rubros', 'White-label'],
             variantId: lemonsqueezy.VARIANT_IDS.enterprise,
           },

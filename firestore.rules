@@ -31,13 +31,13 @@ service cloud.firestore {
     }
 
     match /productos/{productId} {
-      allow read: if true
+      allow read: if isAuth()
       allow create: if isAuth()
       allow update, delete: if isAuth() && sameUser(resource)
     }
 
     match /propuestas/{propuestaId} {
-      allow read: if true
+      allow read: if isAuth() && sameUser(resource)
       allow create, update: if isAuth()
       allow delete: if isAuth() && sameUser(resource)
     }
@@ -74,12 +74,12 @@ service cloud.firestore {
 
     match /support_tickets/{ticketId} {
       allow read, update: if isAuth() && sameUser(resource)
-      allow create: if true
+      allow create: if isAuth()
     }
 
     match /chat_messages/{docId} {
       allow read: if isAuth() && sameUser(resource)
-      allow create: if true
+      allow create: if isAuth()
     }
 
     match /config_demos/{nicheId} {
@@ -89,12 +89,12 @@ service cloud.firestore {
 
     match /landing_views/{viewId} {
       allow read: if isAuth()
-      allow create: if true
+      allow create: if isAuth()
     }
 
     match /landing_engagement/{engagementId} {
       allow read: if isAuth()
-      allow create: if true
+      allow create: if isAuth()
     }
 
     match /notificaciones/{notifId} {
@@ -124,7 +124,7 @@ service cloud.firestore {
 
     match /whatsapp_messages/{msgId} {
       allow read: if isAuth() && sameUser(resource)
-      allow create: if true
+      allow create: if isAuth()
     }
 
     match /scheduled_messages/{msgId} {
