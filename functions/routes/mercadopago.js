@@ -1,5 +1,6 @@
 const { admin, db, FIREBASE_APP_URL } = require('../config')
 const { createPreference, getPayment, handleWebhook, PLAN_PRICES } = require('../services/mercadopago')
+const crypto = require('crypto')
 
 module.exports = function(app) {
 
@@ -38,6 +39,34 @@ module.exports = function(app) {
 
   app.post('/mercadopago/webhook', async (req, res) => {
     try {
+      // Verify webhook signature if secret is configured
+      const webhookSecret = process.env.MP_WEBHOOK_SECRET
+      if (webhookSecret) {
+        const xSignature = req.headers['x-signature'] || ''
+        if (!xSignature) {
+          console.warn('MP webhook: missing X-Signature header')
+          return res.status(401).json({ success: false, error: 'Missing signature' })
+        }
+        const parts = {}
+        for (const pair of xSignature.split(',')) {
+          const [k, v] = pair.split('=', 1)
+          if (k && v) parts[k.trim()] = v.trim()
+        }
+        const ts = parts.ts || ''
+        const v1 = parts.v1 || ''
+        if (!ts || !v1) {
+          return res.status(401).json({ success: false, error: 'Invalid signature format' })
+        }
+        const dataId = req.query['data.id'] || req.body?.data?.id || ''
+        const requestId = req.query['data.request_id'] || req.body?.data?.request_id || ''
+        const verificationStr = `id:${dataId};request-id:${requestId};ts:${ts};`
+        const expected = crypto.createHmac('sha256', webhookSecret).update(verificationStr).digest('hex')
+        if (!crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(v1))) {
+          console.warn('MP webhook: invalid signature')
+          return res.status(401).json({ success: false, error: 'Invalid signature' })
+        }
+      }
+
       await handleWebhook(req.body)
       res.status(200).json({ success: true })
     } catch (error) {
