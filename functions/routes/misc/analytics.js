@@ -70,6 +70,7 @@ app.get('/analytics/trends', async (req, res) => {
 app.get('/client/dashboard/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (userId !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const [userDoc, campaignsSnap, leadsSnap] = await Promise.all([db.collection('usuarios').doc(userId).get(), db.collection('campanias').where('user_id', '==', userId).get(), db.collection('leads').where('user_id', '==', userId).get()])
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
     const userData = userDoc.data(); const plan = userData.plan || 'starter'; const limits = PLAN_LIMITS[plan] || PLAN_LIMITS.starter; const usage = userData.usage || { leads: 0, propuestas: 0, messages: 0 }

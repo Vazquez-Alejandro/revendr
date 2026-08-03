@@ -39,6 +39,7 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const propuestaId = `propuesta-${lead.rubro}-${req.params.leadId}`
     const propuestaData = {
       lead_id: req.params.leadId, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro,
@@ -69,6 +70,7 @@ app.post('/leads/:leadId/generate-message', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     let product = null
     if (req.body.productId) { const prodDoc = await db.collection('productos').doc(req.body.productId).get(); if (prodDoc.exists) product = prodDoc.data() }
     const message = generatePersonalizedMessage(lead, product)
@@ -85,6 +87,7 @@ app.post('/leads/:leadId/send-email', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     if (!lead.email) return res.status(400).json({ success: false, error: { message: 'Lead has no email' } })
     let product = null
     if (req.body.productId) { const prodDoc = await db.collection('productos').doc(req.body.productId).get(); if (prodDoc.exists) product = prodDoc.data() }
@@ -108,6 +111,7 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const whatsappConfig = await getWhatsAppConfig(req.user.uid)
     if (!whatsappConfig.configured) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured. Go to Settings > API Keys to connect your WhatsApp.' } })
     const limitCheck = await checkPlanLimit(req.user.uid, 'messages')
@@ -138,7 +142,7 @@ app.post('/leads/:leadId/send-whatsapp', async (req, res) => {
 app.post('/leads/score-all', async (req, res) => {
   try {
     const { campaignId, minScore } = req.body
-    let query = db.collection('leads')
+    let query = db.collection('leads').where('user_id', '==', req.user.uid)
     if (campaignId) query = query.where('id_campania', '==', campaignId)
     const snapshot = await query.get()
     let scored = 0, qualified = 0, disqualified = 0
@@ -159,7 +163,7 @@ app.post('/leads/score-all', async (req, res) => {
 app.get('/leads/score-stats', async (req, res) => {
   try {
     const { campaignId } = req.query
-    let query = db.collection('leads')
+    let query = db.collection('leads').where('user_id', '==', req.user.uid)
     if (campaignId) query = query.where('id_campania', '==', campaignId)
     const snapshot = await query.get()
     const stats = { total: snapshot.size, excellent: 0, good: 0, regular: 0, low: 0, veryLow: 0, avgScore: 0, qualified: 0 }

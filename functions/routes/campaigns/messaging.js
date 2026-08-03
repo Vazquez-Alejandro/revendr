@@ -10,6 +10,7 @@ app.post('/campaigns/:campaignId/generate-messages', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     let product = null
     if (campaign.producto_id) { const prodDoc = await db.collection('productos').doc(campaign.producto_id).get(); if (prodDoc.exists) product = prodDoc.data() }
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'scraped').get()
@@ -32,6 +33,7 @@ app.post('/campaigns/:campaignId/process-followups', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     if (!campaign.followups || campaign.followups.length === 0) return res.json({ success: true, data: { sent: 0, message: 'No followups configured' } })
     const whatsappConfig = await getWhatsAppConfig(req.user.uid)
     if (!whatsappConfig.configured) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured for this user' } })
@@ -66,6 +68,7 @@ app.post('/campaigns/:campaignId/process-sequence', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     let product = null
     if (campaign.producto_id) { const prodDoc = await db.collection('productos').doc(campaign.producto_id).get(); if (prodDoc.exists) product = prodDoc.data() }
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).get()
@@ -108,6 +111,9 @@ app.post('/campaigns/:campaignId/ab-test', async (req, res) => {
     const campaignId = req.params.campaignId
     const { messageA, messageB } = req.body
     if (!messageA || !messageB) return res.status(400).json({ success: false, error: { message: 'Both message variants required' } })
+    const campaignDoc = await db.collection('campanias').doc(campaignId).get()
+    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    if (campaignDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('qualifies_for_messaging', '==', true).get()
     if (leadsSnapshot.size < 10) return res.status(400).json({ success: false, error: { message: 'Need at least 10 qualified leads for A/B test' } })
     const leads = leadsSnapshot.docs
@@ -130,6 +136,9 @@ app.post('/campaigns/:campaignId/ab-test', async (req, res) => {
 
 app.get('/campaigns/:campaignId/ab-results', async (req, res) => {
   try {
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    if (campaignDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const testsSnapshot = await db.collection('ab_tests').where('campaign_id', '==', req.params.campaignId).orderBy('fecha_creacion', 'desc').limit(5).get()
     const tests = []
     for (const testDoc of testsSnapshot.docs) {
@@ -158,6 +167,7 @@ app.post('/messages/track', async (req, res) => {
       const leadDoc = await leadRef.get()
       if (leadDoc.exists) {
         const lead = leadDoc.data()
+        if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
         const updates = { fecha_actualizacion: new Date() }
         if (eventType === 'delivered') updates.mensajes_entregados = (lead.mensajes_entregados || 0) + 1
         if (eventType === 'read') updates.mensajes_leidos = (lead.mensajes_leidos || 0) + 1
@@ -180,6 +190,7 @@ app.post('/campaigns/:campaignId/send-demo-emails', async (req, res) => {
     const campaignId = req.params.campaignId
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    if (campaignDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const leadsSnapshot = await db.collection('leads')
       .where('id_campania', '==', campaignId)
       .where('estado_proceso', '==', 'propuesta_generada')
@@ -255,6 +266,7 @@ app.post('/campaigns/:campaignId/send-messages', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const whatsappConfig = await getWhatsAppConfig(req.user.uid)
     if (!whatsappConfig.configured) return res.status(500).json({ success: false, error: { message: 'WhatsApp not configured for this user. Go to Settings > API Keys to connect your WhatsApp.' } })
     const limitCheck = await checkPlanLimit(req.user.uid, 'messages')

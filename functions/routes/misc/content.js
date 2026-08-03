@@ -23,7 +23,7 @@ app.post('/content/generate', async (req, res) => {
     const platformInfo = SOCIAL_PLATFORMS[platform] || SOCIAL_PLATFORMS.twitter
     if (content.length > platformInfo.maxChars) content = content.substring(0, platformInfo.maxChars - 3) + '...'
     const variations = templates.map(t => { let v = t; Object.entries(params).forEach(([k, val]) => { v = v.replace(new RegExp(`\\{${k}\\}`, 'g'), val) }); if (v.length > platformInfo.maxChars) v = v.substring(0, platformInfo.maxChars - 3) + '...'; return { text: v, charCount: v.length } })
-    await db.collection('generated_content').add({ product_id: productId || null, type, platform, content, variations, params, timestamp: new Date() })
+    await db.collection('generated_content').add({ product_id: productId || null, type, platform, content, variations, params, user_id: req.user.uid, timestamp: new Date() })
     res.json({ success: true, data: { content, variations, platform: platformInfo.name, charCount: content.length } })
   } catch (error) { console.error('Error generating content:', error); res.status(500).json({ success: false, error: { message: error.message } }) }
 })
@@ -31,7 +31,7 @@ app.post('/content/generate', async (req, res) => {
 app.get('/content/history', async (req, res) => {
   try {
     const { productId } = req.query
-    let query = db.collection('generated_content').orderBy('timestamp', 'desc')
+    let query = db.collection('generated_content').where('user_id', '==', req.user.uid).orderBy('timestamp', 'desc')
     if (productId) query = query.where('product_id', '==', productId)
     const snapshot = await query.limit(50).get()
     res.json({ success: true, data: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) })

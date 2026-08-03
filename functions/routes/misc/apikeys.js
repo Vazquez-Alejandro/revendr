@@ -15,6 +15,9 @@ app.post('/api-keys/generate', async (req, res) => {
 app.post('/api-keys/revoke', async (req, res) => {
   try {
     const { keyId } = req.body
+    const keyDoc = await db.collection('api_keys').doc(keyId).get()
+    if (!keyDoc.exists) return res.status(404).json({ success: false, error: { message: 'API key not found' } })
+    if (keyDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     await db.collection('api_keys').doc(keyId).update({ active: false })
     res.json({ success: true })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
@@ -32,13 +35,20 @@ app.post('/api-keys/client/generate', async (req, res) => {
 
 app.get('/api-keys/client/:userId', async (req, res) => {
   try {
+    if (req.params.userId !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const snapshot = await db.collection('api_keys').where('user_id', '==', req.params.userId).get()
     res.json({ success: true, data: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), api_key_preview: doc.id.slice(0, 12) + '...' })) })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
 app.delete('/api-keys/client/:keyId', async (req, res) => {
-  try { await db.collection('api_keys').doc(req.params.keyId).update({ active: false }); res.json({ success: true }) }
+  try {
+    const keyDoc = await db.collection('api_keys').doc(req.params.keyId).get()
+    if (!keyDoc.exists) return res.status(404).json({ success: false, error: { message: 'API key not found' } })
+    if (keyDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+    await db.collection('api_keys').doc(req.params.keyId).update({ active: false })
+    res.json({ success: true })
+  }
   catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 

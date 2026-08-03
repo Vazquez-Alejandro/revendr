@@ -39,6 +39,9 @@ app.post('/landing/view', async (req, res) => {
 
 app.get('/landing/stats/:productId', async (req, res) => {
   try {
+    const productDoc = await db.collection('productos').doc(req.params.productId).get()
+    if (!productDoc.exists) return res.status(404).json({ success: false, error: { message: 'Product not found' } })
+    if (productDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const viewsSnapshot = await db.collection('landing_views').where('product_id', '==', req.params.productId).get()
     res.json({ success: true, data: { views: viewsSnapshot.size } })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }

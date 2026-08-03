@@ -57,6 +57,7 @@ app.post('/webhook/lemonsqueezy', async (req, res) => {
 app.get('/subscription/:userId', async (req, res) => {
   try {
     const { userId } = req.params
+    if (userId !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const userDoc = await db.collection('usuarios').doc(userId).get()
     if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
 

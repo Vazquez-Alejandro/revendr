@@ -8,6 +8,7 @@ app.post('/campaigns/:campaignId/scrape-google', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const { ciudad, rubro_objetivo, provincia } = campaign
     const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''} ${provincia || ''}`.trim()
     if (!GOOGLE_PLACES_API_KEY) return res.status(500).json({ success: false, error: { message: 'Google Places API key not configured. Set GOOGLE_PLACES_API_KEY in .env' } })
@@ -58,6 +59,7 @@ app.post('/campaigns/:campaignId/scrape', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const { ciudad, rubro_objetivo, provincia } = campaign
     const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''} ${provincia || ''}`.trim()
     if (!APIFY_TOKEN) return res.status(500).json({ success: false, error: { message: 'Apify token not configured' } })
@@ -79,6 +81,7 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
     const campaignDoc = await db.collection('campanias').doc(campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
+    if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     let productPrice = null
     let productGa4Id = null
     let productFbPixelId = null
@@ -125,7 +128,7 @@ app.post('/campaigns/scheduled-scrape', async (req, res) => {
   try {
     const { schedule } = req.body
     if (!schedule || !['daily', 'weekly', 'monthly'].includes(schedule)) return res.status(400).json({ success: false, error: { message: 'schedule must be daily, weekly, or monthly' } })
-    const activeCampaigns = await db.collection('campanias').where('estado', '==', 'activa').where('auto_scrape', '==', true).get()
+    const activeCampaigns = await db.collection('campanias').where('user_id', '==', req.user.uid).where('estado', '==', 'activa').where('auto_scrape', '==', true).get()
     let queued = 0
     for (const doc of activeCampaigns.docs) {
       const campaign = doc.data()

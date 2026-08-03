@@ -22,6 +22,7 @@ app.get('/owner/dashboard/:productId', async (req, res) => {
     const productDoc = await db.collection('productos').doc(req.params.productId).get()
     if (!productDoc.exists) return res.status(404).json({ success: false, error: { message: 'Product not found' } })
     const product = productDoc.data()
+    if (product.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const campaignsSnapshot = await db.collection('campanias').where('producto_id', '==', req.params.productId).get()
     let totalLeads = 0, qualifiedLeads = 0, messagesSent = 0, totalRevenue = 0, activeCampaigns = 0
     const campaignIds = []

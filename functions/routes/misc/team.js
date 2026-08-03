@@ -19,6 +19,7 @@ app.post('/team/invite', async (req, res) => {
 
 app.get('/team/members/:ownerUserId', async (req, res) => {
   try {
+    if (req.params.ownerUserId !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const [membersSnap, invitesSnap] = await Promise.all([
       db.collection('team_members').where('owner_user_id', '==', req.params.ownerUserId).get(),
       db.collection('team_invites').where('owner_user_id', '==', req.params.ownerUserId).where('status', '==', 'pending').get(),
@@ -53,12 +54,24 @@ app.post('/team/invite/accept-link', async (req, res) => {
 })
 
 app.delete('/team/members/:memberId', async (req, res) => {
-  try { await db.collection('team_members').doc(req.params.memberId).delete(); res.json({ success: true }) }
+  try {
+    const memberDoc = await db.collection('team_members').doc(req.params.memberId).get()
+    if (!memberDoc.exists) return res.status(404).json({ success: false, error: { message: 'Member not found' } })
+    if (memberDoc.data().owner_user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+    await db.collection('team_members').doc(req.params.memberId).delete()
+    res.json({ success: true })
+  }
   catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
 app.delete('/team/invites/:inviteId', async (req, res) => {
-  try { await db.collection('team_invites').doc(req.params.inviteId).delete(); res.json({ success: true }) }
+  try {
+    const inviteDoc = await db.collection('team_invites').doc(req.params.inviteId).get()
+    if (!inviteDoc.exists) return res.status(404).json({ success: false, error: { message: 'Invite not found' } })
+    if (inviteDoc.data().owner_user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+    await db.collection('team_invites').doc(req.params.inviteId).delete()
+    res.json({ success: true })
+  }
   catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
