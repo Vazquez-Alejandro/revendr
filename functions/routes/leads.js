@@ -191,6 +191,7 @@ app.post('/leads/:leadId/detect-language', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const idioma = detectarIdioma(lead)
     await db.collection('leads').doc(req.params.leadId).update({ idioma_detectado: idioma, fecha_actualizacion: new Date() })
     res.json({ success: true, data: { idioma } })
@@ -205,6 +206,7 @@ app.get('/leads/:leadId/smart-time', async (req, res) => {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const ciudad = lead.ciudad || 'Buenos Aires'
     res.json({ success: true, data: { ciudad, zona_horaria: getZonaHoraria(ciudad), hora_local: getHoraLocal(ciudad), es_horario_optimal: esHorarioOptimal(ciudad).optimal, razon: esHorarioOptimal(ciudad).reason, mejor_momento_para_enviar: getOptimalSendTime(ciudad).toISOString() } })
   } catch (error) {

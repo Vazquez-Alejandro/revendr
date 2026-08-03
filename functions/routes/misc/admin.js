@@ -132,7 +132,7 @@ app.post('/whitelabel/config', requireAdmin, async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.post('/test/send-demo-email', async (req, res) => {
+app.post('/test/send-demo-email', requireAdmin, async (req, res) => {
   try {
     const { campaignId, email, chatId } = req.query
     if (!campaignId || (!email && !chatId)) return res.status(400).json({ success: false, error: { message: 'campaignId and email or chatId required' } })

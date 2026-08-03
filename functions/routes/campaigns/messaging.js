@@ -161,13 +161,13 @@ app.get('/campaigns/:campaignId/ab-results', async (req, res) => {
 app.post('/messages/track', async (req, res) => {
   try {
     const { leadId, campaignId, channel, eventType, data } = req.body
-    await db.collection('message_events').add({ lead_id: leadId, campaign_id: campaignId, channel, event_type: eventType, data: data || {}, timestamp: new Date() })
     if (leadId) {
       const leadRef = db.collection('leads').doc(leadId)
       const leadDoc = await leadRef.get()
       if (leadDoc.exists) {
         const lead = leadDoc.data()
         if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+        await db.collection('message_events').add({ lead_id: leadId, campaign_id: campaignId, channel, event_type: eventType, data: data || {}, timestamp: new Date() })
         const updates = { fecha_actualizacion: new Date() }
         if (eventType === 'delivered') updates.mensajes_entregados = (lead.mensajes_entregados || 0) + 1
         if (eventType === 'read') updates.mensajes_leidos = (lead.mensajes_leidos || 0) + 1
@@ -179,7 +179,11 @@ app.post('/messages/track', async (req, res) => {
         if (engagementScore >= 5) updates.temperatura = 'hot'
         else if (engagementScore >= 2) updates.temperatura = 'warm'
         await leadRef.update(updates)
+      } else {
+        await db.collection('message_events').add({ lead_id: leadId, campaign_id: campaignId, channel, event_type: eventType, data: data || {}, timestamp: new Date() })
       }
+    } else {
+      await db.collection('message_events').add({ lead_id: leadId, campaign_id: campaignId, channel, event_type: eventType, data: data || {}, timestamp: new Date() })
     }
     res.json({ success: true })
   } catch (error) { res.json({ success: true }) }

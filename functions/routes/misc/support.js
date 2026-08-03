@@ -81,6 +81,7 @@ app.post('/email/send', async (req, res) => {
   try {
     const { to, type, data } = req.body
     if (!to || !type) return res.status(400).json({ success: false, error: { message: 'to and type required' } })
+    if (to !== req.user.email) return res.status(403).json({ success: false, error: { message: 'Can only send emails to your own address' } })
     const result = await sendTransactionalEmail(to, type, data)
     res.json({ success: true, data: result })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }

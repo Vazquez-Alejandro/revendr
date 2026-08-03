@@ -300,6 +300,9 @@ app.get('/whatsapp/conversations/:conversationId/messages', async (req, res) => 
 
 app.post('/whatsapp/conversations/:conversationId/read', async (req, res) => {
   try {
+    const convoDoc = await db.collection('whatsapp_conversations').doc(req.params.conversationId).get()
+    if (!convoDoc.exists) return res.status(404).json({ success: false, error: { message: 'Conversation not found' } })
+    if (convoDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Unauthorized' } })
     await db.collection('whatsapp_conversations').doc(req.params.conversationId).update({ unread_count: 0 })
     res.json({ success: true })
   } catch (error) {

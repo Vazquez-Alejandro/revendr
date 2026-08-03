@@ -4,8 +4,8 @@ module.exports = function(app) {
 
 app.post('/api-keys/generate', async (req, res) => {
   try {
-    const { userId, name } = req.body
-    if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    const { name } = req.body
+    const userId = req.user.uid
     const keyId = `rk_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
     await db.collection('api_keys').doc(keyId).set({ user_id: userId, name: name || 'Default Key', active: true, created_at: new Date(), uses: 0 })
     res.json({ success: true, data: { api_key: keyId } })
@@ -25,8 +25,8 @@ app.post('/api-keys/revoke', async (req, res) => {
 
 app.post('/api-keys/client/generate', async (req, res) => {
   try {
-    const { userId, name } = req.body
-    if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
+    const { name } = req.body
+    const userId = req.user.uid
     const keyId = `rk_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`
     await db.collection('api_keys').doc(keyId).set({ user_id: userId, name: name || 'Default Key', active: true, created_at: new Date(), uses: 0, last_used: null })
     res.json({ success: true, data: { api_key: keyId, name: name || 'Default Key' } })

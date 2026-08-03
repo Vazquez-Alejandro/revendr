@@ -130,6 +130,7 @@ app.post('/campaigns/:campaignId/revenue', async (req, res) => {
     if (!leadId || !amount) return res.status(400).json({ success: false, error: { message: 'leadId and amount required' } })
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    if (campaignDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     await db.collection('revenue').add({ campaign_id: req.params.campaignId, lead_id: leadId, amount: parseFloat(amount), currency: currency || 'USD', notes: notes || '', fecha_creacion: new Date() })
     await db.collection('campanias').doc(req.params.campaignId).update({ total_revenue: admin.firestore.FieldValue.increment(parseFloat(amount)), total_clients: admin.firestore.FieldValue.increment(1) })
     await db.collection('leads').doc(leadId).update({ estado_proceso: 'cliente_activo', revenue_amount: parseFloat(amount), fecha_pago: new Date() })
@@ -141,6 +142,7 @@ app.get('/campaigns/:campaignId/roi', async (req, res) => {
   try {
     const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    if (campaignDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     const campaign = campaignDoc.data()
     const revenueSnapshot = await db.collection('revenue').where('campaign_id', '==', req.params.campaignId).get()
     let totalRevenue = 0, totalClients = 0
@@ -156,6 +158,9 @@ app.post('/campaigns/:campaignId/followups', async (req, res) => {
   try {
     const { followups } = req.body
     if (!followups || !Array.isArray(followups)) return res.status(400).json({ success: false, error: { message: 'followups array required' } })
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    if (campaignDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     await db.collection('campanias').doc(req.params.campaignId).update({ followups, fecha_actualizacion: new Date() })
     res.json({ success: true })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
@@ -164,6 +169,9 @@ app.post('/campaigns/:campaignId/followups', async (req, res) => {
 app.post('/campaigns/:campaignId/set-schedule', async (req, res) => {
   try {
     const { auto_scrape, scrape_schedule } = req.body
+    const campaignDoc = await db.collection('campanias').doc(req.params.campaignId).get()
+    if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
+    if (campaignDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     await db.collection('campanias').doc(req.params.campaignId).update({ auto_scrape: auto_scrape || false, scrape_schedule: scrape_schedule || 'weekly', fecha_actualizacion: new Date() })
     res.json({ success: true })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
