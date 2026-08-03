@@ -54,7 +54,7 @@ const isCampaignExpired = (campaign) => {
   return new Date() > fechaFin
 }
 
-const PUBLIC_PATHS = ['/health', '/check-email', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/propuestas/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification', '/test/send-demo-email', '/whatsapp/webhook', '/mercadopago/webhook', '/mercadopago/success', '/mercadopago/failure', '/mercadopago/pending', '/me']
+const PUBLIC_PATHS = ['/health', '/check-email', '/landing/view', '/landing/engagement', '/landing/stats/', '/support', '/chat/message', '/chat/reply', '/chat/messages', '/propuestas/', '/content/demo-landing', '/status', '/team/invite/accept-link', '/_health', '/email/resend-verification', '/whatsapp/webhook', '/mercadopago/webhook', '/mercadopago/success', '/mercadopago/failure', '/mercadopago/pending', '/me']
 
 const getWhatsAppConfig = async (userId) => {
   const userDoc = await db.collection('usuarios').doc(userId).get()

@@ -1,4 +1,4 @@
-const { db, axios, getWhatsAppConfig, checkPlanLimit } = require('../../config')
+const { db, axios, getWhatsAppConfig, checkPlanLimit, incrementUsage } = require('../../config')
 const whatsappService = require('../../services/whatsapp')
 const warmup = require('../../services/warmup')
 const { logMessage, getMessageHistory, getMessageStats } = require('../../services/message-log')

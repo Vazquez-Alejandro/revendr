@@ -69,7 +69,7 @@ app.post('/admin/migrate-collections', requireAdmin, async (req, res) => {
   }
 })
 
-app.post('/admin/migrate-ownership', async (req, res) => {
+app.post('/admin/migrate-ownership', requireAdmin, async (req, res) => {
   try {
     const uid = req.user?.uid || req.body?.userId
     let migrated = { campaigns: 0, leads: 0, products: 0, crm_events: 0, revenue: 0 }
@@ -82,7 +82,7 @@ app.post('/admin/migrate-ownership', async (req, res) => {
   } catch (error) { console.error('Migration error:', error); res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.get('/usage/:userId', async (req, res) => {
+app.get('/usage/:userId', requireAdmin, async (req, res) => {
   try {
     const { userId } = req.params
     const userDoc = await db.collection('usuarios').doc(userId).get()
@@ -96,7 +96,7 @@ app.get('/usage/:userId', async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.post('/usage/increment', async (req, res) => {
+app.post('/usage/increment', requireAdmin, async (req, res) => {
   try {
     const { userId, type, amount } = req.body
     if (!userId || !type) return res.status(400).json({ success: false, error: { message: 'userId and type required' } })
@@ -112,7 +112,7 @@ app.post('/usage/increment', async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.get('/whitelabel/config', async (req, res) => {
+app.get('/whitelabel/config', requireAdmin, async (req, res) => {
   try {
     const userId = req.query.userId
     if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
@@ -123,7 +123,7 @@ app.get('/whitelabel/config', async (req, res) => {
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
 })
 
-app.post('/whitelabel/config', async (req, res) => {
+app.post('/whitelabel/config', requireAdmin, async (req, res) => {
   try {
     const { userId, custom_logo, custom_colors, custom_domain, custom_app_name } = req.body
     if (!userId) return res.status(400).json({ success: false, error: { message: 'userId required' } })
