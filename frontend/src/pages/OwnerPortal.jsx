@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { auth } from '../config/firebase'
 import {
   BarChart3,
   TrendingUp,
@@ -25,8 +26,10 @@ export default function OwnerPortal() {
   const loadStats = async () => {
     setLoading(true)
     try {
+      const token = await auth.currentUser.getIdToken()
       const result = await fetch(
-        'https://us-central1-revendr-9add8.cloudfunctions.net/api/owner/dashboard/revendr'
+        'https://us-central1-revendr-9add8.cloudfunctions.net/api/owner/dashboard/revendr',
+        { headers: { Authorization: `Bearer ${token}` } }
       ).then(r => r.json())
       if (result.success) {
         setStats(result.data)

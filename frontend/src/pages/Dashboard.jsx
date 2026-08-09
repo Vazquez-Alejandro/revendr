@@ -100,8 +100,10 @@ export default function Dashboard() {
 
       // Load product stats
       try {
+        const token = await auth.currentUser?.getIdToken()
         const productStatsRes = await fetch(
-          'https://us-central1-revendr-9add8.cloudfunctions.net/api/stats/products'
+          'https://us-central1-revendr-9add8.cloudfunctions.net/api/stats/products',
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
         ).then(r => r.json())
         if (productStatsRes.success) {
           setProductStats(productStatsRes.data)

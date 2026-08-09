@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useI18n } from '../contexts/I18nContext'
+import { auth } from '../config/firebase'
 import {
   Sparkles,
   Twitter,
@@ -52,7 +53,7 @@ export default function ContentGenerator() {
         'https://us-central1-revendr-9add8.cloudfunctions.net/api/content/generate',
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(auth.currentUser ? { 'Authorization': `Bearer ${await auth.currentUser.getIdToken()}` } : {}) },
           body: JSON.stringify({
             type: contentType,
             customParams: {

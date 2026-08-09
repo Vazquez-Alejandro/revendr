@@ -49,7 +49,7 @@ module.exports = function(app) {
         }
         const parts = {}
         for (const pair of xSignature.split(',')) {
-          const [k, v] = pair.split('=', 1)
+          const [k, v] = pair.split('=')
           if (k && v) parts[k.trim()] = v.trim()
         }
         const ts = parts.ts || ''

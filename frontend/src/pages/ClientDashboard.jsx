@@ -38,8 +38,10 @@ export default function ClientDashboard() {
     if (!user) return
     setLoading(true)
     try {
+      const token = await user.getIdToken()
       const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/client/dashboard/${user.uid}`
+        `https://us-central1-revendr-9add8.cloudfunctions.net/api/client/dashboard/${user.uid}`,
+        { headers: { Authorization: `Bearer ${token}` } }
       ).then(r => r.json())
       if (result.success) setData(result.data)
     } catch (e) {

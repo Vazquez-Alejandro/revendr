@@ -8,9 +8,9 @@ import { Loader2, AlertCircle, Check, Mail, Zap, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const PLANS = {
-  starter: { name: 'Starter', price: 29, leads: 100, rubros: 1, demos: 50, msgs: 900 },
-  growth: { name: 'Growth', price: 79, leads: 1000, rubros: 3, demos: 500, msgs: 3000 },
-  enterprise: { name: 'Enterprise', price: 199, leads: -1, rubros: -1, demos: -1, msgs: -1 },
+  starter: { name: 'Starter', price: 29, leads: 100, rubros: 1, propuestas: 50, messages: 900, emails: 500 },
+  growth: { name: 'Growth', price: 79, leads: 1000, rubros: 3, propuestas: 500, messages: 3000, emails: 2000 },
+  enterprise: { name: 'Enterprise', price: 199, leads: -1, rubros: -1, propuestas: -1, messages: -1, emails: -1 },
 }
 
 export default function Register() {

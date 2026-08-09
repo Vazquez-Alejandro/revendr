@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
+import { auth } from '../config/firebase'
 import { useConfirm } from '../hooks/useConfirm'
 import {
   Users,
@@ -11,6 +12,13 @@ import {
   Shield,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+
+const API_BASE = 'https://us-central1-revendr-9add8.cloudfunctions.net/api'
+
+const authHeaders = async (json = true) => {
+  const token = auth.currentUser ? await auth.currentUser.getIdToken() : null
+  return { ...(json ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}) }
+}
 
 export default function TeamManagement() {
   const { user } = useAuth()
@@ -30,7 +38,8 @@ export default function TeamManagement() {
     setLoading(true)
     try {
       const result = await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/team/members/${user.uid}`
+        `${API_BASE}/team/members/${user.uid}`,
+        { headers: await authHeaders() }
       ).then(r => r.json())
       if (result.success) {
         setMembers(result.data.members || [])
@@ -49,10 +58,10 @@ export default function TeamManagement() {
     setInviting(true)
     try {
       const result = await fetch(
-        'https://us-central1-revendr-9add8.cloudfunctions.net/api/team/invite',
+        `${API_BASE}/team/invite`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await authHeaders(),
           body: JSON.stringify({ ownerUserId: user.uid, email: inviteEmail, role: inviteRole }),
         }
       ).then(r => r.json())
@@ -75,10 +84,10 @@ export default function TeamManagement() {
   const acceptInvite = async (invite) => {
     try {
       const result = await fetch(
-        'https://us-central1-revendr-9add8.cloudfunctions.net/api/team/invite/accept',
+        `${API_BASE}/team/invite/accept`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: await authHeaders(),
           body: JSON.stringify({
             inviteId: invite.id,
             ownerUserId: user.uid,
@@ -100,8 +109,8 @@ export default function TeamManagement() {
     if (!(await confirm(locale === 'es' ? '¿Eliminar este miembro del equipo?' : 'Remove this team member?'))) return
     try {
       await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/team/members/${memberId}`,
-        { method: 'DELETE' }
+        `${API_BASE}/team/members/${memberId}`,
+        { method: 'DELETE', headers: await authHeaders() }
       )
       toast.success(locale === 'es' ? 'Miembro eliminado' : 'Member removed')
       loadMembers()
@@ -114,8 +123,8 @@ export default function TeamManagement() {
     if (!(await confirm(locale === 'es' ? '¿Cancelar esta invitación?' : 'Cancel this invite?'))) return
     try {
       await fetch(
-        `https://us-central1-revendr-9add8.cloudfunctions.net/api/team/invites/${inviteId}`,
-        { method: 'DELETE' }
+        `${API_BASE}/team/invites/${inviteId}`,
+        { method: 'DELETE', headers: await authHeaders() }
       )
       toast.success(locale === 'es' ? 'Invitación cancelada' : 'Invite cancelled')
       loadMembers()

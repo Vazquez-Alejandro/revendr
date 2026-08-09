@@ -21,9 +21,12 @@ app.post('/whatsapp/webhook', async (req, res) => {
   try {
     const signature = req.headers['x-hub-signature-256'] || ''
     const rawBody = req.rawBody || JSON.stringify(req.body)
-    if (signature) {
+    const appSecret = process.env.WHATSAPP_APP_SECRET
+    if (!appSecret) {
+      console.warn('WHATSAPP_APP_SECRET no configurado; omitiendo validación de firma del webhook')
+    } else if (signature) {
       const crypto = require('crypto')
-      const expected = crypto.createHmac('sha256', process.env.WHATSAPP_APP_SECRET || '').update(rawBody).digest('hex')
+      const expected = crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex')
       const expectedSig = `sha256=${expected}`
       if (signature !== expectedSig) {
         console.error('Invalid webhook signature')

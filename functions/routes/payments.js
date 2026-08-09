@@ -175,14 +175,14 @@ app.get('/plans', async (req, res) => {
           {
             id: 'starter',
             name: 'Starter',
-            price: 15,
+            price: 29,
             features: ['100 leads/mes', '50 propuestas', '900 mensajes WhatsApp', '1 rubro'],
             variantId: lemonsqueezy.VARIANT_IDS.starter,
           },
           {
             id: 'growth',
             name: 'Growth',
-            price: 39,
+            price: 79,
             popular: true,
             features: ['1,000 leads/mes', '500 propuestas', '3,000 mensajes WhatsApp', '3 rubros', 'A/B Testing'],
             variantId: lemonsqueezy.VARIANT_IDS.growth,
@@ -190,7 +190,7 @@ app.get('/plans', async (req, res) => {
           {
             id: 'enterprise',
             name: 'Enterprise',
-            price: 99,
+            price: 199,
             features: ['Leads ilimitados', 'Propuestas ilimitadas', 'Mensajes ilimitados', 'Todos los rubros', 'White-label'],
             variantId: lemonsqueezy.VARIANT_IDS.enterprise,
           },

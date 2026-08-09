@@ -105,10 +105,22 @@ function getPlanLimits(plan) {
   return limits[plan] || limits.starter
 }
 
-const PLAN_PRICES = {
-  starter: { monthly: 29900, annual: 299000 },
-  growth: { monthly: 79900, annual: 799000 },
-  enterprise: { monthly: 199900, annual: 1999000 },
+const PLAN_PRICES_USD = {
+  starter: 29,
+  growth: 79,
+  enterprise: 199,
 }
 
-module.exports = { createPreference, getPayment, handleWebhook, getClient, PLAN_PRICES }
+const USD_TO_ARS = 1000
+
+function toARS(usd) {
+  return Math.round(usd * USD_TO_ARS)
+}
+
+const PLAN_PRICES = {
+  starter: { monthly: toARS(PLAN_PRICES_USD.starter), annual: toARS(PLAN_PRICES_USD.starter * 12 * 0.8) },
+  growth: { monthly: toARS(PLAN_PRICES_USD.growth), annual: toARS(PLAN_PRICES_USD.growth * 12 * 0.8) },
+  enterprise: { monthly: toARS(PLAN_PRICES_USD.enterprise), annual: toARS(PLAN_PRICES_USD.enterprise * 12 * 0.8) },
+}
+
+module.exports = { createPreference, getPayment, handleWebhook, getClient, PLAN_PRICES, PLAN_PRICES_USD }

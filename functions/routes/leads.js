@@ -34,6 +34,25 @@ app.get('/leads/stats', async (req, res) => {
   }
 })
 
+app.get('/leads/stats/by-rubro', async (req, res) => {
+  try {
+    const snapshot = await db.collection('leads').where('user_id', '==', req.user.uid).get()
+    const byRubro = {}
+    const byStatus = {}
+    const byCiudad = {}
+    snapshot.docs.forEach(doc => {
+      const lead = doc.data()
+      byRubro[lead.rubro || 'general'] = (byRubro[lead.rubro || 'general'] || 0) + 1
+      byStatus[lead.estado_proceso || 'nuevo'] = (byStatus[lead.estado_proceso || 'nuevo'] || 0) + 1
+      byCiudad[lead.ciudad || 'Desconocida'] = (byCiudad[lead.ciudad || 'Desconocida'] || 0) + 1
+    })
+    res.json({ success: true, data: { total: snapshot.size, byRubro, byStatus, byCiudad } })
+  } catch (error) {
+    console.error('Error fetching stats by rubro:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
 app.post('/leads/:leadId/generate-demo', async (req, res) => {
   try {
     const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
@@ -211,6 +230,34 @@ app.get('/leads/:leadId/smart-time', async (req, res) => {
     res.json({ success: true, data: { ciudad, zona_horaria: getZonaHoraria(ciudad), hora_local: getHoraLocal(ciudad), es_horario_optimal: esHorarioOptimal(ciudad).optimal, razon: esHorarioOptimal(ciudad).reason, mejor_momento_para_enviar: getOptimalSendTime(ciudad).toISOString() } })
   } catch (error) {
     console.error('Error getting smart time:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.get('/leads/:leadId', async (req, res) => {
+  try {
+    const leadDoc = await db.collection('leads').doc(req.params.leadId).get()
+    if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+    const lead = leadDoc.data()
+    if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+    res.json({ success: true, data: { id: leadDoc.id, ...lead } })
+  } catch (error) {
+    console.error('Error fetching lead:', error)
+    res.status(500).json({ success: false, error: { message: error.message } })
+  }
+})
+
+app.post('/leads/import-csv', async (req, res) => {
+  try {
+    const { csvText, productId } = req.body
+    if (!csvText) return res.status(400).json({ success: false, error: { message: 'csvText required' } })
+    const { importLeadsFromCSV, parseCSV } = require('../services/csv-import')
+    const leads = parseCSV(csvText)
+    if (leads.length === 0) return res.status(400).json({ success: false, error: { message: 'No valid leads found in CSV' } })
+    const results = await importLeadsFromCSV(req.user.uid, leads, productId)
+    res.json({ success: true, data: results })
+  } catch (error) {
+    console.error('Error importing CSV:', error)
     res.status(500).json({ success: false, error: { message: error.message } })
   }
 })

@@ -95,7 +95,6 @@ class ApiService {
     blacklist: (params) => this.get('/whatsapp/blacklist', params),
     addToBlacklist: (data) => this.post('/whatsapp/blacklist', data),
     removeFromBlacklist: (phone) => this.delete(`/whatsapp/blacklist/${phone}`),
-    reengagement: (params) => this.get('/whatsapp/reengagement', params),
     schedule: (data) => this.post('/whatsapp/schedule', data),
     messages: (params) => this.get('/whatsapp/messages', params),
     messagesStats: (params) => this.get('/whatsapp/messages/stats', params),
@@ -183,8 +182,8 @@ class ApiService {
     return this.post('/stats/products', data)
   }
 
-  async getProducts() {
-    return this.get('/products')
+  async getStatus() {
+    return this.get('/status')
   }
 
   async createCheckoutSession(data) {

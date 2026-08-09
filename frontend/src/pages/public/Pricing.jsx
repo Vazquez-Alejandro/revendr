@@ -6,8 +6,8 @@ const plans = [
   {
     key: 'starter',
     name: 'Starter',
-    price: 15,
-    annualPrice: 144,
+    price: 29,
+    annualPrice: 278.40,
     description: 'Para empezar a revender',
     features: [
       '100 leads/mes',
@@ -22,8 +22,8 @@ const plans = [
   {
     key: 'growth',
     name: 'Growth',
-    price: 39,
-    annualPrice: 374.40,
+    price: 79,
+    annualPrice: 758.40,
     description: 'Para escalar rápido',
     features: [
       '1,000 leads/mes',
@@ -39,8 +39,8 @@ const plans = [
   {
     key: 'enterprise',
     name: 'Enterprise',
-    price: 99,
-    annualPrice: 950.40,
+    price: 199,
+    annualPrice: 1910.40,
     description: 'Para operaciones grandes',
     features: [
       'Leads ilimitados',
