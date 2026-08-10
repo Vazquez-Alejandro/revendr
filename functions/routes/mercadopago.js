@@ -2,6 +2,17 @@ const { admin, db, FIREBASE_APP_URL } = require('../config')
 const { createPreference, createPreApproval, cancelPreApproval, getPayment, getPreApprovalInfo, handleWebhook, PLAN_PRICES } = require('../services/mercadopago')
 const crypto = require('crypto')
 
+async function ensureUser(req) {
+  if (req.user) return req.user
+  const bearer = req.headers.authorization || ''
+  if (!bearer.startsWith('Bearer ')) return null
+  try {
+    return await admin.auth().verifyIdToken(bearer.slice(7))
+  } catch (e) {
+    return null
+  }
+}
+
 module.exports = function(app) {
 
   app.post('/mercadopago/create-preference', async (req, res) => {
@@ -16,7 +27,8 @@ module.exports = function(app) {
         if (!price) return res.status(400).json({ success: false, error: { message: 'Invalid plan or billing' } })
         items = [{ title: `Revendr ${plan} - ${billing === 'annual' ? 'Anual' : 'Mensual'}`, unit_price: price }]
         externalReference = `plan:${userId || req.user?.uid}:${plan}:${billing || 'monthly'}`
-        if (!userId && !req.user) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+        const authed = await ensureUser(req)
+        if (!userId && !authed) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
       } else {
         if (!amount || !title) return res.status(400).json({ success: false, error: { message: 'amount and title required' } })
         items = [{ title, unit_price: parseFloat(amount) }]
@@ -41,10 +53,12 @@ module.exports = function(app) {
     try {
       const { plan, billing, userId, email } = req.body
       if (!plan || !PLAN_PRICES[plan]) return res.status(400).json({ success: false, error: { message: 'Invalid plan' } })
-      if (!userId && !req.user) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
 
-      const uid = userId || req.user.uid
-      const userEmail = email || req.user.email
+      const authed = await ensureUser(req)
+      if (!userId && !authed) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+
+      const uid = userId || authed?.uid || req.user?.uid
+      const userEmail = email || authed?.email || req.user?.email
 
       const externalReference = `plan:${uid}:${plan}:${billing || 'monthly'}`
       const preApproval = await createPreApproval({ planKey: plan, billing: billing || 'monthly', payerEmail: userEmail, externalReference })
@@ -59,9 +73,10 @@ module.exports = function(app) {
   app.post('/mercadopago/cancel-subscription', async (req, res) => {
     try {
       const { userId } = req.body
-      const uid = userId || req.user?.uid
+      const authed = await ensureUser(req) || req.user
+      const uid = userId || authed?.uid
       if (!uid) return res.status(400).json({ success: false, error: { message: 'userId required' } })
-      if (req.user?.uid !== uid && req.user?.email !== process.env.ADMIN_EMAIL) {
+      if (authed?.uid !== uid && authed?.email !== process.env.ADMIN_EMAIL) {
         return res.status(403).json({ success: false, error: { message: 'No autorizado' } })
       }
 
@@ -107,7 +122,8 @@ module.exports = function(app) {
   app.get('/mercadopago/subscription-status/:userId', async (req, res) => {
     try {
       const { userId } = req.params
-      if (req.user?.uid !== userId && req.user?.email !== process.env.ADMIN_EMAIL) {
+      const authed = await ensureUser(req) || req.user
+      if (authed?.uid !== userId && authed?.email !== process.env.ADMIN_EMAIL) {
         return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
       }
 
