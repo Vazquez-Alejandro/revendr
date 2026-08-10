@@ -122,7 +122,7 @@ functions/
 │   ├── misc/
 │   │   ├── whatsapp.js    # WhatsApp endpoints + followup + reengagement
 │   │   ├── crm.js         # CRM CRUD con ownership verification
-│   │   ├── payments.js    # LemonSqueezy + MercadoPago integration
+│   │   ├── mercadopago.js # MercadoPago integration (subscriptions + webhooks)
 │   │   ├── content.js     # AI content generation
 │   │   └── admin.js       # Admin panel endpoints
 │   └── campaigns/
@@ -131,13 +131,13 @@ functions/
     ├── whatsapp.js        # Service abstraction (Baileys/Meta)
     ├── whatsapp-baileys.js # Baileys provider (QR, session)
     ├── whatsapp-meta.js   # Meta Cloud API provider
+    ├── mercadopago.js     # MercadoPago service (preferences, preapprovals, webhooks)
     ├── warmup.js          # Anti-ban warm-up system
     ├── engagement.js      # Lead engagement categorization
     ├── followup.js        # Follow-up automation
     ├── reengagement.js    # Re-engagement automation
     ├── message-log.js     # Message history tracking
-    ├── ai-message.js      # Gemini AI message generation
-    └── lemonsqueezy.js    # Payment processing
+    └── ai-message.js      # Gemini AI message generation
 ```
 
 ### Frontend (React + Vite)
@@ -203,10 +203,11 @@ frontend/src/
 - `POST /crm/leads/:id/activity` - Agregar actividad
 
 ### Payments
-- `POST /create-checkout-session` - Checkout LemonSqueezy
-- `POST /mercadopago/create-preference` - Preferencia MercadoPago
-- `POST /webhook/lemonsqueezy` - Webhook LemonSqueezy
-- `POST /mercadopago/webhook` - Webhook MercadoPago
+- `POST /mercadopago/create-preference` — Preferencia MercadoPago (pago único)
+- `POST /mercadopago/create-subscription` — Crear suscripción (preapproval) MercadoPago
+- `POST /mercadopago/cancel-subscription` — Cancelar suscripción MercadoPago
+- `GET /mercadopago/subscription-status/:userId` — Estado de suscripción
+- `POST /mercadopago/webhook` — Webhook MercadoPago (pagos + suscripciones)
 
 ### Content & Team
 - `POST /content/generate` - Generar contenido IA
@@ -220,17 +221,6 @@ frontend/src/
 ```env
 # Firebase
 FIREBASE_PROJECT_ID=revendr-9add8
-
-# LemonSqueezy
-LEMONSQUEEZY_API_KEY=
-LEMONSQUEEZY_STORE_ID=
-LEMONSQUEEZY_VARIANT_STARTER_MONTHLY=
-LEMONSQUEEZY_VARIANT_STARTER_ANNUAL=
-LEMONSQUEEZY_VARIANT_GROWTH_MONTHLY=
-LEMONSQUEEZY_VARIANT_GROWTH_ANNUAL=
-LEMONSQUEEZY_VARIANT_ENTERPRISE_MONTHLY=
-LEMONSQUEEZY_VARIANT_ENTERPRISE_ANNUAL=
-LEMONSQUEEZY_WEBHOOK_SECRET=
 
 # MercadoPago
 MP_ACCESS_TOKEN=

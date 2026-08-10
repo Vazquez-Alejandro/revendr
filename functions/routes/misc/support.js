@@ -71,7 +71,7 @@ app.post('/landing/engagement', async (req, res) => {
 
 app.get('/status', async (req, res) => {
   try {
-    const checks = { api: { status: 'operational', latency: 0 }, database: { status: 'operational', latency: 0 }, scraping: { status: 'operational', latency: 0 }, whatsapp: { status: WHATSAPP_TOKEN ? 'operational' : 'degraded', latency: 0 }, email: { status: RESEND_API_KEY ? 'operational' : 'degraded', latency: 0 }, lemonsqueezy: { status: 'operational', latency: 0 } }
+    const checks = { api: { status: 'operational', latency: 0 }, database: { status: 'operational', latency: 0 }, scraping: { status: 'operational', latency: 0 }, whatsapp: { status: WHATSAPP_TOKEN ? 'operational' : 'degraded', latency: 0 }, email: { status: RESEND_API_KEY ? 'operational' : 'degraded', latency: 0 }, mercadopago: { status: process.env.MP_ACCESS_TOKEN ? 'operational' : 'degraded', latency: 0 } }
     const dbStart = Date.now(); await db.collection('_health').doc('ping').set({ timestamp: new Date() }); checks.database.latency = Date.now() - dbStart
     res.json({ status: Object.values(checks).every(c => c.status === 'operational') ? 'operational' : 'degraded', updated: new Date().toISOString(), checks })
   } catch (error) { res.json({ status: 'major_outage', updated: new Date().toISOString(), checks: { api: { status: 'major_outage' }, database: { status: 'major_outage' } } }) }

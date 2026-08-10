@@ -100,10 +100,13 @@ async function runTests() {
     assert(typeof messageLog.getMessageStats === 'function', 'getMessageStats should exist')
   })
 
-  // LemonSqueezy tests
-  test('lemonsqueezy.js loads correctly', () => {
-    const lemon = require('../functions/services/lemonsqueezy')
-    assert(typeof lemon.createCheckout === 'function', 'createCheckout should exist')
+  // MercadoPago tests
+  test('mercadopago.js loads correctly', () => {
+    const mp = require('../functions/services/mercadopago')
+    assert(typeof mp.createPreference === 'function', 'createPreference should exist')
+    assert(typeof mp.createPreApproval === 'function', 'createPreApproval should exist')
+    assert(typeof mp.cancelPreApproval === 'function', 'cancelPreApproval should exist')
+    assert(typeof mp.handleWebhook === 'function', 'handleWebhook should exist')
   })
 
   // AI message tests

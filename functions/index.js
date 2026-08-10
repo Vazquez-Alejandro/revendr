@@ -117,7 +117,6 @@ app.get('/me', async (req, res) => {
 
 require('./routes/campaigns')(app)
 require('./routes/leads')(app)
-require('./routes/payments')(app)
 require('./routes/mercadopago')(app)
 require('./routes/misc')(app)
 

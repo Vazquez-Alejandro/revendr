@@ -25,7 +25,7 @@ const stepsEs = [
   {
     step: 4,
     title: 'Enviá y cobrá',
-    description: 'WhatsApp masivo con delays inteligentes. Cobros con LemonSqueezy integrados.',
+    description: 'WhatsApp masivo con delays inteligentes. Cobros con MercadoPago integrados.',
     icon: Shield,
   },
 ]
@@ -52,7 +52,7 @@ const stepsEn = [
   {
     step: 4,
     title: 'Send & collect payments',
-    description: 'WhatsApp at scale with smart delays. LemonSqueezy payments integrated.',
+    description: 'WhatsApp at scale with smart delays. MercadoPago payments integrated.',
     icon: Shield,
   },
 ]

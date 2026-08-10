@@ -30,8 +30,8 @@ const featuresEs = [
   },
   {
     icon: CreditCard,
-    title: 'Cobros con LemonSqueezy',
-    description: 'El cliente paga directo desde la propuesta. Integración con LemonSqueezy para pagos internacionales.',
+    title: 'Cobros con MercadoPago',
+    description: 'El cliente paga directo desde la propuesta. Integración con MercadoPago para pagos en Argentina.',
   },
   {
     icon: BarChart3,
@@ -63,8 +63,8 @@ const featuresEn = [
   },
   {
     icon: CreditCard,
-    title: 'LemonSqueezy',
-    description: 'Clients pay directly from the proposal. Integration with LemonSqueezy for international payments.',
+    title: 'MercadoPago',
+    description: 'Clients pay directly from the proposal. Integration with MercadoPago for payments in Argentina.',
   },
   {
     icon: BarChart3,

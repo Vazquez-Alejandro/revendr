@@ -6,7 +6,6 @@
   },
   "main": "index.js",
   "dependencies": {
-    "@lemonsqueezy/lemonsqueezy.js": "^4.0.0",
     "@whiskeysockets/baileys": "^7.0.0-rc13",
     "axios": "^1.6.2",
     "cors": "^2.8.5",

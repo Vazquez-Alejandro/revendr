@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useI18n } from '../contexts/I18nContext'
 import { api } from '../services/api'
@@ -25,6 +26,7 @@ const PLANS = [
 export default function Subscription() {
   const { user } = useAuth()
   const { locale } = useI18n()
+  const [searchParams] = useSearchParams()
   const [subscription, setSubscription] = useState(null)
   const [loading, setLoading] = useState(true)
   const [changing, setChanging] = useState(false)
@@ -33,13 +35,24 @@ export default function Subscription() {
   const [whatsappStatus, setWhatsappStatus] = useState({ configured: false, status: 'not_configured' })
   const [billing, setBilling] = useState('monthly')
 
-  useEffect(() => { loadSubscription(); loadWhatsAppStatus() }, [])
+  useEffect(() => {
+    const mpStatus = searchParams.get('mp_status')
+    if (mpStatus === 'approved') {
+      toast.success(locale === 'es' ? 'Pago aprobado. ¡Tu plan está activo!' : 'Payment approved. Your plan is now active!')
+    } else if (mpStatus === 'failure') {
+      toast.error(locale === 'es' ? 'El pago no pudo completarse' : 'Payment could not be completed')
+    } else if (mpStatus && mpStatus !== 'success') {
+      toast(locale === 'es' ? 'Pago pendiente. Se acreditará al confirmarse.' : 'Payment pending. It will be applied once confirmed.')
+    }
+    loadSubscription()
+    loadWhatsAppStatus()
+  }, [])
 
   const loadSubscription = async () => {
     if (!user) return
     setLoading(true)
     try {
-      const result = await api.subscription.get(user.uid)
+      const result = await api.mercadopago.subscriptionStatus(user.uid)
       if (result.success) setSubscription(result.data)
     } catch (e) {
       console.error(e)
@@ -73,7 +86,7 @@ export default function Subscription() {
   const handleMpSubscribe = async (planId) => {
     setSubscribing(true)
     try {
-      const data = await api.mercadopago.createPreference({ plan: planId, billing })
+      const data = await api.mercadopago.createSubscription({ plan: planId, billing })
       if (data.success && data.data?.init_point) {
         window.location.href = data.data.init_point
       } else {
@@ -91,12 +104,11 @@ export default function Subscription() {
     if (!(await confirm(locale === 'es' ? `¿Cambiar al plan ${newPlan}?` : `Change to ${newPlan} plan?`, 'Cambiar'))) return
     setChanging(true)
     try {
-      const result = await api.subscription.change({ userId: user.uid, newPlan })
-      if (result.success) {
-        toast.success(locale === 'es' ? 'Plan actualizado' : 'Plan updated')
-        loadSubscription()
+      const result = await api.mercadopago.createSubscription({ plan: newPlan, billing: subscription.billing, userId: user.uid })
+      if (result.success && result.data?.init_point) {
+        window.location.href = result.data.init_point
       } else {
-        toast.error(result.error?.message || 'Error')
+        throw new Error(result.error?.message || 'Error')
       }
     } catch (e) {
       toast.error('Error')
@@ -108,9 +120,12 @@ export default function Subscription() {
   const reactivateSubscription = async () => {
     setChanging(true)
     try {
-      await api.subscription.reactivate({ userId: user.uid })
-      toast.success(locale === 'es' ? 'Suscripción reactivada' : 'Subscription reactivated')
-      loadSubscription()
+      const result = await api.mercadopago.createSubscription({ plan: subscription.plan, billing: subscription.billing, userId: user.uid })
+      if (result.success && result.data?.init_point) {
+        window.location.href = result.data.init_point
+      } else {
+        throw new Error(result.error?.message || 'Error')
+      }
     } catch (e) {
       toast.error('Error')
     } finally {
@@ -122,7 +137,7 @@ export default function Subscription() {
     if (!(await confirm(locale === 'es' ? '¿Cancelar suscripción? Seguirás usando Revendr hasta fin del período.' : 'Cancel subscription? You can use Revendr until the period ends.', 'Cancelar suscripción'))) return
     setChanging(true)
     try {
-      await api.subscription.cancel({ userId: user.uid })
+      await api.mercadopago.cancelSubscription({ userId: user.uid })
       toast.success(locale === 'es' ? 'Suscripción cancelada' : 'Subscription cancelled')
       loadSubscription()
     } catch (e) {
@@ -331,14 +346,6 @@ export default function Subscription() {
                       ))}
                     </ul>
                     <div className="space-y-2">
-                      <button
-                        onClick={() => handleSubscribe(plan.id)}
-                        disabled={subscribing}
-                        className="btn-primary w-full flex items-center justify-center gap-2"
-                      >
-                        {subscribing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Shield className="w-4 h-4" />}
-                        {locale === 'es' ? 'Pagar con tarjeta (USD)' : 'Pay with card (USD)'}
-                      </button>
                       <button
                         onClick={() => handleMpSubscribe(plan.id)}
                         disabled={subscribing}

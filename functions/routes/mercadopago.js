@@ -1,5 +1,5 @@
 const { admin, db, FIREBASE_APP_URL } = require('../config')
-const { createPreference, getPayment, handleWebhook, PLAN_PRICES } = require('../services/mercadopago')
+const { createPreference, createPreApproval, cancelPreApproval, getPayment, getPreApprovalInfo, handleWebhook, PLAN_PRICES } = require('../services/mercadopago')
 const crypto = require('crypto')
 
 module.exports = function(app) {
@@ -37,9 +37,108 @@ module.exports = function(app) {
     }
   })
 
+  app.post('/mercadopago/create-subscription', async (req, res) => {
+    try {
+      const { plan, billing, userId, email } = req.body
+      if (!plan || !PLAN_PRICES[plan]) return res.status(400).json({ success: false, error: { message: 'Invalid plan' } })
+      if (!userId && !req.user) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+
+      const uid = userId || req.user.uid
+      const userEmail = email || req.user.email
+
+      const externalReference = `plan:${uid}:${plan}:${billing || 'monthly'}`
+      const preApproval = await createPreApproval({ planKey: plan, billing: billing || 'monthly', payerEmail: userEmail, externalReference })
+
+      res.json({ success: true, data: { init_point: preApproval.init_point, preapproval_id: preApproval.id } })
+    } catch (error) {
+      console.error('Error creating MP subscription:', error)
+      res.status(500).json({ success: false, error: { message: error.message } })
+    }
+  })
+
+  app.post('/mercadopago/cancel-subscription', async (req, res) => {
+    try {
+      const { userId } = req.body
+      const uid = userId || req.user?.uid
+      if (!uid) return res.status(400).json({ success: false, error: { message: 'userId required' } })
+      if (req.user?.uid !== uid && req.user?.email !== process.env.ADMIN_EMAIL) {
+        return res.status(403).json({ success: false, error: { message: 'No autorizado' } })
+      }
+
+      const cacheDoc = await db.collection('cache').doc(`mp_preapproval:${uid}`).get()
+      let preApprovalId = ''
+      if (cacheDoc.exists && cacheDoc.data().token) {
+        preApprovalId = JSON.parse(cacheDoc.data().token).preApprovalId || ''
+      }
+
+      if (!preApprovalId) {
+        const mp = require('../services/mercadopago')
+        const mpClient = mp.getPreApprovalClient()
+        if (mpClient) {
+          const search = await new (require('mercadopago').PreApprovalSearch)(mpClient).search({ options: { filter: { external_reference: uid, status: 'authorized' } } })
+          if (search.results?.length) preApprovalId = search.results[0].id
+        }
+      }
+
+      if (!preApprovalId) {
+        return res.status(404).json({ success: false, error: { message: 'No active subscription found' } })
+      }
+
+      await cancelPreApproval(preApprovalId)
+
+      await db.collection('usuarios').doc(uid).set({
+        plan: 'starter',
+        plan_limits: require('../config').PLAN_LIMITS.starter,
+        subscription_status: 'cancelled',
+        mp_preapproval_id: null,
+        activo: false,
+        fecha_actualizacion: new Date(),
+      }, { merge: true })
+
+      await db.collection('cache').doc(`mp_preapproval:${uid}`).delete()
+
+      res.json({ success: true, data: { message: 'Subscription cancelled. Reverted to Starter plan.' } })
+    } catch (error) {
+      console.error('Error cancelling subscription:', error)
+      res.status(500).json({ success: false, error: { message: error.message } })
+    }
+  })
+
+  app.get('/mercadopago/subscription-status/:userId', async (req, res) => {
+    try {
+      const { userId } = req.params
+      if (req.user?.uid !== userId && req.user?.email !== process.env.ADMIN_EMAIL) {
+        return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+      }
+
+      const userDoc = await db.collection('usuarios').doc(userId).get()
+      if (!userDoc.exists) return res.status(404).json({ success: false, error: { message: 'User not found' } })
+
+      const userData = userDoc.data()
+      const plan = userData.plan || 'starter'
+      const limits = require('../config').PLAN_LIMITS[plan] || require('../config').PLAN_LIMITS.starter
+      const usage = userData.usage || { leads: 0, propuestas: 0, messages: 0 }
+
+      res.json({
+        success: true,
+        data: {
+          plan,
+          status: userData.subscription_status || 'active',
+          billing: userData.billing || 'monthly',
+          limits,
+          usage,
+          subscriptionId: userData.mp_preapproval_id || null,
+          cancelAtPeriodEnd: userData.cancel_at_period_end || false,
+          hasSubscription: !!userData.mp_preapproval_id,
+        }
+      })
+    } catch (error) {
+      res.status(500).json({ success: false, error: { message: error.message } })
+    }
+  })
+
   app.post('/mercadopago/webhook', async (req, res) => {
     try {
-      // Verify webhook signature if secret is configured
       const webhookSecret = process.env.MP_WEBHOOK_SECRET
       if (webhookSecret) {
         const xSignature = req.headers['x-signature'] || ''

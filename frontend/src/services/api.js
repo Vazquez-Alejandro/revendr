@@ -141,6 +141,9 @@ class ApiService {
 
   mercadopago = {
     createPreference: (data) => this.post('/mercadopago/create-preference', data),
+    createSubscription: (data) => this.post('/mercadopago/create-subscription', data),
+    cancelSubscription: (data) => this.post('/mercadopago/cancel-subscription', data),
+    subscriptionStatus: (userId) => this.get(`/mercadopago/subscription-status/${userId}`),
   }
 
   subscription = {
