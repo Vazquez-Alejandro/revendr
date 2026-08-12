@@ -82,6 +82,7 @@ const niches = [
   { nameEs: 'Inmobiliarias', nameEn: 'Real Estate', apps: 'Inmoxil', color: 'from-amber-500 to-amber-700' },
   { nameEs: 'Estética / Peluquería', nameEn: 'Beauty / Salon', apps: 'AgenPro', color: 'from-pink-500 to-pink-700' },
   { nameEs: 'E-commerce / Retail', nameEn: 'E-commerce / Retail', apps: 'PriceAnchor', color: 'from-blue-500 to-blue-700' },
+  { nameEs: 'Comparación de precios', nameEn: 'Price Comparison', apps: 'Howlify', color: 'from-orange-500 to-orange-700' },
   { nameEs: 'Privacidad / Datos', nameEn: 'Privacy / Data', apps: 'TraceLess', color: 'from-emerald-500 to-emerald-700' },
   { nameEs: 'Resellers / Revendedores', nameEn: 'Resellers', apps: 'Revendr', color: 'from-violet-500 to-violet-700' },
 ]
@@ -206,7 +207,7 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {niches.map((niche) => (
               <div key={niche.nameEs} className="card-hover text-center group">
                 <div className={`w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br ${niche.color} flex items-center justify-center mb-4`}>
