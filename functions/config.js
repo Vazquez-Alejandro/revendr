@@ -12,6 +12,8 @@ const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_ID
 const RESEND_API_KEY = process.env.RESEND_API_KEY
 const GMAIL_USER = process.env.GMAIL_USER
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD
+const SMTP_HOST = process.env.SMTP_HOST || 'smtp.gmail.com'
+const SMTP_PORT = parseInt(process.env.SMTP_PORT || '465')
 const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN
 const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN
 const GOOGLE_PLACES_API_KEY = process.env.GOOGLE_PLACES_API_KEY
@@ -22,7 +24,9 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'vazquezale82@gmail.com'
 
 const nodemailer = GMAIL_USER && GMAIL_APP_PASSWORD ? require('nodemailer') : null
 const emailTransporter = nodemailer ? nodemailer.createTransport({
-  service: 'gmail',
+  host: SMTP_HOST,
+  port: SMTP_PORT,
+  secure: true,
   auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
 }) : null
 
