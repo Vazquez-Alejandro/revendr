@@ -70,19 +70,6 @@ export default function Subscription() {
     }
   }
 
-  const handleSubscribe = async (planId) => {
-    setSubscribing(true)
-    try {
-      const data = await api.subscription.createCheckout({ plan: planId, userId: user.uid, email: user.email, billing })
-      if (!data.url) throw new Error(data.error?.message || 'Error creating checkout')
-      window.location.href = data.url
-    } catch (e) {
-      toast.error(e.message)
-    } finally {
-      setSubscribing(false)
-    }
-  }
-
   const handleMpSubscribe = async (planId) => {
     setSubscribing(true)
     try {

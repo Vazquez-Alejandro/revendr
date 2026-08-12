@@ -160,7 +160,7 @@ export default function Leads() {
   const loadCampaigns = async () => {
     try {
       const userId = auth.currentUser?.uid
-      const q = query(collection(db, 'campanias'), where('user_id', '==', userId || ''), orderBy('fecha_inicio', 'desc'))
+      const q = query(collection(db, 'campanias'), where('user_id', '==', userId || ''), orderBy('fecha_creacion', 'desc'))
       const snapshot = await getDocs(q)
       setCampaigns(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
     } catch (error) {
@@ -1223,11 +1223,12 @@ export default function Leads() {
                           return
                         }
                         try {
+                          const emailToken = auth.currentUser ? await auth.currentUser.getIdToken() : null
                           await fetch(
                             `https://us-central1-revendr-9add8.cloudfunctions.net/api/leads/${selectedLead.id}/send-email`,
                             {
                               method: 'POST',
-                              headers: { 'Content-Type': 'application/json' },
+                              headers: { 'Content-Type': 'application/json', ...(emailToken ? { 'Authorization': `Bearer ${emailToken}` } : {}) },
                               body: JSON.stringify({ messageType: 'initial', email: targetEmail }),
                             }
                           )

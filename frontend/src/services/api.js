@@ -151,8 +151,6 @@ class ApiService {
     change: (data) => this.post('/subscription/change', data),
     cancel: (data) => this.post('/subscription/cancel', data),
     reactivate: (data) => this.post('/subscription/reactivate', data),
-    plans: () => this.get('/plans'),
-    createCheckout: (data) => this.post('/create-checkout-session', data),
   }
 
   email = {
