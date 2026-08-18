@@ -89,6 +89,15 @@ async function autoScoreLead(leadId, lead) {
 
 function generatePersonalizedMessage(lead, product) {
   const rubro = lead.rubro || 'otro'
+  if (product?.mensaje_whatsapp) {
+    return product.mensaje_whatsapp
+      .replace(/{nombre_negocio}/g, lead.nombre_negocio || '')
+      .replace(/{nombre}/g, lead.nombre_negocio || '')
+      .replace(/{rubro}/g, rubro)
+      .replace(/{url_propuesta}/g, lead.url_propuesta || '')
+      .replace(/{url_demo}/g, lead.url_propuesta || product.url_demo || '')
+      .replace(/{empresa}/g, product.nombre || 'Revendr')
+  }
   const templates = MESSAGE_TEMPLATES[rubro] || MESSAGE_TEMPLATES.otro
   const template = templates[Math.floor(Math.random() * templates.length)]
   return template

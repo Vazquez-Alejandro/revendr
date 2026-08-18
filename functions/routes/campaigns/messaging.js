@@ -13,7 +13,7 @@ app.post('/campaigns/:campaignId/generate-messages', async (req, res) => {
     if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
     let product = null
     if (campaign.producto_id) { const prodDoc = await db.collection('productos').doc(campaign.producto_id).get(); if (prodDoc.exists) product = prodDoc.data() }
-    const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', '==', 'scraped').get()
+    const leadsSnapshot = await db.collection('leads').where('id_campania', '==', campaignId).where('estado_proceso', 'in', ['scraped', 'propuesta_generada']).get()
     let generated = 0, skipped = 0
     for (const leadDoc of leadsSnapshot.docs) {
       const lead = leadDoc.data()
