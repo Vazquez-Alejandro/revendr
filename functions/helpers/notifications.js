@@ -12,45 +12,53 @@ async function createNotification({ userId, type, title, body, link = null, data
 }
 
 async function sendEmail(to, subject, html) {
-  try {
-    const emailData = { from: RESEND_FROM, to, subject, html }
-    if (RESEND_API_KEY) {
-      await axios.post('https://api.resend.com/emails', emailData, {
+  if (RESEND_API_KEY) {
+    try {
+      await axios.post('https://api.resend.com/emails', { from: RESEND_FROM, to, subject, html }, {
         headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
         timeout: 15000,
       })
       return { sent: true, provider: 'resend' }
+    } catch (error) {
+      console.error('Resend error, falling back to SMTP:', error.message)
     }
-    if (emailTransporter) {
+  }
+  if (emailTransporter) {
+    try {
       await emailTransporter.sendMail({ from: `"Revendr" <${GMAIL_USER}>`, to, subject, html })
       return { sent: true, provider: 'gmail' }
+    } catch (error) {
+      console.error('Email error:', error.message)
+      return { sent: false, reason: error.message }
     }
-    return { sent: false, reason: 'no_email_provider' }
-  } catch (error) {
-    console.error('Email error:', error.message)
-    return { sent: false, reason: error.message }
   }
+  return { sent: false, reason: 'no_email_provider' }
 }
 
 async function sendSimpleEmail(to, subject, html) {
   if (!to || !subject || !html) return { sent: false, reason: 'missing_params' }
-  try {
-    if (RESEND_API_KEY) {
+  if (RESEND_API_KEY) {
+    try {
       const res = await axios.post('https://api.resend.com/emails',
         { from: RESEND_FROM, to, subject, html },
         { headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' }, timeout: 15000 }
       )
       if (res.status === 200) return { sent: true, provider: 'resend' }
+      console.error('Resend returned non-200, falling back to SMTP:', res.status)
+    } catch (error) {
+      console.error('Resend error, falling back to SMTP:', error.message)
     }
-    if (emailTransporter) {
+  }
+  if (emailTransporter) {
+    try {
       await emailTransporter.sendMail({ from: `"Revendr" <${GMAIL_USER}>`, to, subject, html })
       return { sent: true, provider: 'gmail' }
+    } catch (error) {
+      console.error('sendSimpleEmail error:', error.message)
+      return { sent: false, reason: error.message }
     }
-    return { sent: false, reason: 'no_provider_available' }
-  } catch (error) {
-    console.error('sendSimpleEmail error:', error.message)
-    return { sent: false, reason: error.message }
   }
+  return { sent: false, reason: 'no_provider_available' }
 }
 
 async function sendTransactionalEmail(to, type, data = {}) {
