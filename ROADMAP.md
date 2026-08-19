@@ -1,6 +1,6 @@
 # Revendr — Roadmap
 
-## Estado actual (Julio 2026)
+## Estado actual (verificado 2026-08-19)
 - ✅ Código completo funcional (frontend + backend)
 - ✅ Proyecto Firebase creado (revendr-9add8)
 - ✅ Functions desplegadas (api, processScheduledMessages, onUserCreated)
@@ -12,86 +12,47 @@
 - ✅ Warmup system, business hours, quality score
 - ✅ AI message generation (Gemini)
 - ✅ Follow-ups, re-engagement, A/B testing
-- ✅ LemonSqueezy + MercadoPago (pagos USD + ARS)
-- ✅ Email transaccional (Gmail fallback)
+- ✅ MercadoPago (pagos USD + ARS) — único medio de pago (LemonSqueezy fue removido del código)
+- ✅ Email transaccional (Gmail/Resend fallback)
 - ✅ CRM pipeline, analytics, content generation
-- ✅ Telegram notifications (registro)
-- ✅ Blacklist, soporte, team management
-- ✅ Onboarding, user guide, white-label config
+- ✅ Telegram notifications, blacklist, team management, onboarding
 
-## Fixes aplicados (Julio 2026)
-- `campaign-metrics.js`: colección `message_events` → `message_log`
-- `analytics.js`: `/stats/products` y `/analytics/trends` ahora filtran por `user_id`
-- `analytics.js`: `/predictions/:campaignId` verifica ownership de campaña
-- `templates/emails.js`: copyright 2024 → 2026
+## Verificado en esta sesión (opencode)
+- ✅ **Precio unificado en $29 / $79 / $199 USD** en frontend (`Subscription.jsx`) y backend (`mercadopago.js` → `PLAN_PRICES_USD`). README coincide. No hay inconsistencia.
+- ✅ **Webhook de MercadoPago con HMAC SHA256** implementado en `routes/mercadopago.js` (valida `x-signature`). Falta solo setear `MP_WEBHOOK_SECRET` en env.
+- ✅ **Smoke tests:** 19/19 pass (`node tests/smoke-test.js`).
+- ✅ **Composite indexes** definidos en `firestore.indexes.json` (productos, campanias, leads, crm_events, message_log, etc.).
+- ⚠️ LemonSqueezy ya no existe en el código: ignorar cualquier referencia vieja a `LEMONSQUEEZY_WEBHOOK_SECRET`.
 
-## Pendiente para salir a producción
+## Pendiente para salir a producción (lo que NO es código)
 
-### 1. Comprar dominio (~$12 USD)
-- Un dominio para Revendr (ej: `revendr.com.ar`)
-- Configurar en Firebase Hosting
+### Crítico para cobrar
+1. **Secretos de MercadoPago** en Firebase Functions config:
+   - `MP_ACCESS_TOKEN`, `MP_PUBLIC_KEY`, `MP_WEBHOOK_SECRET` (obligatorio para que el webhook valide).
+2. **WhatsApp Business API** (chip llega hoy 2026-08-19):
+   - Registrar número en Meta Business → `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_ID`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`.
+   - Verificar webhook: `https://us-central1-revendr-9add8.cloudfunctions.net/api/whatsapp/webhook`.
+3. **Dominio propio** (~$12 USD): `revendr.com.ar` o `revendr.app` → Firebase Hosting. Actualizar `FIREBASE_APP_URL` y CORS.
+4. **Resend**: verificar dominio y setear `RESEND_API_KEY` + `RESEND_FROM=noreply@revendr.app` (hoy sale de `resend.dev`).
 
-### 2. Configurar WhatsApp Business API
-- Comprar chip nuevo O contactar Meta para deregistrar número actual
-- Configurar número en Baileys (local) o Meta Cloud API (producción)
-- Verificar webhook: `https://us-central1-revendr-9add8.cloudfunctions.net/api/whatsapp/webhook`
-
-### 3. Configurar Resend (emails transaccionales)
-- Dominio `revendr.com.ar` verificado (o usar el mismo que TraceLess)
-- Actualizar `RESEND_FROM` en `.env` (actualmente usa `onboarding@resend.dev`)
-- FROM建议: `noreply@revendr.com.ar`
-
-### 4. Variables de entorno en Firebase
-```
-ADMIN_EMAIL=vazquezale82@gmail.com
-APIFY_TOKEN=
-MP_ACCESS_TOKEN=
-WHATSAPP_TOKEN=
-WHATSAPP_PHONE_ID=
-RESEND_API_KEY=
-GMAIL_USER=
-GMAIL_APP_PASSWORD=
-WHATSAPP_VERIFY_TOKEN=
-WHATSAPP_APP_SECRET=
-GOOGLE_PLACES_API_KEY=
-TELEGRAM_BOT_TOKEN=
-ADMIN_TELEGRAM_CHAT_ID=
-```
-
-### 5. Upgrade Node.js (antes de Octubre 2026)
-- Node.js 20 deprecado, migrar a Node.js 22
-- `firebase.json` → `"runtime": "nodejs22"`
-- Testear compatibilidad
-
-### 6. Upgrade firebase-functions SDK
-- Actual: 4.9.0 → Necesario: >=5.1.0
-- `npm install firebase-functions@latest`
-- Revisar breaking changes
-
-### 7. Firestore composite indexes
-- Muchos queries usan `where` + `orderBy` en campos diferentes
-- Sin indexes compuestos, Firestore da errores
-- Crear en Firebase Console > Firestore > Indexes
-
-### 8. Test end-to-end
-- [ ] Registro → onboarding → crear producto → campaña → scraping → mensaje → landing
-- [ ] Pagos (LemonSqueezy checkout)
-- [ ] WhatsApp Baileys (QR scan + envío)
-- [ ] WhatsApp Meta API (webhook + envío)
-- [ ] Email transaccional
-- [ ] Admin panel
+### Importante
+5. **Web Push**: generar VAPID key y setear `VITE_FIREBASE_VAPID_KEY` en `frontend/.env` (hoy vacío).
+6. **Desplegar índices**: `firebase deploy --only firestore:indexes` (ya están definidos, falta aplicarlos).
+7. **Mover .env a Firebase Functions config** (seguridad): no dejar secretos en repo.
+8. **Upgrade Node.js 20 → 22** (`firebase.json` runtime `nodejs22`) y **firebase-functions ≥ 5.1.0** antes de Oct 2026.
+9. **Test E2E manual**: registro → onboarding → producto → campaña → scraping → propuesta → mensaje → landing → pago MP → cambio de plan → WhatsApp Meta.
 
 ## Servicios externos
-| Servicio | Costo | Estado |
-|----------|-------|--------|
-| Firebase | Spark (gratis) | ✅ Deployed |
-| Apify | $5-50/mes | Pendiente configurar |
-| LemonSqueezy | 5% + $0.50/txn | Pendiente testear |
-| MercadoPago | ~4-6% + fijo | Pendiente testear |
-| Resend | 100 gratis | Pendiente dominio |
-| Gemini API | Gratis (60 req/min) | ✅ Configurado |
+| Servicio | Estado |
+|----------|--------|
+| Firebase | ✅ Deployado (Spark) |
+| Apify | Pendiente configurar token |
+| MercadoPago | ✅ Código listo, pendiente token + webhook secret |
+| Resend | Pendiente dominio |
+| Gemini API | ✅ Configurado |
+| Meta WhatsApp | ⏳ Chip llega hoy |
 
 ## Opcionales
 - Sentry — monitoreo de errores
 - PostHog — analytics (gratis hasta 1M eventos)
-- Google Places API — datos de ubicación (ya configurado)
+- Google Places API — ya configurado

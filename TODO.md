@@ -8,14 +8,21 @@
 - [x] `routes/payments.js`: Add auth checks to /subscription/change, /subscription/cancel, /subscription/reactivate (任何人 could change anyone's plan)
 - [x] `.env.example`: Created
 
-## Pendiente
-- [ ] **Configurar dominio en Resend** — `revendr.app` necesita estar verificado para que los emails no vengan de `resend.dev`
-- [ ] **MP_WEBHOOK_SECRET** — Completar para verificación HMAC de webhooks de MercadoPago
-- [ ] **LEMONSQUEEZY_WEBHOOK_SECRET** — Usar un secreto más fuerte (actual: `revendr_webhook_secret_2026_abc123`)
-- [ ] **Rate limiting** — El rate limiter usa un Map en memoria que se resetea en cold start de Firebase Functions. Considerar usar Firestore o Redis para rate limiting persistente
-- [ ] **WhatsApp phone number** — Verificar número registrado en Meta Business
-- [ ] **Firebase Functions crons** — Verificar que `processScheduledMessages` funciona correctamente
-- [ ] **Frontend .env** — `VITE_FIREBASE_VAPID_KEY` está vacío (Web Push no funciona)
+## Pendiente (estado 2026-08-19)
+- [x] **Precio unificado** — frontend + backend ya en $29/$79/$199. No hay inconsistencia.
+- [x] **Webhook MP HMAC** — implementado en `routes/mercadopago.js`. Falta setear `MP_WEBHOOK_SECRET` en env.
+- [x] **LemonSqueezy** — removido del código; ignorar referencias viejas.
+- [ ] **Secretos MP** — setear `MP_ACCESS_TOKEN`, `MP_PUBLIC_KEY`, `MP_WEBHOOK_SECRET` en Firebase Functions config.
+- [ ] **WhatsApp (chip llega hoy)** — registrar número en Meta, setear `WHATSAPP_TOKEN/PHONE_ID/VERIFY_TOKEN/APP_SECRET`, verificar webhook.
+- [ ] **Dominio + Hosting** — comprar `revendr.app`/`.com.ar`, conectar Firebase Hosting, actualizar `FIREBASE_APP_URL`/CORS.
+- [ ] **Resend** — verificar dominio, `RESEND_API_KEY` + `RESEND_FROM=noreply@revendr.app`.
+- [ ] **Web Push** — generar VAPID key → `VITE_FIREBASE_VAPID_KEY` en `frontend/.env`.
+- [ ] **Desplegar índices** — `firebase deploy --only firestore:indexes`.
+- [ ] **Rate limiting persistente** — el limiter usa Map en memoria (se resetea en cold start). Considerar Firestore/Redis.
+- [ ] **Firebase Functions crons** — verificar `processScheduledMessages`.
+- [ ] **Mover .env a Functions config** (seguridad).
+- [ ] **Upgrade** Node 20→22 y firebase-functions ≥5.1 antes de Oct 2026.
+- [ ] **Test E2E manual** completo (registro→pago→campaña→WhatsApp).
 
 ## Marketing
 - [ ] Crear post de lanzamiento para redes sociales
