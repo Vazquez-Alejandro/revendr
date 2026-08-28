@@ -308,6 +308,7 @@ app.post('/whatsapp/generate-message', async (req, res) => {
     if (leadId) {
       const leadDoc = await db.collection('leads').doc(leadId).get()
       if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
+      if (leadDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
       const lead = { id: leadDoc.id, ...leadDoc.data() }
       const message = await generatePersonalizedMessage(lead, { productContext, tone, useAI })
       return res.json({ success: true, data: { leadId, message } })
@@ -317,7 +318,7 @@ app.post('/whatsapp/generate-message', async (req, res) => {
       const leads = []
       for (const id of leadIds) {
         const doc = await db.collection('leads').doc(id).get()
-        if (doc.exists) leads.push({ id: doc.id, ...doc.data() })
+        if (doc.exists && doc.data().user_id === req.user.uid) leads.push({ id: doc.id, ...doc.data() })
       }
       const results = await generateBulkMessages(leads, { productContext, tone, useAI })
       return res.json({ success: true, data: results })

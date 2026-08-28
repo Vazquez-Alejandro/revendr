@@ -25,14 +25,23 @@ module.exports = function(app) {
       if (plan) {
         const price = PLAN_PRICES[plan]?.[billing || 'monthly']
         if (!price) return res.status(400).json({ success: false, error: { message: 'Invalid plan or billing' } })
-        items = [{ title: `Revendr ${plan} - ${billing === 'annual' ? 'Anual' : 'Mensual'}`, unit_price: price }]
-        externalReference = `plan:${userId || req.user?.uid}:${plan}:${billing || 'monthly'}`
         const authed = await ensureUser(req)
-        if (!userId && !authed) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+        if (!authed) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+        if (userId && userId !== authed.uid && authed.email !== process.env.ADMIN_EMAIL) {
+          return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+        }
+        const uid = userId || authed.uid
+        items = [{ title: `Revendr ${plan} - ${billing === 'annual' ? 'Anual' : 'Mensual'}`, unit_price: price }]
+        externalReference = `plan:${uid}:${plan}:${billing || 'monthly'}`
       } else {
+        const authed = await ensureUser(req)
+        if (!authed) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+        if (userId && userId !== authed.uid && authed.email !== process.env.ADMIN_EMAIL) {
+          return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+        }
         if (!amount || !title) return res.status(400).json({ success: false, error: { message: 'amount and title required' } })
         items = [{ title, unit_price: parseFloat(amount) }]
-        externalReference = `payment:${userId || req.user?.uid || 'anonymous'}`
+        externalReference = `payment:${userId || authed.uid}`
       }
 
       const preference = await createPreference({
@@ -55,9 +64,12 @@ module.exports = function(app) {
       if (!plan || !PLAN_PRICES[plan]) return res.status(400).json({ success: false, error: { message: 'Invalid plan' } })
 
       const authed = await ensureUser(req)
-      if (!userId && !authed) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+      if (!authed) return res.status(401).json({ success: false, error: { message: 'Auth required' } })
+      if (userId && userId !== authed.uid && authed.email !== process.env.ADMIN_EMAIL) {
+        return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+      }
 
-      const uid = userId || authed?.uid || req.user?.uid
+      const uid = userId || authed.uid
       const userEmail = email || authed?.email || req.user?.email
 
       const externalReference = `plan:${uid}:${plan}:${billing || 'monthly'}`

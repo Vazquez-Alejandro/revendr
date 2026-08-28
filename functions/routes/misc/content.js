@@ -14,7 +14,13 @@ app.post('/content/generate', async (req, res) => {
   try {
     const { productId, type, platform, customParams } = req.body
     let product = null
-    if (productId) { const prodDoc = await db.collection('productos').doc(productId).get(); if (prodDoc.exists) product = prodDoc.data() }
+    if (productId) {
+      const prodDoc = await db.collection('productos').doc(productId).get()
+      if (prodDoc.exists) {
+        if (prodDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+        product = prodDoc.data()
+      }
+    }
     const templates = CONTENT_TEMPLATES[type] || CONTENT_TEMPLATES.launch
     const template = templates[Math.floor(Math.random() * templates.length)]
     const params = { producto: product?.nombre || customParams?.producto || 'nuestro producto', descripcion: product?.descripcion || customParams?.descripcion || 'una solución innovadora', url: product?.url_propuesta || customParams?.url || FIREBASE_APP_URL, beneficio: customParams?.beneficio || 'multiplicar tus ventas', cliente: customParams?.cliente || 'un cliente satisfecho', testimonial: customParams?.testimonial || 'Es increíble', descuento: customParams?.descuento || '20%' }

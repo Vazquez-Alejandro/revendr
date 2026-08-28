@@ -61,7 +61,12 @@ app.get('/chat/messages', async (req, res) => {
   try {
     const { productId, status } = req.query
     let query = db.collection('chat_messages').orderBy('timestamp', 'desc')
-    if (productId) query = query.where('product_id', '==', productId)
+    if (productId) {
+      const productDoc = await db.collection('productos').doc(productId).get()
+      if (!productDoc.exists) return res.status(404).json({ success: false, error: { message: 'Product not found' } })
+      if (productDoc.data().user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+      query = query.where('product_id', '==', productId)
+    }
     if (status) query = query.where('status', '==', status)
     const snapshot = await query.limit(100).get()
     res.json({ success: true, data: snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) })
@@ -71,11 +76,18 @@ app.get('/chat/messages', async (req, res) => {
 app.post('/chat/reply', async (req, res) => {
   try {
     const { messageId, reply } = req.body
-    await db.collection('chat_messages').doc(messageId).update({ reply, status: 'replied', replied_at: new Date() })
     const msgDoc = await db.collection('chat_messages').doc(messageId).get()
-    if (msgDoc.exists && msgDoc.data().visitor_email && RESEND_API_KEY) {
-      const msg = msgDoc.data()
-      await sendEmail(msg.visitor_email, 'Respuesta de Revendr', `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px;"><h2 style="color:#0ea5e9;">Tu mensaje fue respondido</h2><p>Hola ${msg.visitor_name},</p><div style="background:#1e293b;padding:15px;border-radius:8px;margin:15px 0;"><p style="color:#e2e8f0;">${reply}</p></div></div>`)
+    if (!msgDoc.exists) return res.status(404).json({ success: false, error: { message: 'Message not found' } })
+    const msg = msgDoc.data()
+    if (msg.product_id) {
+      const productDoc = await db.collection('productos').doc(msg.product_id).get()
+      if (!productDoc.exists || productDoc.data().user_id !== req.user.uid) {
+        return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+      }
+    }
+    await db.collection('chat_messages').doc(messageId).update({ reply, status: 'replied', replied_at: new Date() })
+    if (msg.visitor_email && RESEND_API_KEY) {
+      await sendEmail(msg.visitor_email, 'Respuesta de Revendr', `<div style="font-family:Arial;max-width:600px;margin:0 auto;padding:20px;"><h2 style="color:#0ea5e9;">Tu mensaje fue respondido</h2><p>Hola ${msg.visitor_name || ''},</p><div style="background:#1e293b;padding:15px;border-radius:8px;margin:15px 0;"><p style="color:#e2e8f0;">${reply}</p></div></div>`)
     }
     res.json({ success: true })
   } catch (error) { res.status(500).json({ success: false, error: { message: error.message } }) }
