@@ -4,7 +4,6 @@ import { ProtectedRoute } from './routes/ProtectedRoute'
 import { DashboardLayout } from './components/layout/DashboardLayout'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import GuidedChat from './components/GuidedChat'
-import { Loader2 } from 'lucide-react'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const Campaigns = lazy(() => import('./pages/Campaigns'))
@@ -42,8 +41,9 @@ const WhatsAppInbox = lazy(() => import('./pages/WhatsAppInbox'))
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Loader2 className="w-8 h-8 animate-spin text-brand-400" />
+    <div className="flex flex-col items-center justify-center min-h-screen bg-dark-950 gap-4">
+      <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover animate-pulse" />
+      <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }
