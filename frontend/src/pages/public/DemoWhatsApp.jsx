@@ -69,7 +69,7 @@ export default function DemoWhatsApp() {
       <div className="bg-gradient-to-br from-brand-600 to-brand-800 text-white">
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="flex items-center gap-3 mb-4">
-            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 rounded-xl object-cover" />
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 md:w-14 md:h-14 rounded-xl object-cover" />
             <span className="text-xl font-bold">Revendr</span>
           </div>
           <h1 className="text-3xl font-bold mb-2">{demo.nombre_negocio}</h1>

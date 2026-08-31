@@ -68,7 +68,7 @@ export default function Pricing() {
       <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 md:gap-3">
-            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-8 h-8 md:w-10 md:h-10 rounded-xl object-cover" />
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 md:w-14 md:h-14 rounded-xl object-cover" />
             <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
           </Link>
           <Link to="/" className="text-dark-400 hover:text-dark-200 flex items-center gap-2 text-sm">

@@ -45,7 +45,7 @@ export default function StatusPage() {
       <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-4xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-3">
-            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 rounded-xl object-cover" />
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 md:w-14 md:h-14 rounded-xl object-cover" />
             <span className="text-xl font-bold text-dark-50">Revendr</span>
           </Link>
           <Link to="/" className="text-dark-400 hover:text-dark-200 flex items-center gap-2 text-sm">
