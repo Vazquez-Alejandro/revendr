@@ -236,6 +236,7 @@ export default function Register() {
       <div className="flex items-center justify-center p-4 py-12">
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-cover mx-auto mb-6 shadow-2xl shadow-brand-500/20" />
             <h1 className="text-2xl font-bold text-dark-50">
               {locale === 'es' ? 'Creá tu cuenta' : 'Create your account'}
             </h1>

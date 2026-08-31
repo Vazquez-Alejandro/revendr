@@ -133,6 +133,7 @@ export default function Landing() {
         <div className="absolute inset-0 bg-gradient-to-b from-brand-600/10 via-transparent to-transparent" />
         <div className="max-w-7xl mx-auto px-6 py-24 relative">
           <div className="text-center max-w-4xl mx-auto">
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-32 h-32 md:w-40 md:h-40 rounded-3xl object-cover mx-auto mb-8 shadow-2xl shadow-brand-500/20" />
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-500/10 border border-brand-500/20 rounded-full text-brand-400 text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
               {locale === 'es' ? 'Automatización B2B Inteligente' : 'Smart B2B Automation'}
