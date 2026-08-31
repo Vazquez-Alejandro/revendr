@@ -1,7 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useI18n } from '../../contexts/I18nContext'
 import { 
-  Zap, 
   Bot, 
   MessageCircle, 
   CreditCard, 
@@ -112,9 +111,7 @@ export default function Landing() {
       <nav className="border-b border-dark-800 bg-dark-950/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2 md:gap-3">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-              <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
-            </div>
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-8 h-8 md:w-10 md:h-10 rounded-xl object-cover" />
             <span className="text-lg md:text-xl font-bold text-dark-50">Revendr</span>
           </Link>
           <div className="flex items-center gap-2 md:gap-4">
@@ -242,9 +239,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-                <Zap className="w-5 h-5 text-white" />
-              </div>
+              <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-8 h-8 rounded-lg object-cover" />
               <span className="font-bold text-dark-100">Revendr</span>
             </div>
             <div className="flex items-center gap-6 text-sm text-dark-400">

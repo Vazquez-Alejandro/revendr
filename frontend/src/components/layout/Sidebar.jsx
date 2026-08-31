@@ -7,7 +7,6 @@ import {
   Users, 
   Settings,
   LogOut,
-  Zap,
   Package,
   GitBranch,
   Building2,
@@ -47,9 +46,7 @@ export function Sidebar() {
     <aside className="fixed left-0 top-0 h-full w-64 bg-dark-900 border-r border-dark-700 flex flex-col z-40">
       <div className="p-6 border-b border-dark-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center">
-            <Zap className="w-6 h-6 text-white" />
-          </div>
+          <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 rounded-xl object-cover" />
           <div>
             <h1 className="text-lg font-bold text-dark-50">Revendr</h1>
             <p className="text-xs text-dark-400">SaaS Engine</p>

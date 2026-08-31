@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import { doc, getDoc, updateDoc, increment, arrayUnion } from 'firebase/firestore'
 import { db } from '../../config/firebase'
-import { Zap, Calendar, Clock, MapPin, Phone, Star, Check, ArrowRight } from 'lucide-react'
+import { Calendar, Clock, MapPin, Phone, Star, Check, ArrowRight } from 'lucide-react'
 
 const timeSlots = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -69,9 +69,7 @@ export default function DemoWhatsApp() {
       <div className="bg-gradient-to-br from-brand-600 to-brand-800 text-white">
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 rounded-xl object-cover" />
             <span className="text-xl font-bold">Revendr</span>
           </div>
           <h1 className="text-3xl font-bold mb-2">{demo.nombre_negocio}</h1>
