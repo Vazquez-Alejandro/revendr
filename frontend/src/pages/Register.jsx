@@ -275,7 +275,7 @@ export default function Register() {
                       value={nombre}
                       onChange={(e) => setNombre(e.target.value)}
                       className="input-field"
-                      placeholder={locale === 'es' ? 'Juan Pérez' : 'John Doe'}
+                      placeholder={locale === 'es' ? 'Nombre y apellido' : 'Full name'}
                       disabled={loading}
                       required
                     />
