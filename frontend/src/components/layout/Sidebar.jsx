@@ -48,7 +48,7 @@ export function Sidebar() {
         <div className="flex items-center gap-3">
           <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 md:w-14 md:h-14 rounded-xl object-cover" />
           <div>
-            <h1 className="text-lg font-bold text-dark-50">Revendr</h1>
+            <h1 className="text-lg font-bold text-dark-50">Revendr<span className="text-brand-400">dr</span></h1>
             <p className="text-xs text-dark-400">SaaS Engine</p>
           </div>
         </div>

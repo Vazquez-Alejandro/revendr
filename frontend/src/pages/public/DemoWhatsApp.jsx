@@ -70,7 +70,7 @@ export default function DemoWhatsApp() {
         <div className="max-w-4xl mx-auto px-6 py-8">
           <div className="flex items-center gap-3 mb-4">
             <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-10 h-10 md:w-14 md:h-14 rounded-xl object-cover" />
-            <span className="text-xl font-bold">Revendr</span>
+            <span className="text-xl font-bold">Revendr<span className="text-brand-400">dr</span></span>
           </div>
           <h1 className="text-3xl font-bold mb-2">{demo.nombre_negocio}</h1>
           <p className="text-white/80">{demo.rubro} • {demo.ciudad || 'Argentina'}</p>
@@ -125,7 +125,7 @@ export default function DemoWhatsApp() {
 
         {/* Footer */}
         <div className="text-center mt-8 text-dark-500 text-sm">
-          <p>Powered by <span className="text-brand-400 font-medium">Revendr</span></p>
+          <p>Powered by <span className="text-brand-400 font-medium">Revendr<span className="text-brand-400">dr</span></span></p>
         </div>
       </div>
     </div>
