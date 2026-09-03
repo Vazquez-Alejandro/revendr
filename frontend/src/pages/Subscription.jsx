@@ -287,7 +287,7 @@ export default function Subscription() {
                 <span className="ml-1 text-xs text-emerald-400">-20%</span>
               </button>
             </div>
-            <div className="grid md:grid-cols-3 gap-3">
+            <div className="grid md:grid-cols-2 gap-3">
               {PLANS.map(plan => {
                 const Icon = plan.icon
                 const isCurrent = sub.plan === plan.id
@@ -359,7 +359,7 @@ export default function Subscription() {
           <h2 className="text-lg font-semibold text-dark-100 mb-4">
             {locale === 'es' ? 'Cambiar de Plan' : 'Change Plan'}
           </h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-2 gap-4">
             {PLANS.map(plan => {
               const Icon = plan.icon
               const isCurrent = sub.plan === plan.id

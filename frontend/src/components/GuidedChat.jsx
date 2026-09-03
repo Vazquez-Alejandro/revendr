@@ -108,7 +108,7 @@ const TREE = {
 function renderText(text) {
   return text.split('\n').map((line, i) => (
     <span key={i}>
-      {line}
+      <span dangerouslySetInnerHTML={{ __html: line }} />
       {i < text.split('\n').length - 1 && <br />}
     </span>
   ))
@@ -152,7 +152,7 @@ export default function GuidedChat() {
         className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg shadow-brand-500/30 flex items-center justify-center transition-all hover:scale-110 z-50 group overflow-hidden"
       >
         <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-14 h-14 rounded-full object-cover" />
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-900" />
+        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-900 animate-pulse" />
       </button>
     )
   }
