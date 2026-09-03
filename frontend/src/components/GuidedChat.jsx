@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, ChevronRight, ArrowLeft, ExternalLink } from 'lucide-react'
+import { X, ChevronRight, ArrowLeft, ExternalLink, MessageCircle } from 'lucide-react'
 
 const TREE = {
   menu: {
@@ -149,10 +149,22 @@ export default function GuidedChat() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg shadow-brand-500/30 flex items-center justify-center transition-all hover:scale-110 z-50 group overflow-hidden"
+        className="fixed bottom-6 right-6 z-50 group flex items-center gap-3"
       >
-        <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-14 h-14 rounded-full object-cover" />
-        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-900 animate-pulse" />
+        <span className="hidden sm:inline-flex bg-dark-800 border border-dark-600 text-dark-100 text-sm px-4 py-2 rounded-full shadow-lg items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <MessageCircle className="w-4 h-4 text-brand-400" />
+          ¿Necesitás ayuda con tu cuenta?
+        </span>
+        <span className="relative w-16 h-16">
+          <span className="absolute inset-0 rounded-full bg-brand-500/30 animate-ping" />
+          <span className="relative w-16 h-16 rounded-full shadow-lg shadow-brand-500/30 flex items-center justify-center overflow-hidden transition-transform group-hover:scale-110">
+            <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-16 h-16 rounded-full object-cover" />
+            <span className="absolute bottom-0 right-0 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center border-2 border-dark-900">
+              <MessageCircle className="w-3 h-3 text-white" />
+            </span>
+          </span>
+          <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-900 animate-pulse" />
+        </span>
       </button>
     )
   }
