@@ -156,12 +156,9 @@ export default function GuidedChat() {
           ¿Necesitás ayuda con tu cuenta?
         </span>
         <span className="relative w-16 h-16">
-          <span className="absolute inset-0 rounded-full bg-brand-500/30 animate-ping" />
+          <span className="absolute inset-0 rounded-full bg-brand-500/20 [animation-duration:4s] animate-ping" />
           <span className="relative w-16 h-16 rounded-full shadow-lg shadow-brand-500/30 flex items-center justify-center overflow-hidden transition-transform group-hover:scale-110">
             <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-16 h-16 rounded-full object-cover" />
-            <span className="absolute bottom-0 right-0 w-5 h-5 bg-brand-500 rounded-full flex items-center justify-center border-2 border-dark-900">
-              <MessageCircle className="w-3 h-3 text-white" />
-            </span>
           </span>
           <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-900 animate-pulse" />
         </span>
