@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Check, Zap, Building2, Sparkles, ArrowRight, ArrowLeft } from 'lucide-react'
+import { Check, Zap, Building2, ArrowRight, ArrowLeft } from 'lucide-react'
 
 const plans = [
   {
@@ -35,23 +35,6 @@ const plans = [
     ],
     icon: Building2,
     popular: true,
-  },
-  {
-    key: 'enterprise',
-    name: 'Enterprise',
-    price: 199,
-    annualPrice: 1910.40,
-    description: 'Para operaciones grandes',
-    features: [
-      'Leads ilimitados',
-      'Rubros ilimitados',
-      'Propuestas ilimitadas',
-      'Mensajes ilimitados',
-      'White-label',
-      'Soporte dedicado',
-    ],
-    icon: Sparkles,
-    popular: false,
   },
 ]
 
@@ -101,7 +84,7 @@ export default function Pricing() {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
           {plans.map((plan) => (
             <div
               key={plan.name}
