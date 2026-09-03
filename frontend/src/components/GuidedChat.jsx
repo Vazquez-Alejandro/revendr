@@ -1,71 +1,71 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { MessageCircle, X, ChevronRight, ArrowLeft, ExternalLink, Mail, MessageSquare, BookOpen, HelpCircle, LayoutDashboard } from 'lucide-react'
+import { X, ChevronRight, ArrowLeft, ExternalLink } from 'lucide-react'
 
 const TREE = {
   menu: {
-    text: '¡Hola! Soy el asistente de Revendr 🚀\n¿En qué puedo ayudarte?',
+    text: '¡Hola! Soy el asistente de Reven<span style="color:#d97706">dr</span>.\n¿En qué puedo ayudarte?',
     options: [
-      { label: '📖 Guía de uso', next: 'guia' },
-      { label: '❓ Preguntas frecuentes', next: 'faq' },
-      { label: '💬 Contacto / Soporte', next: 'contacto' },
-      { label: '⚙️ Ir al panel', next: 'panel' },
+      { label: 'Guía de uso', next: 'guia' },
+      { label: 'Preguntas frecuentes', next: 'faq' },
+      { label: 'Contacto / Soporte', next: 'contacto' },
+      { label: 'Ir al panel', next: 'panel' },
     ],
   },
   guia: {
-    text: 'Elegí un tema de la guía:',
+    text: 'Elegí un tema:',
     options: [
-      { label: '📦 Crear un producto', next: 'crear_producto' },
-      { label: '🎯 Crear una campaña', next: 'crear_campania' },
-      { label: '👥 Ver mis leads', next: 'ver_leads' },
-      { label: '📱 Conectar WhatsApp', next: 'conectar_whatsapp' },
-      { label: '📊 Ver engagement', next: 'ver_engagement' },
-      { label: '📚 Guía completa', type: 'link', path: '/guide' },
+      { label: 'Crear un producto', next: 'crear_producto' },
+      { label: 'Crear una campaña', next: 'crear_campania' },
+      { label: 'Ver mis leads', next: 'ver_leads' },
+      { label: 'Conectar WhatsApp', next: 'conectar_whatsapp' },
+      { label: 'Ver engagement', next: 'ver_engagement' },
+      { label: 'Guía completa', type: 'link', path: '/guide' },
       { label: '← Volver', next: 'menu' },
     ],
   },
   crear_producto: {
     text: 'Andá a **Productos → Nuevo Producto**.\n\nCompletá:\n• Nombre del producto/servicio\n• URL de tu landing o propuesta\n• Rubro de tu negocio\n• Personalizá la landing (título, descripción, color, botón)\n\nUna vez creado, usalo en tus campañas.',
     options: [
-      { label: 'Ir a Productos →', type: 'link', path: '/dashboard/productos' },
+      { label: 'Ir a Productos', type: 'link', path: '/dashboard/productos' },
       { label: '← Volver', next: 'guia' },
     ],
   },
   crear_campania: {
-    text: 'Andá a **Campañas → Nueva Campaña**.\n\nConfigurá:\n• Producto: seleccioná el que creaste\n• Ciudad: dónde querés buscar prospectos\n• Rubro: qué tipo de negocio buscar\n\nEl sistema se encarga del resto 🚀',
+    text: 'Andá a **Campañas → Nueva Campaña**.\n\nConfigurá:\n• Producto: seleccioná el que creaste\n• Ciudad: dónde querés buscar prospectos\n• Rubro: qué tipo de negocio buscar\n\nEl sistema se encarga del resto.',
     options: [
-      { label: 'Ir a Campañas →', type: 'link', path: '/dashboard/campanias' },
+      { label: 'Ir a Campañas', type: 'link', path: '/dashboard/campanias' },
       { label: '← Volver', next: 'guia' },
     ],
   },
   ver_leads: {
     text: 'En la sección **Leads** encontrás todos los prospectos.\n\nCada lead tiene:\n• Score de calidad (Excelente a Muy Bajo)\n• Datos de contacto\n• Mensaje personalizado generado\n• Historial de engagement\n\nPodés filtrarlos por campaña o score.',
     options: [
-      { label: 'Ir a Leads →', type: 'link', path: '/dashboard/leads' },
+      { label: 'Ir a Leads', type: 'link', path: '/dashboard/leads' },
       { label: '← Volver', next: 'guia' },
     ],
   },
   conectar_whatsapp: {
-    text: 'Para conectar WhatsApp:\n\n1. Andá a **Settings → WhatsApp**\n2. Elegí "Gratis (Baileys)"\n3. Escaneá el código QR\n\n✅ Sin costo por mensaje\n⚠️ Respetá los límites para evitar baneo\n\nTambién podés usar la API oficial de Meta si preferís.',
+    text: 'Para conectar WhatsApp:\n\n1. Pedí un chip prepago\n2. Andá a **Settings → WhatsApp**\n3. Creá una app en Meta for Developers\n4. Verificá tu número\n5. Cargá Phone Number ID y Access Token\n\nListo, ya podés enviar campañas por WhatsApp.',
     options: [
-      { label: 'Ir a Settings →', type: 'link', path: '/dashboard/settings' },
+      { label: 'Ir a Settings', type: 'link', path: '/dashboard/settings' },
       { label: '← Volver', next: 'guia' },
     ],
   },
   ver_engagement: {
     text: 'El sistema trackea automáticamente:\n\n• **Abrió/Interesado** - Hizo clic en tu link\n• **Vio el link** - Abrió pero no hizo clic\n• **Ignoró** - No abrió después de 3 días\n• **Convirtió** - Se hizo cliente\n\nEsto te ayuda a saber a quién contactar de nuevo.',
     options: [
-      { label: 'Ir a Leads →', type: 'link', path: '/dashboard/leads' },
+      { label: 'Ir a Leads', type: 'link', path: '/dashboard/leads' },
       { label: '← Volver', next: 'guia' },
     ],
   },
   faq: {
-    text: 'Elegí una pregunta frecuente:',
+    text: 'Elegí una pregunta:',
     options: [
       { label: '¿Qué es Revendr?', next: 'que_es' },
       { label: '¿Cómo funciona el scraping?', next: 'scraping' },
       { label: '¿Cómo funcionan los planes?', next: 'planes' },
-      { label: '📖 Centro de ayuda', type: 'link', path: '/help' },
+      { label: 'Centro de ayuda', type: 'link', path: '/help' },
       { label: '← Volver', next: 'menu' },
     ],
   },
@@ -82,24 +82,24 @@ const TREE = {
     ],
   },
   planes: {
-    text: 'Tenemos **3 planes**:\n\n• **Starter** ($29/mes) - 100 leads, 50 props., 900 WhatsApp\n• **Growth** ($79/mes) - 1.000 leads, 500 props., 3.000 WhatsApp\n• **Enterprise** ($199/mes) - Ilimitado + white-label\n\n🔄 Pagando anual tenés **20% de descuento**.',
+    text: 'Tenemos **2 planes**:\n\n• **Starter** ($29/mes) - 100 leads, 50 propuestas, 900 WhatsApp\n• **Growth** ($79/mes) - 1.000 leads, 500 propuestas, 3.000 WhatsApp\n\nPagando anual tenés **20% de descuento**.\n\nTodos incluyen 14 días gratis.',
     options: [
-      { label: 'Ver precios →', type: 'link', path: '/pricing' },
+      { label: 'Ver precios', type: 'link', path: '/pricing' },
       { label: '← Volver', next: 'faq' },
     ],
   },
   contacto: {
     text: 'Elegí cómo querés contactarnos:',
     options: [
-      { label: '📧 Enviar ticket de soporte', type: 'link', path: '/support' },
-      { label: '✉️ hola@revendr.app', type: 'action', action: 'email' },
+      { label: 'Enviar ticket de soporte', type: 'link', path: '/support' },
+      { label: 'hola@revendr.app', type: 'action', action: 'email' },
       { label: '← Volver', next: 'menu' },
     ],
   },
   panel: {
     text: '¿Listo para trabajar? Andá a tu panel:',
     options: [
-      { label: '⚙️ Ir al Dashboard', type: 'link', path: '/dashboard' },
+      { label: 'Ir al Dashboard', type: 'link', path: '/dashboard' },
       { label: '← Volver', next: 'menu' },
     ],
   },
@@ -149,9 +149,9 @@ export default function GuidedChat() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 w-14 h-14 bg-brand-500 hover:bg-brand-600 rounded-full shadow-lg shadow-brand-500/30 flex items-center justify-center text-white transition-all hover:scale-110 z-50 group"
+        className="fixed bottom-6 right-6 w-14 h-14 rounded-full shadow-lg shadow-brand-500/30 flex items-center justify-center transition-all hover:scale-110 z-50 group overflow-hidden"
       >
-        <MessageCircle className="w-6 h-6" />
+        <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-14 h-14 rounded-full object-cover" />
         <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-dark-900" />
       </button>
     )
@@ -161,11 +161,9 @@ export default function GuidedChat() {
     <div className="fixed bottom-6 right-6 w-80 h-[480px] bg-dark-900 rounded-2xl shadow-2xl shadow-brand-500/10 border border-dark-700 flex flex-col z-50 animate-slide-up">
       <div className="bg-brand-500 rounded-t-2xl p-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-            <MessageCircle className="w-4 h-4 text-white" />
-          </div>
+          <img src="/RevendrLogo.jpeg" alt="Revendr" className="w-8 h-8 rounded-lg object-cover" />
           <div>
-            <div className="text-sm font-medium text-white">Asistente Revendr</div>
+            <div className="text-sm font-medium text-white">Asistente Reven<span className="text-white">dr</span></div>
             <div className="text-xs text-white/70">En línea</div>
           </div>
         </div>
