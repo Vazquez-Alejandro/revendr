@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 
 const PLANS = {
   starter: { name: 'Starter', price: 29, leads: 100, rubros: 1, propuestas: 50, messages: 900, emails: 500 },
-  growth: { name: 'Growth', price: 79, leads: 1000, rubros: 3, propuestas: 500, messages: 3000, emails: 2000 },
+  growth: { name: 'Growth', price: 99, leads: 1000, rubros: 3, propuestas: 500, messages: 3000, emails: 2000 },
 }
 
 export default function Register() {

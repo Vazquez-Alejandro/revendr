@@ -82,7 +82,7 @@ const TREE = {
     ],
   },
   planes: {
-    text: 'Tenemos **2 planes**:\n\n• **Starter** ($29/mes) - 100 leads, 50 propuestas, 900 WhatsApp\n• **Growth** ($79/mes) - 1.000 leads, 500 propuestas, 3.000 WhatsApp\n\nPagando anual tenés **20% de descuento**.\n\nTodos incluyen 14 días gratis.',
+    text: 'Tenemos **2 planes**:\n\n• **Starter** ($29/mes) - 100 leads, 50 propuestas, 900 WhatsApp\n• **Growth** ($99/mes) - 1.000 leads, 500 propuestas, 3.000 WhatsApp\n\nPagando anual tenés **20% de descuento**.\n\nTodos incluyen 14 días gratis.',
     options: [
       { label: 'Ver precios', type: 'link', path: '/pricing' },
       { label: '← Volver', next: 'faq' },

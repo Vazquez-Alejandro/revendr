@@ -195,7 +195,7 @@ function getPlanLimits(plan) {
 
 const PLAN_PRICES_USD = {
   starter: 29,
-  growth: 79,
+  growth: 99,
   enterprise: 199,
 }
 

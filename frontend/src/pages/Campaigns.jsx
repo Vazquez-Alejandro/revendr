@@ -937,6 +937,18 @@ export default function Campaigns() {
 
               <div className="flex gap-2">
                 <button
+                  onClick={() => handleGoogleScrape(campaign.id)}
+                  disabled={processingAction !== null}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs font-medium hover:bg-green-500/20 transition-all disabled:opacity-50"
+                >
+                  {processingAction === `${campaign.id}-google` ? (
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                  ) : (
+                    <Globe className="w-3 h-3" />
+                  )}
+                  {locale === 'es' ? 'Buscar leads' : 'Find leads'}
+                </button>
+                <button
                   onClick={() => handleScrape(campaign.id)}
                   disabled={processingAction !== null}
                   className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-orange-500/10 text-orange-400 border border-orange-500/20 rounded-lg text-xs font-medium hover:bg-orange-500/20 transition-all disabled:opacity-50"
@@ -947,18 +959,6 @@ export default function Campaigns() {
                     <Search className="w-3 h-3" />
                   )}
                   Apify
-                </button>
-                <button
-                  onClick={() => handleGoogleScrape(campaign.id)}
-                  disabled={processingAction !== null}
-                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-green-500/10 text-green-400 border border-green-500/20 rounded-lg text-xs font-medium hover:bg-green-500/20 transition-all disabled:opacity-50"
-                >
-                  {processingAction === `${campaign.id}-google` ? (
-                    <Loader2 className="w-3 h-3 animate-spin" />
-                  ) : (
-                    <Globe className="w-3 h-3" />
-                  )}
-                  Google
                 </button>
                 <button
                   onClick={() => handleProcessDemos(campaign.id)}

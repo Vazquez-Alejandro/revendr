@@ -18,7 +18,7 @@ const faqEs = [
   },
   {
     q: '¿Cómo funciona el scraping de leads?',
-    a: 'Usamos Apify para extraer negocios de Google Maps e Instagram. Configurá tu API key en Settings → API Keys.',
+    a: 'Buscamos negocios en Google Maps de forma automática según tu rubro y ciudad. Podés indicar la ciudad y rubro de tu campaña y el sistema encuentra los leads listos para prospectar.',
   },
   {
     q: '¿Cómo genero propuestas personalizadas?',
@@ -45,7 +45,7 @@ const faqEn = [
   },
   {
     q: 'How does lead scraping work?',
-    a: 'We use Apify to extract businesses from Google Maps and Instagram. Set up your API key in Settings → API Keys.',
+    a: 'We search Google Maps automatically based on your niche and city. You set the target city and niche in your campaign and the system finds ready-to-prospect leads.',
   },
   {
     q: 'How do I generate personalized proposals?',

@@ -22,8 +22,8 @@ const plans = [
   {
     key: 'growth',
     name: 'Growth',
-    price: 79,
-    annualPrice: 758.40,
+    price: 99,
+    annualPrice: 950.40,
     description: 'Para escalar rápido',
     features: [
       '1,000 leads/mes',
