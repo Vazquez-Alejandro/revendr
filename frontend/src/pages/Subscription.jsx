@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   Zap,
   Building2,
-  Sparkles,
   Clock,
   Shield,
 } from 'lucide-react'
@@ -20,7 +19,6 @@ import { useConfirm } from '../hooks/useConfirm'
 const PLANS = [
   { id: 'starter', name: 'Starter', price: 29, annualPrice: 278.40, icon: Zap, limits: { leads: 100, rubros: 1, propuestas: 50, messages: 900 } },
   { id: 'growth', name: 'Growth', price: 79, annualPrice: 758.40, icon: Building2, popular: true, limits: { leads: 1000, rubros: 3, propuestas: 500, messages: 3000 } },
-  { id: 'enterprise', name: 'Enterprise', price: 199, annualPrice: 1910.40, icon: Sparkles, limits: { leads: -1, rubros: -1, propuestas: -1, messages: -1 } },
 ]
 
 export default function Subscription() {

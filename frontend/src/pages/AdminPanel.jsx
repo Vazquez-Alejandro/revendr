@@ -31,7 +31,7 @@ async function authFetch(url, options = {}) {
   })
 }
 
-const PLANS = ['starter', 'growth', 'enterprise']
+const PLANS = ['starter', 'growth']
 
 export default function AdminPanel() {
   const { locale } = useI18n()

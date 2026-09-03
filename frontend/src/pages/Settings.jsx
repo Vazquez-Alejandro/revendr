@@ -807,8 +807,8 @@ export default function Settings() {
                 <h2 className="text-lg font-semibold text-dark-100">{locale === 'es' ? 'White-Label' : 'White-Label'}</h2>
                 <p className="text-sm text-dark-400 mt-1">
                   {locale === 'es'
-                    ? 'Personalizá Revendr con tu marca. Disponible en plan Enterprise.'
-                    : 'Customize Revendr with your brand. Available on Enterprise plan.'}
+                    ? 'Personalizá Revendr con tu marca. Próximamente.'
+                    : 'Customize Revendr with your brand. Coming soon.'}
                 </p>
               </div>
 
