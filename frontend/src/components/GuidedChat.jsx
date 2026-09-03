@@ -46,7 +46,7 @@ const TREE = {
     ],
   },
   conectar_whatsapp: {
-    text: 'Tu WhatsApp se activa sin que hagas nada técnico, para que empieces hoy mismo 😉\n\nCon tu plan ya podés enviar campañas: el equipo de **Revendr** se encarga de la configuración.\n\n💡 **¿Querés llevar tu marca al siguiente nivel?**\nPodés vincular tu **propio número** de WhatsApp: tus prospectos te escriben directo a tu línea y aparece tu negocio como emisor. Es lo más profesional para tu marca.\n\nEn **Settings → WhatsApp** lo activás cuando quieras.',
+    text: '**Empezá a enviar hoy, sin configurar nada** 😉\n\nPor defecto tus campañas salen desde el **número de Revendr**. Está todo listo, no tenés que tocar nada.\n\n💡 **¿Querés que sea 100% tu marca?**\nPodés registrar tu **propio negocio en Meta** y usar tu **propio número/token**. Tus prospectos reciben el WhatsApp de tu negocio y te responden directo. Es lo más profesional.\n\nEn **Settings → WhatsApp** tenés la guía paso a paso, solo registrás tu cuenta y nos pasás el token.',
     options: [
       { label: 'Ir a Settings', type: 'link', path: '/dashboard/settings' },
       { label: '← Volver', next: 'guia' },
