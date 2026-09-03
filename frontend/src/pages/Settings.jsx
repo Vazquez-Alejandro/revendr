@@ -459,6 +459,16 @@ export default function Settings() {
                   </div>
                 ) : (
                   <div className="p-4 bg-dark-900 rounded-xl border border-dark-700 space-y-4">
+                    <div className="p-3 bg-brand-500/5 border border-brand-500/20 rounded-lg">
+                      <p className="text-xs text-brand-400 font-medium mb-1">
+                        💡 {locale === 'es' ? 'No necesitás configurar nada de Meta' : 'No Meta setup needed'}
+                      </p>
+                      <p className="text-xs text-dark-400">
+                        {locale === 'es'
+                          ? 'El equipo de Revendr activa el envío oficial por vos (chip + API de Meta). La opción avanzada de abajo es solo si querés usar tu propio número.'
+                          : 'The Revendr team activates official sending for you (chip + Meta API). The advanced option below is only if you want to use your own number.'}
+                      </p>
+                    </div>
                     {/* Mode selector */}
                     <div className="flex gap-2">
                       <button
@@ -599,12 +609,12 @@ export default function Settings() {
                       <div className="space-y-3">
                         <div className="p-3 bg-violet-500/5 border border-violet-500/20 rounded-lg">
                           <p className="text-xs text-violet-400 font-medium mb-1">
-                            {locale === 'es' ? '💼 Para negocios serios' : '💼 For serious businesses'}
+                            {locale === 'es' ? '💼 Opcional: usá tu propio número' : '💼 Optional: use your own number'}
                           </p>
                           <p className="text-xs text-dark-400">
                             {locale === 'es'
-                              ? 'API oficial de Meta. Sin riesgo de baneo, green tick, pero ~$0.05 por mensaje.'
-                              : 'Meta official API. No ban risk, green tick, but ~$0.05 per message.'}
+                              ? 'API oficial de Meta. Sin riesgo de baneo, green tick, pero ~$0.05 por mensaje. Solo seguí esto si querés tu propio número; si no, el equipo de Revendr lo configura por vos.'
+                              : 'Meta official API. No ban risk, green tick, but ~$0.05 per message. Only follow this if you want your own number; otherwise the Revendr team sets it up for you.'}
                           </p>
                         </div>
 

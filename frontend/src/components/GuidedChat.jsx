@@ -46,7 +46,7 @@ const TREE = {
     ],
   },
   conectar_whatsapp: {
-    text: 'Para conectar WhatsApp:\n\n1. Pedí un chip prepago\n2. Andá a **Settings → WhatsApp**\n3. Creá una app en Meta for Developers\n4. Verificá tu número\n5. Cargá Phone Number ID y Access Token\n\nListo, ya podés enviar campañas por WhatsApp.',
+    text: 'Tu WhatsApp se activa sin que hagas nada técnico 😉\n\nEl equipo de **Revendr** configura por vos el envío de mensajes (chip + API oficial de Meta).\n\n**Solo necesitamos que confirmes por dónde coordinamos tu alta.**\n\nCuando esté activo, vas a poder enviar campañas desde el panel.',
     options: [
       { label: 'Ir a Settings', type: 'link', path: '/dashboard/settings' },
       { label: '← Volver', next: 'guia' },
