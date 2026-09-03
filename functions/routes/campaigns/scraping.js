@@ -1,4 +1,4 @@
-const { admin, db, axios, APIFY_TOKEN, WHATSAPP_TOKEN, PHONE_NUMBER_ID, GOOGLE_PLACES_API_KEY, APIFY_ACTORS, RUBRO_SEARCH_TERMS, FIREBASE_APP_URL } = require('../../config')
+const { admin, db, axios, APIFY_TOKEN, WHATSAPP_TOKEN, PHONE_NUMBER_ID, GOOGLE_PLACES_API_KEY, APIFY_ACTORS, RUBRO_SEARCH_TERMS, FIREBASE_APP_URL, checkPlanLimit, incrementUsage } = require('../../config')
 const { createNotification, calculateLeadScore, getTemperature, getScoreLabel, pollApifyRun } = require('../../helpers')
 
 module.exports = function(app) {
@@ -9,6 +9,12 @@ app.post('/campaigns/:campaignId/scrape-google', async (req, res) => {
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
     if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+
+    const leadCheck = await checkPlanLimit(req.user.uid, 'leads')
+    if (!leadCheck.allowed) {
+      return res.status(403).json({ success: false, error: { message: `Límite de leads alcanzado (${leadCheck.usage}/${leadCheck.limit}). Upgradeá tu plan.`, code: 'PLAN_LIMIT_REACHED', ...leadCheck } })
+    }
+
     const { ciudad, rubro_objetivo, provincia } = campaign
     const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''} ${provincia || ''}`.trim()
     if (!GOOGLE_PLACES_API_KEY) return res.status(500).json({ success: false, error: { message: 'Google Places API key not configured. Set GOOGLE_PLACES_API_KEY in .env' } })
@@ -44,7 +50,10 @@ app.post('/campaigns/:campaignId/scrape-google', async (req, res) => {
       saved++
     }
     await db.collection('campanias').doc(req.params.campaignId).update({ scraping_status: 'completed', scraping_completed_at: new Date(), leads_count: admin.firestore.FieldValue.increment(saved) })
-    if (req.user?.uid && saved > 0) createNotification({ userId: req.user.uid, type: 'new_lead', title: `${saved} ${saved === 1 ? 'nuevo lead' : 'nuevos leads'} encontrados`, body: `Google Places completado para ${campaign.nombre || 'la campaña'}`, link: `/dashboard/leads` })
+    if (req.user?.uid && saved > 0) {
+      await incrementUsage(req.user.uid, 'leads', saved)
+      createNotification({ userId: req.user.uid, type: 'new_lead', title: `${saved} ${saved === 1 ? 'nuevo lead' : 'nuevos leads'} encontrados`, body: `Google Places completado para ${campaign.nombre || 'la campaña'}`, link: `/dashboard/leads` })
+    }
     res.json({ success: true, data: { saved, status: 'completed' } })
   } catch (error) {
     console.error('Error in Google Places scrape:', error.message)
@@ -60,6 +69,12 @@ app.post('/campaigns/:campaignId/scrape', async (req, res) => {
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
     if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+
+    const leadCheck = await checkPlanLimit(req.user.uid, 'leads')
+    if (!leadCheck.allowed) {
+      return res.status(403).json({ success: false, error: { message: `Límite de leads alcanzado (${leadCheck.usage}/${leadCheck.limit}). Upgradeá tu plan.`, code: 'PLAN_LIMIT_REACHED', ...leadCheck } })
+    }
+
     const { ciudad, rubro_objetivo, provincia } = campaign
     const searchTerm = `${RUBRO_SEARCH_TERMS[rubro_objetivo] || rubro_objetivo} ${ciudad || ''} ${provincia || ''}`.trim()
     if (!APIFY_TOKEN) return res.status(500).json({ success: false, error: { message: 'Apify token not configured' } })
@@ -82,6 +97,12 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
     if (!campaignDoc.exists) return res.status(404).json({ success: false, error: { message: 'Campaign not found' } })
     const campaign = campaignDoc.data()
     if (campaign.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+
+    const propuestaCheck = await checkPlanLimit(req.user.uid, 'propuestas')
+    if (!propuestaCheck.allowed) {
+      return res.status(403).json({ success: false, error: { message: `Límite de propuestas alcanzado (${propuestaCheck.usage}/${propuestaCheck.limit}). Upgradeá tu plan.`, code: 'PLAN_LIMIT_REACHED', ...propuestaCheck } })
+    }
+
     let productPrice = null
     let productGa4Id = null
     let productFbPixelId = null
@@ -109,6 +130,7 @@ app.post('/campaigns/:campaignId/process-demos', async (req, res) => {
         const propuestaData = { lead_id: leadDoc.id, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro, ciudad: lead.ciudad || 'Argentina', direccion: lead.direccion || '', telefono_whatsapp: lead.telefono_whatsapp || '', calificacion: lead.calificacion || 4.8, logo: lead.datos_personalizados?.logo || '', website: lead.datos_personalizados?.website || '', horarios: lead.datos_personalizados?.horarios || [], url_propuesta: propuestaUrl, producto_url: campaign.producto_url_demo || null, precio: productPrice, ga4_id: productGa4Id, fb_pixel_id: productFbPixelId, fecha_creacion: new Date() }
         await db.collection('propuestas').doc(propuestaId).set(propuestaData)
         await db.collection('leads').doc(leadDoc.id).update({ estado_proceso: 'propuesta_generada', url_propuesta: propuestaData.url_propuesta, propuesta_id: propuestaId, fecha_generacion_propuesta: new Date(), fecha_actualizacion: new Date() })
+        await incrementUsage(req.user.uid, 'propuestas', 1)
         processed++
         results.push({ leadId: leadDoc.id, propuestaUrl: propuestaData.url_propuesta })
       } catch (err) { console.error(`Error generating propuesta for lead ${leadDoc.id}:`, err.message) }

@@ -479,6 +479,11 @@ app.post('/whatsapp/import-csv', async (req, res) => {
     const { csvText, productId } = req.body
     if (!csvText) return res.status(400).json({ success: false, error: { message: 'csvText required' } })
 
+    const leadCheck = await checkPlanLimit(req.user.uid, 'leads')
+    if (!leadCheck.allowed) {
+      return res.status(403).json({ success: false, error: { message: `Límite de leads alcanzado (${leadCheck.usage}/${leadCheck.limit}). Upgradeá tu plan.`, code: 'PLAN_LIMIT_REACHED', ...leadCheck } })
+    }
+
     const { importLeadsFromCSV, parseCSV } = require('../../services/csv-import')
     const leads = parseCSV(csvText)
 

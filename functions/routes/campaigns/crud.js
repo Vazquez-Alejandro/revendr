@@ -1,4 +1,4 @@
-const { admin, db } = require('../../config')
+const { admin, db, checkPlanLimit } = require('../../config')
 
 module.exports = function(app) {
 
@@ -23,6 +23,16 @@ app.post('/campaigns', async (req, res) => {
     if (!nombre || !rubro_objetivo) {
       return res.status(400).json({ success: false, error: { message: 'Nombre y rubro requeridos' } })
     }
+
+    const rubroCheck = await checkPlanLimit(req.user.uid, 'rubros')
+    if (!rubroCheck.allowed) {
+      const existingCampaigns = await db.collection('campanias').where('user_id', '==', req.user.uid).get()
+      const uniqueRubros = new Set(existingCampaigns.docs.map(d => d.data().rubro_objetivo))
+      if (!uniqueRubros.has(rubro_objetivo)) {
+        return res.status(403).json({ success: false, error: { message: `Límite de rubros alcanzado (${uniqueRubros.size}/${rubroCheck.limit}). Upgradeá tu plan.`, code: 'PLAN_LIMIT_REACHED', ...rubroCheck } })
+      }
+    }
+
     let producto_nombre = null, producto_url_demo = null, producto_mensaje = null
     if (producto_id) {
       const prodDoc = await db.collection('productos').doc(producto_id).get()

@@ -59,6 +59,12 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
     if (!leadDoc.exists) return res.status(404).json({ success: false, error: { message: 'Lead not found' } })
     const lead = leadDoc.data()
     if (lead.user_id !== req.user.uid) return res.status(403).json({ success: false, error: { message: 'Forbidden' } })
+
+    const propuestaCheck = await checkPlanLimit(req.user.uid, 'propuestas')
+    if (!propuestaCheck.allowed) {
+      return res.status(403).json({ success: false, error: { message: `Límite de propuestas alcanzado (${propuestaCheck.usage}/${propuestaCheck.limit}). Upgradeá tu plan.`, code: 'PLAN_LIMIT_REACHED', ...propuestaCheck } })
+    }
+
     const propuestaId = `propuesta-${lead.rubro}-${req.params.leadId}`
     const propuestaData = {
       lead_id: req.params.leadId, nombre_negocio: lead.nombre_negocio, rubro: lead.rubro,
@@ -73,6 +79,7 @@ app.post('/leads/:leadId/generate-demo', async (req, res) => {
       estado_proceso: 'propuesta_generada', url_propuesta: propuestaData.url_propuesta, propuesta_id: propuestaId,
       fecha_generacion_propuesta: new Date(), fecha_actualizacion: new Date(),
     })
+    await incrementUsage(req.user.uid, 'propuestas', 1)
     if (lead.id_campania) {
       await db.collection('campanias').doc(lead.id_campania).update({ propuestas_generadas: admin.firestore.FieldValue.increment(1) })
     }
@@ -251,6 +258,12 @@ app.post('/leads/import-csv', async (req, res) => {
   try {
     const { csvText, productId } = req.body
     if (!csvText) return res.status(400).json({ success: false, error: { message: 'csvText required' } })
+
+    const leadCheck = await checkPlanLimit(req.user.uid, 'leads')
+    if (!leadCheck.allowed) {
+      return res.status(403).json({ success: false, error: { message: `Límite de leads alcanzado (${leadCheck.usage}/${leadCheck.limit}). Upgradeá tu plan.`, code: 'PLAN_LIMIT_REACHED', ...leadCheck } })
+    }
+
     const { importLeadsFromCSV, parseCSV } = require('../services/csv-import')
     const leads = parseCSV(csvText)
     if (leads.length === 0) return res.status(400).json({ success: false, error: { message: 'No valid leads found in CSV' } })
