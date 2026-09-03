@@ -493,8 +493,8 @@ export default function Settings() {
                         }`}
                       >
                         <div className="flex flex-col items-center gap-1">
-                          <span>✅ {locale === 'es' ? 'Oficial' : 'Official'}</span>
-                          <span className="text-xs opacity-75">Meta API</span>
+                          <span>⭐ {locale === 'es' ? 'Tu número' : 'Your number'}</span>
+                          <span className="text-xs opacity-75">{locale === 'es' ? 'Proyectá tu marca' : 'Build your brand'}</span>
                         </div>
                       </button>
                     </div>
@@ -607,14 +607,31 @@ export default function Settings() {
                       </div>
                     ) : (
                       <div className="space-y-3">
-                        <div className="p-3 bg-violet-500/5 border border-violet-500/20 rounded-lg">
-                          <p className="text-xs text-violet-400 font-medium mb-1">
-                            {locale === 'es' ? '💼 Opcional: usá tu propio número' : '💼 Optional: use your own number'}
+                        <div className="p-3 bg-violet-500/5 border border-violet-500/20 rounded-lg space-y-1">
+                          <p className="text-xs text-violet-300 font-semibold">
+                            ⭐ {locale === 'es' ? 'Proyectá tu marca con tu PROPIO número' : 'Build your brand with your OWN number'}
                           </p>
-                          <p className="text-xs text-dark-400">
+                          <ul className="text-xs text-dark-400 space-y-1">
+                            {locale === 'es' ? (
+                              <>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span> Tus prospectos reciben el WhatsApp <span className="text-dark-100 font-medium">de tu negocio</span>, no de un número genérico.</li>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span> Envíos <span className="text-dark-100 font-medium">oficiales de Meta</span> con verificación: más confianza, sin riesgo de baneo.</li>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span> El número queda <span className="text-dark-100 font-medium">a tu nombre</span>, lo ves en tu celular y lo controlás vos.</li>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span> Es tu canal: vendés y te responden directo a tu línea.</li>
+                              </>
+                            ) : (
+                              <>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span> Your prospects receive the WhatsApp <span className="text-dark-100 font-medium">from your business</span>, not a generic number.</li>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span><span className="text-dark-100 font-medium">Official Meta</span> verified sending: more trust, no ban risk.</li>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span> The number is <span className="text-dark-100 font-medium">in your name</span>, you see it on your phone and control it.</li>
+                                <li className="flex items-start gap-1.5"><span className="text-violet-400">✓</span> It's your channel: you sell and clients reply directly to your line.</li>
+                              </>
+                            )}
+                          </ul>
+                          <p className="text-xs text-dark-500 pt-1">
                             {locale === 'es'
-                              ? 'API oficial de Meta. Sin riesgo de baneo, green tick, pero ~$0.05 por mensaje. Solo seguí esto si querés tu propio número; si no, el equipo de Revendr lo configura por vos.'
-                              : 'Meta official API. No ban risk, green tick, but ~$0.05 per message. Only follow this if you want your own number; otherwise the Revendr team sets it up for you.'}
+                              ? 'Vincular tu número es muy simple y solo lo hacés una vez, con tu propia línea.'
+                              : 'Linking your number is simple and you only do it once, with your own line.'}
                           </p>
                         </div>
 
